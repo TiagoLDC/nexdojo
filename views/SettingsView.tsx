@@ -259,7 +259,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ academy, user, onLogout, th
         </section>
       )}
 
-      {user.role === 'admin' && (
+      {/* Oculto temporariamente - user.role === 'admin' && (
         <section className="space-y-4">
           <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-4">Minha Assinatura</h2>
           <div className="bg-indigo-600 rounded-[32px] p-6 text-white shadow-xl shadow-indigo-600/20 relative overflow-hidden group">
@@ -284,7 +284,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ academy, user, onLogout, th
             </div>
           </div>
         </section>
-      )}
+      )*/}
 
       {user.role === 'admin' && (
         <section className="space-y-4">
