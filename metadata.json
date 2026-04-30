@@ -1,0 +1,7 @@
+{
+  "name": "PROJETO JIU-JITSU",
+  "description": "Sistema completo para controle de presença, graduação e empréstimo de quimonos para academias de artes marciais, com foco em Jiu-Jitsu.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

@@ -1,0 +1,114 @@
+# Regras do Projeto NexDojo
+
+> **CRÍTICO:** Este documento deve ser lido e seguido integralmente em TODOS os chats que envolvam o projeto NexDojo, localizado em `d:\DEV_WEB\nexdojo`.
+
+---
+
+## 1. Informações Gerais do Projeto
+
+| Campo | Valor |
+|---|---|
+| **Nome do Projeto** | NexDojo |
+| **Caminho Local** | `d:\DEV_WEB\nexdojo` |
+| **Stack** | React 19 + TypeScript + Vite + TailwindCSS v4 |
+| **Porta Dev** | **3002** (portas 3000 e 3001 ocupadas) |
+| **Gerenciador de Pacotes** | npm |
+
+---
+
+## 2. Servidor de Desenvolvimento
+
+- **Sempre** usar a porta `3002` (nunca 3000 ou 3001)
+- Comando para iniciar: `npm run dev` dentro de `d:\DEV_WEB\nexdojo`
+- URL local: `http://localhost:3002/`
+- Configuração em: `d:\DEV_WEB\nexdojo\vite.config.ts`
+
+---
+
+## 3. Repositório Git
+
+| Campo | Valor |
+|---|---|
+| **URL do Repositório** | `<!-- PREENCHER -->` |
+| **Branch principal** | `<!-- PREENCHER (ex: main / master) -->` |
+| **Branch de desenvolvimento** | `<!-- PREENCHER (ex: develop) -->` |
+
+### Regras de Commit
+- `<!-- PREENCHER -->`
+
+---
+
+## 4. Servidor Remoto / Deploy
+
+| Campo | Valor |
+|---|---|
+| **Host / IP** | `<!-- PREENCHER (ex: 54.x.x.x) -->` |
+| **Usuário SSH** | `<!-- PREENCHER (ex: ubuntu) -->` |
+| **Caminho da Chave SSH** | `<!-- PREENCHER (ex: C:\Users\TiagoCastro\.ssh\nexdojo.pem) -->` |
+| **Porta SSH** | `22` (padrão — alterar se diferente) |
+| **Diretório do projeto no servidor** | `<!-- PREENCHER (ex: /var/www/nexdojo) -->` |
+
+### Comando de Conexão SSH
+```bash
+ssh -i "<!-- CAMINHO_DA_CHAVE -->" <!-- USUARIO -->@<!-- HOST -->
+```
+
+### Comando de Deploy
+```bash
+<!-- PREENCHER com o script/comando de deploy, ex: git pull + pm2 restart / docker compose up -d -->
+```
+
+---
+
+## 5. Banco de Dados
+
+| Campo | Valor |
+|---|---|
+| **Tipo** | `<!-- PREENCHER (ex: PostgreSQL / MySQL / SQLite) -->` |
+| **Host** | `<!-- PREENCHER -->` |
+| **Porta** | `<!-- PREENCHER (ex: 5432) -->` |
+| **Nome do Banco** | `<!-- PREENCHER -->` |
+| **Usuário** | `<!-- PREENCHER -->` |
+| **Senha** | `<!-- PREENCHER -->` |
+
+---
+
+## 6. Variáveis de Ambiente
+
+Arquivo: `d:\DEV_WEB\nexdojo\.env`
+
+```env
+# Preencher conforme necessidade do projeto
+GEMINI_API_KEY=<!-- PREENCHER -->
+# Adicionar outras variáveis aqui
+```
+
+---
+
+## 7. Credenciais de Serviços Externos
+
+| Serviço | Usuário / API Key | Observação |
+|---|---|---|
+| `<!-- PREENCHER -->` | `<!-- PREENCHER -->` | `<!-- PREENCHER -->` |
+
+---
+
+## 8. Regras Obrigatórias para o Agente
+
+1. **Porta**: NUNCA usar as portas `3000` ou `3001` neste projeto. Sempre `3002`.
+2. **Diretório**: Todo código do projeto fica em `d:\DEV_WEB\nexdojo`.
+3. **Stack**: Não sugerir nem instalar outras bibliotecas de UI sem aprovação explícita do usuário.
+4. **Deploy**: `<!-- PREENCHER com regras de deploy automático, se houver -->`.
+5. **Commits**: Seguir o padrão definido na seção 3 antes de qualquer push.
+
+---
+
+## 9. Observações Adicionais
+
+```
+<!-- Espaço livre para anotações, gotchas, bugs conhecidos, etc. -->
+```
+
+---
+
+*Última atualização: 30/04/2026*
