@@ -29,9 +29,9 @@
 
 | Campo | Valor |
 |---|---|
-| **URL do Repositório** | `<!-- PREENCHER -->` |
-| **Branch principal** | `<!-- PREENCHER (ex: main / master) -->` |
-| **Branch de desenvolvimento** | `<!-- PREENCHER (ex: develop) -->` |
+| **URL do Repositório** | `https://github.com/TiagoLDC/nexdojo` |
+| **Branch principal** | `main` |
+| **Branch de desenvolvimento** | `main` |
 
 ### Regras de Commit
 - `<!-- PREENCHER -->`
