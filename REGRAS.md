@@ -34,7 +34,11 @@
 | **Branch de desenvolvimento** | `main` |
 
 ### Regras de Commit
-- `<!-- PREENCHER -->`
+As mensagens de commit devem seguir rigorosamente o formato:
+`#<sequencial>-<YYYY-MM-DD> <HH:MM>-<descrição em português>`
+
+**Exemplo:**
+`#001-2026-04-28 10:19-atualização de estilos e correção de datas`
 
 ---
 
@@ -42,20 +46,20 @@
 
 | Campo | Valor |
 |---|---|
-| **Host / IP** | `<!-- PREENCHER (ex: 54.x.x.x) -->` |
-| **Usuário SSH** | `<!-- PREENCHER (ex: ubuntu) -->` |
-| **Caminho da Chave SSH** | `<!-- PREENCHER (ex: C:\Users\TiagoCastro\.ssh\nexdojo.pem) -->` |
-| **Porta SSH** | `22` (padrão — alterar se diferente) |
-| **Diretório do projeto no servidor** | `<!-- PREENCHER (ex: /var/www/nexdojo) -->` |
+| **Host / IP** | `162.240.167.149` |
+| **Usuário SSH** | `qasnexdojo` |
+| **Caminho da Chave SSH** | `(Acesso via senha: @Tmd4738@)` |
+| **Porta SSH** | `22022` |
+| **Diretório do projeto no servidor** | `/home/qasnexdojo/nexdojo` |
 
 ### Comando de Conexão SSH
 ```bash
-ssh -i "<!-- CAMINHO_DA_CHAVE -->" <!-- USUARIO -->@<!-- HOST -->
+ssh -p 22022 qasnexdojo@162.240.167.149
 ```
 
 ### Comando de Deploy
 ```bash
-<!-- PREENCHER com o script/comando de deploy, ex: git pull + pm2 restart / docker compose up -d -->
+cd /home/qasnexdojo/nexdojo && git pull origin main && docker compose up -d --build
 ```
 
 ---
@@ -99,7 +103,8 @@ GEMINI_API_KEY=<!-- PREENCHER -->
 2. **Diretório**: Todo código do projeto fica em `d:\DEV_WEB\nexdojo`.
 3. **Stack**: Não sugerir nem instalar outras bibliotecas de UI sem aprovação explícita do usuário.
 4. **Deploy**: `<!-- PREENCHER com regras de deploy automático, se houver -->`.
-5. **Commits**: Seguir o padrão definido na seção 3 antes de qualquer push.
+5. **Commits**: Seguir o padrão definido na seção 3.
+6. **Frequência de Commit**: SÓ realizar commits quando o usuário solicitar explicitamente.
 
 ---
 
