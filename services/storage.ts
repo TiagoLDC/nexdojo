@@ -1,5 +1,5 @@
 
-import { Student, Instructor, Staff, AttendanceRecord, Academy, User, ClassSession, KimonoLoan, ClassTemplate, ChatMessage, CalendarEvent, RecycleBinItem, FinanceTransaction, SystemConfig, SystemPlan } from '../types';
+import { Student, Instructor, Staff, AttendanceRecord, Academy, User, ClassSession, KimonoLoan, ClassTemplate, ChatMessage, CalendarEvent, RecycleBinItem, FinanceTransaction, SystemConfig, SystemPlan, Language } from '../types';
 import { MOCK_ACADEMY, MOCK_ACADEMIES } from './mockData';
 
 const KEYS = {
@@ -16,10 +16,12 @@ const KEYS = {
   CHAT: 'oss_chat_messages',
   CALENDAR: 'oss_calendar_events',
   THEME: 'oss_theme_mode',
+  LANGUAGE: 'oss_language',
   RECYCLE_BIN: 'oss_recycle_bin',
   FINANCES: 'oss_finances',
   USERS: 'oss_users',
   SYSTEM_CONFIG: 'oss_system_config',
+  ACCENT_COLOR: 'oss_accent_color',
 };
 
 const DEFAULT_SYSTEM_CONFIG: SystemConfig = {
@@ -44,7 +46,17 @@ export const StorageService = {
 
   getAcademy: (): Academy | null => {
     const data = localStorage.getItem(KEYS.ACADEMY);
-    return data ? JSON.parse(data) : null;
+    if (!data) return null;
+    let academy = JSON.parse(data);
+    
+    // Migration: Rename Guerreiros to NexDojo
+    if (academy.id === 'mock_acad_1' && academy.name === 'Guerreiros') {
+      const targetLogo = 'https://images.unsplash.com/photo-1552072092-7f9b8d63efcb?q=80&w=400&h=400&auto=format&fit=crop';
+      academy = { ...academy, name: 'NexDojo', logo: targetLogo };
+      StorageService.saveAcademy(academy);
+    }
+    
+    return academy;
   },
   saveAcademy: (academy: Academy) => {
     localStorage.setItem(KEYS.ACADEMY, JSON.stringify(academy));
@@ -57,11 +69,62 @@ export const StorageService = {
 
   getAcademies: (): Academy[] => {
     const data = localStorage.getItem(KEYS.ACADEMIES);
-    if (!data) return MOCK_ACADEMIES; // Retorna as academias mockadas por padrão
-    return JSON.parse(data);
+    let academies = data ? JSON.parse(data) : MOCK_ACADEMIES;
+    
+    // Migration: Keep only NexDojo (mock_acad_1) and filter out old mocks
+    let changed = false;
+    const initialCount = academies.length;
+    
+    // Filter out mock_acad_2 and mock_acad_3
+    academies = academies.filter((a: Academy) => a.id !== 'mock_acad_2' && a.id !== 'mock_acad_3');
+    
+    // Rename mock_acad_1 to NexDojo
+    academies = academies.map((a: Academy) => {
+      if (a.id === 'mock_acad_1') {
+        const targetLogo = 'https://images.unsplash.com/photo-1552072092-7f9b8d63efcb?q=80&w=400&h=400&auto=format&fit=crop';
+        if (a.name !== 'NexDojo' || a.logo !== targetLogo) {
+          changed = true;
+          return { ...a, name: 'NexDojo', logo: targetLogo };
+        }
+      }
+      return a;
+    });
+
+    if (academies.length !== initialCount) changed = true;
+
+    if (changed) {
+      StorageService.saveAcademies(academies);
+      // Also update current active academy if needed
+      const currentData = localStorage.getItem(KEYS.ACADEMY);
+      if (currentData) {
+        const current = JSON.parse(currentData);
+        if (current.id === 'mock_acad_1' || current.id === 'mock_acad_2' || current.id === 'mock_acad_3') {
+          // Force active to be NexDojo if it was a mock
+          StorageService.saveAcademy(academies.find((a: Academy) => a.id === 'mock_acad_1') || academies[0]);
+        }
+      }
+    }
+
+    return [...academies].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
   },
   saveAcademies: (academies: Academy[]) => {
     localStorage.setItem(KEYS.ACADEMIES, JSON.stringify(academies));
+  },
+
+  deleteAcademy: (id: string) => {
+    const all = StorageService.getAcademies();
+    const updated = all.filter(a => a.id !== id);
+    StorageService.saveAcademies(updated);
+    
+    // Also remove from current academy if it's the one being deleted
+    const current = StorageService.getAcademy();
+    if (current && current.id === id) {
+      if (updated.length > 0) {
+        StorageService.saveAcademy(updated[0]);
+      } else {
+        localStorage.removeItem(KEYS.ACADEMY);
+      }
+    }
   },
 
   getAcademyById: (id: string): Academy | null => {
@@ -228,6 +291,20 @@ export const StorageService = {
   },
   saveTheme: (theme: 'light' | 'dark') => {
     localStorage.setItem(KEYS.THEME, theme);
+  },
+
+  getLanguage: (): Language => {
+    return (localStorage.getItem(KEYS.LANGUAGE) as Language) || 'pt';
+  },
+  saveLanguage: (lang: Language) => {
+    localStorage.setItem(KEYS.LANGUAGE, lang);
+  },
+  
+  getAccentColor: (): string => {
+    return localStorage.getItem(KEYS.ACCENT_COLOR) || 'indigo';
+  },
+  saveAccentColor: (color: string) => {
+    localStorage.setItem(KEYS.ACCENT_COLOR, color);
   },
   
   clear: () => localStorage.clear(),

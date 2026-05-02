@@ -1,6 +1,6 @@
 {
-  "name": "PROJETO JIU-JITSU",
-  "description": "Sistema completo para controle de presença, graduação e empréstimo de quimonos para academias de artes marciais, com foco em Jiu-Jitsu.",
+  "name": "SISTEMA NEXDOJO OFICIAL - ULTIMO",
+  "description": "Sistema completo para controle de presença, graduação e empréstimo de quimonos para academias de artes marciais, com foco em Jiu-Jitsu e gestão multi-unidades.",
   "requestFramePermissions": [
     "camera"
   ]

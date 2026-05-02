@@ -3,6 +3,38 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --primary-accent: var(--primary-accent-color, #4f46e5);
+  
+  --color-indigo-50: var(--primary-accent-50, #f5f3ff);
+  --color-indigo-100: var(--primary-accent-100, #e0e7ff);
+  --color-indigo-200: var(--primary-accent-200, #c7d2fe);
+  --color-indigo-300: var(--primary-accent-300, #a5b4fc);
+  --color-indigo-400: var(--primary-accent-400, #818cf8);
+  --color-indigo-500: var(--primary-accent-500, #6366f1);
+  --color-indigo-600: var(--primary-accent-color, #4f46e5);
+  --color-indigo-700: var(--primary-accent-700, #4338ca);
+  --color-indigo-800: var(--primary-accent-800, #3730a3);
+  --color-indigo-900: var(--primary-accent-900, #1e1b4b);
+  --color-indigo-950: var(--primary-accent-950, #0f172a);
+}
+
+@layer base {
+  html, body {
+    height: 100%;
+    height: 100dvh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* Prevents the whole page from scrolling/bouncing weirdly on mobile */
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  input, textarea, select {
+    user-select: text; /* Allow text selection in inputs */
+  }
+
+  #root {
+    height: 100%;
+  }
 }
 
 @media print {

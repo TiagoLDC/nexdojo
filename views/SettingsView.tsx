@@ -1,10 +1,11 @@
 
 import React, { useState } from 'react';
-import { Academy, User, Student, Instructor, Staff } from '../types';
-import { Settings, Bell, Shield, LogOut, ChevronRight, User as UserIcon, Palette, MapPin, Moon, Sun, X, CreditCard, Wallet, Loader2, Save, Phone, Mail, Eye, EyeOff, CheckCircle2, Crown, Zap, Star as StarIcon, Award, Trophy } from 'lucide-react';
+import { Academy, User, Student, Instructor, Staff, AcademyPlan, Language } from '../types';
+import { Settings, Bell, Shield, LogOut, ChevronRight, User as UserIcon, Palette, MapPin, Moon, Sun, X, CreditCard, Wallet, Loader2, Save, Phone, Mail, Eye, EyeOff, CheckCircle2, Crown, Zap, Star as StarIcon, Award, Trophy, Book, Users, Clock, Plus, Trash2, Calendar, Globe, AlertTriangle, Smartphone, Check } from 'lucide-react';
 import { fetchAddressByCep, maskCEP, maskPhone } from '../services/cep';
 import { PrivacyValue } from '../components/PrivacyValue';
 import { StorageService } from '../services/storage';
+import { getTranslation } from '../services/translations';
 
 /**
  * Função para redimensionar e comprimir imagem Base64
@@ -45,18 +46,36 @@ interface SettingsViewProps {
   onLogout: () => void;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
+  language: Language;
+  onLanguageChange: (lang: Language) => void;
   onUpdateAcademy: (academy: Academy) => void;
+  accentColor: string;
+  onAccentColorChange: (color: string) => void;
 }
 
-const SettingsView: React.FC<SettingsViewProps> = ({ academy, user, onLogout, theme, onToggleTheme, onUpdateAcademy }) => {
+const SettingsView: React.FC<SettingsViewProps> = ({ 
+  academy, 
+  user, 
+  onLogout, 
+  theme, 
+  onToggleTheme, 
+  language, 
+  onLanguageChange, 
+  onUpdateAcademy,
+  accentColor,
+  onAccentColorChange
+}) => {
+  const t = getTranslation(language);
   const [isEditingAcademy, setIsEditingAcademy] = React.useState(false);
+  const [isEditingNotifications, setIsEditingNotifications] = React.useState(false);
   const [isEditingPayment, setIsEditingPayment] = React.useState(false);
   const [isEditingProfile, setIsEditingProfile] = React.useState(false);
-  const [isEditingVisual, setIsEditingVisual] = useState(false);
   const [isEditingPlans, setIsEditingPlans] = useState(false);
+  const [isManagingAcademyPlans, setIsManagingAcademyPlans] = useState(false);
+  const [isAddingAcademyPlan, setIsAddingAcademyPlan] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<Partial<AcademyPlan> | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState<string | null>(null);
   const [showPlanNotification, setShowPlanNotification] = useState(false);
-  const [accentColor, setAccentColor] = useState(localStorage.getItem('oss_accent_color') || 'indigo');
   const [editAcademy, setEditAcademy] = React.useState<Academy>(academy);
   const logoInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -73,14 +92,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ academy, user, onLogout, th
     reader.readAsDataURL(file);
   };
 
-  const handleSaveVisual = (color: string) => {
-    setAccentColor(color);
-    localStorage.setItem('oss_accent_color', color);
-    setIsEditingVisual(false);
-    // Em um app real, aqui aplicaríamos a cor via CSS Variables ou Context
-    window.location.reload(); 
-  };
-  
   const [isLoadingCep, setIsLoadingCep] = useState(false);
 
   // Perfil do usuário logado
@@ -119,6 +130,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ academy, user, onLogout, th
   const handleSaveAcademy = () => {
     onUpdateAcademy(editAcademy);
     setIsEditingAcademy(false);
+    setIsEditingNotifications(false);
     setIsEditingPayment(false);
   };
 
@@ -142,12 +154,155 @@ const SettingsView: React.FC<SettingsViewProps> = ({ academy, user, onLogout, th
     setUserProfile(editProfile);
     setIsEditingProfile(false);
   };
+
+  const handleSaveAcademyPlans = (updatedPlans: AcademyPlan[]) => {
+    const updatedAcademy = { ...academy, plans: updatedPlans };
+    onUpdateAcademy(updatedAcademy);
+    setEditAcademy(updatedAcademy);
+  };
+
+  const deletePlan = (id: string) => {
+    const updated = (editAcademy.plans || []).filter(p => p.id !== id);
+    handleSaveAcademyPlans(updated);
+  };
+
+  const savePlan = () => {
+    if (!editingPlan?.name) return;
+
+    const plans = editAcademy.plans || [];
+    let updated: AcademyPlan[];
+
+    if (editingPlan.id) {
+      updated = plans.map(p => p.id === editingPlan.id ? (editingPlan as AcademyPlan) : p);
+    } else {
+      const newPlanWithId: AcademyPlan = {
+        ...editingPlan as AcademyPlan,
+        id: Math.random().toString(36).substr(2, 9)
+      };
+      updated = [...plans, newPlanWithId];
+    }
+
+    handleSaveAcademyPlans(updated);
+    setIsAddingAcademyPlan(false);
+    setEditingPlan(null);
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-8 pb-10 transition-colors">
       <header>
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Configurações</h1>
-        <p className="text-slate-500 dark:text-slate-400">Olá, <strong>{user.name}</strong>. Gerencie seu acesso e preferências.</p>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-white">{t.settings}</h1>
+        <p className="text-slate-500 dark:text-slate-400">{t.welcome}<strong>{user.name}</strong>. {t.manageAccess}</p>
       </header>
+
+      {(user.role === 'admin' || user.role === 'superuser') && academy && (
+        <section className="space-y-4">
+          <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-4">Gestão da Unidade</h2>
+          <div className="bg-white dark:bg-slate-900 rounded-[32px] border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm transition-colors divide-y divide-slate-50 dark:divide-slate-800">
+            <SettingItem 
+              icon={<Settings className="text-indigo-500" />} 
+              title="Dados da Unidade" 
+              subtitle={`${academy.name} • ${academy.ownerName}`} 
+              onClick={() => {
+                setEditAcademy(academy);
+                setIsEditingAcademy(true);
+              }}
+            />
+            <SettingItem icon={<Shield className="text-green-500" />} title={t.additionalUsers} subtitle={t.manageAccess} />
+          </div>
+        </section>
+      )}
+
+      <section className="space-y-4">
+        <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-4">Personalização & Preferências</h2>
+        <div className="bg-white dark:bg-slate-900 rounded-[32px] border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm transition-colors divide-y divide-slate-50 dark:divide-slate-800">
+          {/* Color Selector Block */}
+          <div className="p-6">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="bg-slate-100 dark:bg-slate-800 w-10 h-10 rounded-xl flex items-center justify-center">
+                <Palette size={20} className="text-indigo-600" />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Cor da Unidade</h4>
+                <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Identidade Visual do Sistema</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-5 gap-3">
+              {[
+                { id: 'indigo', color: 'bg-[#4f46e5]', label: 'Indigo' },
+                { id: 'azul', color: 'bg-[#2563eb]', label: 'Azul' },
+                { id: 'roxo', color: 'bg-[#9333ea]', label: 'Roxo' },
+                { id: 'verde', color: 'bg-[#10b981]', label: 'Verde' },
+                { id: 'laranja', color: 'bg-[#f97316]', label: 'Laranja' },
+                { id: 'amarelo', color: 'bg-[#eab308]', label: 'Amarelo' },
+                { id: 'marrom', color: 'bg-[#5c4033]', label: 'Marrom' },
+                { id: 'preto', color: 'bg-[#0f172a]', label: 'Preto' },
+                { id: 'cinza', color: 'bg-[#64748b]', label: 'Cinza' },
+                { id: 'branco', color: 'bg-[#94a3b8]', label: 'Clean' },
+              ].map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => onAccentColorChange(c.id)}
+                  className={`group relative flex flex-col items-center gap-2 transition-all active:scale-95`}
+                >
+                  <div className={`w-12 h-12 rounded-2xl ${c.color} shadow-lg transition-all ${accentColor === c.id ? 'ring-4 ring-offset-4 dark:ring-offset-slate-900 ring-indigo-500 scale-110' : 'hover:scale-105'}`}>
+                    {accentColor === c.id && (
+                      <div className="absolute inset-0 flex items-center justify-center text-white">
+                        <Check size={24} strokeWidth={4} />
+                      </div>
+                    )}
+                  </div>
+                  <span className={`text-[8px] font-black uppercase tracking-tighter ${accentColor === c.id ? 'text-indigo-600' : 'text-slate-400'}`}>
+                    {c.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Theme Toggle */}
+          <div className="p-5 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="bg-slate-100 dark:bg-slate-800 w-10 h-10 rounded-xl flex items-center justify-center">
+                {theme === 'dark' ? <Sun size={20} className="text-amber-500" /> : <Moon size={20} className="text-slate-600" />}
+              </div>
+              <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm">{t.theme}</h4>
+            </div>
+            <button 
+              onClick={onToggleTheme}
+              className={`w-12 h-6 rounded-full p-1 transition-colors ${theme === 'dark' ? 'bg-indigo-600' : 'bg-slate-300'}`}
+            >
+              <div className={`bg-white w-4 h-4 rounded-full transition-transform ${theme === 'dark' ? 'translate-x-6' : 'translate-x-0'}`} />
+            </button>
+          </div>
+
+          {/* Language Selector */}
+          <div className="p-5 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="bg-slate-100 dark:bg-slate-800 w-10 h-10 rounded-xl flex items-center justify-center">
+                <Globe size={20} className="text-indigo-600" />
+              </div>
+              <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm">{t.language}</h4>
+            </div>
+            <div className="flex bg-slate-50 dark:bg-slate-800 p-1 rounded-2xl border border-slate-100 dark:border-slate-700">
+              {[
+                { code: 'pt', flag: '🇧🇷' },
+                { code: 'en', flag: '🇺🇸' },
+                { code: 'es', flag: '🇪🇸' }
+              ].map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => onLanguageChange(lang.code as Language)}
+                  className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${language === lang.code ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm' : 'text-slate-400'}`}
+                >
+                  <span className="text-base leading-none">{lang.flag}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
 
       {userProfile && (
         <section className="space-y-4">
@@ -156,23 +311,16 @@ const SettingsView: React.FC<SettingsViewProps> = ({ academy, user, onLogout, th
             <SettingItem 
               icon={<UserIcon className="text-indigo-600" />} 
               title="Meu Perfil" 
-              subtitle={userProfile.name} 
+              subtitle={
+                user.role === 'student' && (userProfile as Student).belt
+                  ? `${userProfile.name} • ${(userProfile as Student).belt} (${(userProfile as Student).stripes} Graus)`
+                  : userProfile.name
+              } 
               onClick={() => {
                 setEditProfile(userProfile);
                 setIsEditingProfile(true);
               }}
             />
-            {user.role === 'student' && (userProfile as Student).belt && (
-              <SettingItem 
-                icon={<Award className="text-amber-500" />} 
-                title="Minha Graduação" 
-                subtitle={`${(userProfile as Student).belt} - ${(userProfile as Student).stripes} Graus`} 
-                onClick={() => {
-                  setEditProfile(userProfile);
-                  setIsEditingProfile(true);
-                }}
-              />
-            )}
             {userProfile.address && (
               <SettingItem 
                 icon={<MapPin className="text-slate-600" />} 
@@ -184,44 +332,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ academy, user, onLogout, th
                 }}
               />
             )}
-          </div>
-        </section>
-      )}
-
-      {user.role === 'admin' && (
-        <section className="space-y-4">
-          <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-4">Minha Academia</h2>
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm divide-y divide-slate-50 dark:divide-slate-800 transition-colors">
-            <SettingItem 
-              icon={<MapPin className="text-indigo-500" />} 
-              title="Informações da Unidade" 
-              subtitle={academy.name} 
-              onClick={() => {
-                setEditAcademy(academy);
-                setIsEditingAcademy(true);
-              }}
-            />
-            <SettingItem 
-              icon={<UserIcon className="text-blue-500" />} 
-              title="Responsável Técnico" 
-              subtitle={academy.ownerName} 
-              onClick={() => {
-                setEditAcademy(academy);
-                setIsEditingAcademy(true);
-              }}
-            />
-            {academy.address && (
-              <SettingItem 
-                icon={<MapPin className="text-red-500" />} 
-                title="Localização" 
-                subtitle={`${academy.address}${academy.addressNumber ? `, ${academy.addressNumber}` : ''}`} 
-                onClick={() => {
-                  setEditAcademy(academy);
-                  setIsEditingAcademy(true);
-                }}
-              />
-            )}
-            <SettingItem icon={<Shield className="text-green-500" />} title="Usuários Adicionais" subtitle="Gestão de acesso" />
           </div>
         </section>
       )}
@@ -240,28 +350,61 @@ const SettingsView: React.FC<SettingsViewProps> = ({ academy, user, onLogout, th
               </div>
             </div>
             
-            <div className="flex flex-col sm:flex-row gap-2 mt-4">
-              <div className="flex-1 bg-slate-50 dark:bg-slate-800 rounded-2xl px-4 py-3 border border-slate-100 dark:border-slate-700 font-mono text-[10px] text-slate-500 dark:text-slate-400 flex items-center overflow-hidden whitespace-nowrap">
-                {`${window.location.origin}${window.location.pathname}?academyId=${academy.id}`}
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="flex-1 bg-slate-50 dark:bg-slate-800 rounded-2xl px-4 py-3 border border-slate-100 dark:border-slate-700 font-mono text-[10px] text-slate-500 dark:text-slate-400 flex items-center overflow-hidden">
+                  <span className="truncate">{`${window.location.href.split('#')[0]}#/?academyId=${academy.id}`}</span>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button 
+                    onClick={(e) => {
+                      const baseUrl = window.location.href.split('#')[0];
+                      const url = `${baseUrl}#/?academyId=${academy.id}`;
+                      navigator.clipboard.writeText(url);
+                      const btn = e.currentTarget;
+                      const originalText = btn.innerText;
+                      btn.innerText = 'Copiado!';
+                      btn.classList.add('bg-green-600');
+                      setTimeout(() => {
+                        btn.innerText = originalText;
+                        btn.classList.remove('bg-green-600');
+                      }, 2000);
+                    }}
+                    className="bg-slate-800 text-white font-black px-6 py-3 rounded-2xl text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-lg"
+                  >
+                    Copiar
+                  </button>
+                  <a 
+                    href={`https://wa.me/?text=${encodeURIComponent(`Olá! Faça sua matrícula na ${academy.name} através do link: ${window.location.href.split('#')[0]}#/?academyId=${academy.id}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-[#25D366] hover:bg-[#128C7E] text-white font-black px-6 py-3 rounded-2xl text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-green-500/20 flex items-center gap-2"
+                  >
+                    <Smartphone size={14} />
+                    WhatsApp
+                  </a>
+                </div>
               </div>
-              <button 
-                onClick={() => {
-                  const url = `${window.location.origin}${window.location.pathname}?academyId=${academy.id}`;
-                  navigator.clipboard.writeText(url);
-                  alert('Link copiado para a área de transferência!');
-                }}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-indigo-600/20 shrink-0"
-              >
-                Copiar Link
-              </button>
+
+              {window.location.href.includes('-dev-') && (
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-4 rounded-2xl flex items-start gap-3">
+                  <AlertTriangle className="text-amber-500 shrink-0" size={18} />
+                  <div>
+                    <h5 className="text-[10px] font-black text-amber-800 dark:text-amber-400 uppercase">Atenção: Link em modo Edição</h5>
+                    <p className="text-[9px] text-amber-700 dark:text-amber-500 font-bold mt-1 leading-relaxed">
+                      Este link é para seu uso pessoal. Para compartilhar com alunos, clique em <b>"Share"</b> no topo do AI Studio e envie o <b>"Shared App URL"</b> que o Google fornecer, adicionando <code className="bg-amber-100 dark:bg-amber-900/50 px-1 rounded">#/?academyId={academy.id}</code> ao final.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </section>
       )}
 
-      {/* Oculto temporariamente - user.role === 'admin' && (
+      {user.role === 'admin' && (
         <section className="space-y-4">
-          <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-4">Minha Assinatura</h2>
+          <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-4">{t.mySubscription}</h2>
           <div className="bg-indigo-600 rounded-[32px] p-6 text-white shadow-xl shadow-indigo-600/20 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:scale-110 transition-transform">
               <Crown size={80} />
@@ -271,20 +414,34 @@ const SettingsView: React.FC<SettingsViewProps> = ({ academy, user, onLogout, th
                 <div className="bg-white/20 p-2 rounded-xl">
                   <Zap size={20} />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest">Plano Atual: {academy.currentPlan || 'Free (Degustação)'}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">{t.mySubscription}: {academy.currentPlan || 'Free'}</span>
               </div>
-              <h3 className="text-2xl font-black italic uppercase tracking-tighter mb-2">Poder Total no Tatame</h3>
-              <p className="text-xs text-indigo-100 font-medium mb-6 max-w-[200px]">Desbloqueie todos os recursos e escale sua academia profissionalmente.</p>
+              <h3 className="text-2xl font-black italic uppercase tracking-tighter mb-2 italic">Power on Mat</h3>
+              <p className="text-xs text-indigo-100 font-medium mb-6 max-w-[200px]">Unlock all features and scale your academy professionally.</p>
               <button 
                 onClick={() => setIsEditingPlans(true)}
                 className="bg-white text-indigo-600 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95"
               >
-                Ver Planos Disponíveis
+                {t.viewPlans}
               </button>
             </div>
           </div>
         </section>
-      )*/}
+      )}
+
+      {user.role === 'admin' && (
+        <section className="space-y-4">
+          <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-4">Recrutamento & Planos</h2>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm divide-y divide-slate-50 dark:divide-slate-800 transition-colors">
+            <SettingItem 
+              icon={<Book className="text-orange-500" />} 
+              title="Planos de Aula" 
+              subtitle={`${(editAcademy.plans || []).length} planos configurados`} 
+              onClick={() => setIsManagingAcademyPlans(true)}
+            />
+          </div>
+        </section>
+      )}
 
       {user.role === 'admin' && (
         <section className="space-y-4">
@@ -337,6 +494,252 @@ const SettingsView: React.FC<SettingsViewProps> = ({ academy, user, onLogout, th
             </div>
           </div>
         </section>
+      )}
+
+      {/* Modal de Notificações Automáticas */}
+      {isEditingNotifications && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[32px] p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-black text-slate-800 dark:text-white tracking-tight uppercase italic flex items-center gap-2">
+                <Bell className="text-amber-500" />
+                Notificações
+              </h2>
+              <button onClick={() => setIsEditingNotifications(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <X size={24} />
+              </button>
+            </div>
+            
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6 leading-relaxed">
+              Defina os gatilhos para as notificações automáticas da academia <span className="text-indigo-600">{academy.name}</span>.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Limite de Faltas (Alerta)</label>
+                <input 
+                  type="number" 
+                  min="1"
+                  value={editAcademy.absenceLimit || 3}
+                  onChange={(e) => setEditAcademy({ ...editAcademy, absenceLimit: parseInt(e.target.value) || 0 })}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                  placeholder="Ex: 3"
+                />
+                <p className="text-[9px] text-slate-400 mt-1 ml-1 italic">Define quando o sistema sinaliza risco de evasão do aluno.</p>
+              </div>
+              {user.role === 'admin' && (
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Aviso de Mensalidade (Dias)</label>
+                  <input 
+                    type="number" 
+                    min="1"
+                    value={editAcademy.paymentWarningDays || 5}
+                    onChange={(e) => setEditAcademy({ ...editAcademy, paymentWarningDays: parseInt(e.target.value) || 0 })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                    placeholder="Ex: 5"
+                  />
+                  <p className="text-[9px] text-slate-400 mt-1 ml-1 italic">Dias de antecedência para alertar sobre o vencimento da mensalidade.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2 mt-8">
+              <button 
+                onClick={handleSaveAcademy}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-600/20 active:scale-95 transition-all text-sm uppercase tracking-widest"
+              >
+                Salvar Configurações
+              </button>
+              <button 
+                onClick={() => setIsEditingNotifications(false)}
+                className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-4 rounded-2xl active:scale-95 transition-all text-sm"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Gestão de Planos da Academia */}
+      {isManagingAcademyPlans && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[32px] p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-xl font-black text-slate-800 dark:text-white tracking-tight uppercase italic flex items-center gap-2">
+                  <Book className="text-orange-500" />
+                  Planos da Academia
+                </h2>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Configure as opções de mensalidade para seus alunos</p>
+              </div>
+              <button onClick={() => setIsManagingAcademyPlans(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <button 
+                onClick={() => {
+                  setEditingPlan({
+                    name: '',
+                    durationMonths: 1,
+                    classesPerWeek: 3,
+                    price: 0,
+                    category: 'Adultos'
+                  });
+                  setIsAddingAcademyPlan(true);
+                }}
+                className="w-full bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-black py-4 rounded-2xl border-2 border-dashed border-indigo-200 dark:border-indigo-800 flex items-center justify-center gap-2 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-all"
+              >
+                <Plus size={20} /> Adicionar Novo Plano
+              </button>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {(editAcademy.plans || []).map(plan => (
+                  <div key={plan.id} className="bg-slate-50 dark:bg-slate-800 p-5 rounded-3xl border border-slate-100 dark:border-slate-700 space-y-3 relative group">
+                    <div className="flex justify-between items-start">
+                      <span className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-tight italic">
+                        {plan.category}
+                      </span>
+                      <button 
+                        onClick={() => deletePlan(plan.id)}
+                        className="text-slate-300 hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                    <div>
+                      <h4 className="font-black text-slate-800 dark:text-white text-base leading-tight uppercase italic">{plan.name}</h4>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                        {plan.durationMonths} {plan.durationMonths === 1 ? 'Mês' : 'Meses'} • {plan.classesPerWeek}x p/ Semana
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="text-xl font-black text-indigo-600 dark:text-indigo-400 italic">R$ {plan.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                      <button 
+                        onClick={() => {
+                          setEditingPlan(plan);
+                          setIsAddingAcademyPlan(true);
+                        }}
+                        className="bg-white dark:bg-slate-700 p-2 rounded-xl text-slate-400 hover:text-indigo-600 shadow-sm border border-slate-100 dark:border-slate-600"
+                      >
+                        <Save size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {(editAcademy.plans || []).length === 0 && !isAddingAcademyPlan && (
+                <div className="text-center py-10">
+                  <div className="bg-slate-50 dark:bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Book size={32} className="text-slate-300" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-400 uppercase tracking-widest italic">Nenhum plano cadastrado</p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-8">
+              <button 
+                onClick={() => setIsManagingAcademyPlans(false)}
+                className="w-full bg-slate-900 dark:bg-slate-800 text-white font-black py-4 rounded-2xl active:scale-95 transition-all text-sm uppercase tracking-widest italic"
+              >
+                Voltar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Adição/Edição de Plano Específico */}
+      {isAddingAcademyPlan && editingPlan && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[300] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[32px] p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800">
+            <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase italic mb-6">
+              {editingPlan.id ? 'Editar Plano' : 'Novo Plano'}
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Nome do Plano</label>
+                <input 
+                  type="text" 
+                  value={editingPlan.name}
+                  onChange={(e) => setEditingPlan({ ...editingPlan, name: e.target.value })}
+                  placeholder="Ex: Semestral Master"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 font-mono">Duração (Meses)</label>
+                  <input 
+                    type="number" 
+                    value={editingPlan.durationMonths}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, durationMonths: parseInt(e.target.value) || 1 })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Aulas p/ Semana</label>
+                  <input 
+                    type="number" 
+                    value={editingPlan.classesPerWeek}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, classesPerWeek: parseInt(e.target.value) || 3 })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Valor (R$)</label>
+                  <input 
+                    type="number" 
+                    value={editingPlan.price}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, price: parseFloat(e.target.value) || 0 })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Categoria</label>
+                  <select 
+                    value={editingPlan.category}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, category: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all appearance-none"
+                  >
+                    <option value="Adultos">Adultos</option>
+                    <option value="Crianças">Crianças</option>
+                    <option value="Adolescentes">Adolescentes</option>
+                    <option value="Feminino">Feminino</option>
+                    <option value="Outros">Outros</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 mt-8">
+              <button 
+                onClick={savePlan}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-600/20 transition-all active:scale-95 text-sm uppercase tracking-widest italic"
+              >
+                Salvar Plano
+              </button>
+              <button 
+                onClick={() => {
+                  setIsAddingAcademyPlan(false);
+                  setEditingPlan(null);
+                }}
+                className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-4 rounded-2xl active:scale-95 transition-all text-sm uppercase tracking-widest"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal de Edição da Academia */}
@@ -442,28 +845,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ academy, user, onLogout, th
                   onChange={(e) => setEditAcademy({ ...editAcademy, phone: maskPhone(e.target.value) })}
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
                   placeholder="(00) 0.0000-0000"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Limite de Faltas (Alerta)</label>
-                <input 
-                  type="number" 
-                  min="1"
-                  value={editAcademy.absenceLimit || 3}
-                  onChange={(e) => setEditAcademy({ ...editAcademy, absenceLimit: parseInt(e.target.value) || 0 })}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                  placeholder="Ex: 3"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Aviso de Mensalidade (Dias)</label>
-                <input 
-                  type="number" 
-                  min="1"
-                  value={editAcademy.paymentWarningDays || 5}
-                  onChange={(e) => setEditAcademy({ ...editAcademy, paymentWarningDays: parseInt(e.target.value) || 0 })}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                  placeholder="Ex: 5"
                 />
               </div>
             </div>
@@ -778,47 +1159,26 @@ const SettingsView: React.FC<SettingsViewProps> = ({ academy, user, onLogout, th
       )}
 
       {/* Preferências do Sistema */}
-      <section className="space-y-4">
-        <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-4">Preferências do Sistema</h2>
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm divide-y divide-slate-50 dark:divide-slate-800 transition-colors">
-          <button 
-            onClick={onToggleTheme}
-            className="w-full flex items-center justify-between p-5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all text-left group"
-          >
-            <div className="flex items-center gap-4">
-              <div className="bg-slate-100 dark:bg-slate-800 w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110">
-                {theme === 'dark' ? <Moon className="text-indigo-400" /> : <Sun className="text-amber-500" />}
-              </div>
-              <div>
-                <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Modo Escuro</h4>
-                <p className="text-xs text-slate-400 dark:text-slate-500">{theme === 'dark' ? 'Ativado' : 'Desativado'}</p>
-              </div>
-            </div>
-            <div className={`w-12 h-6 rounded-full p-1 transition-colors ${theme === 'dark' ? 'bg-indigo-600' : 'bg-slate-300'}`}>
-              <div className={`bg-white w-4 h-4 rounded-full transition-transform ${theme === 'dark' ? 'translate-x-6' : 'translate-x-0'}`} />
-            </div>
-          </button>
-          
-          {user.role !== 'student' && (
+      {user.role !== 'student' && (
+        <section className="space-y-4">
+          <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-4">Preferências do Sistema</h2>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm divide-y divide-slate-50 dark:divide-slate-800 transition-colors">
             <SettingItem 
               icon={<Bell className="text-amber-500" />} 
               title="Notificações Automáticas" 
-              subtitle={`${academy.absenceLimit || 3} Faltas / Aviso de Mensalidade: ${academy.paymentWarningDays || 5} Dias`} 
+              subtitle={user.role === 'admin' 
+                ? `${academy.absenceLimit || 3} Faltas / Aviso de Mensalidade: ${academy.paymentWarningDays || 5} Dias`
+                : `${academy.absenceLimit || 3} Faltas`
+              } 
               onClick={() => {
                 setEditAcademy(academy);
-                setIsEditingAcademy(true);
+                setIsEditingNotifications(true);
               }}
             />
-          )}
+          </div>
+        </section>
+      )}
 
-          <SettingItem 
-            icon={<Palette className="text-pink-500" />} 
-            title="Visual & Tema" 
-            subtitle="Personalize as cores do sistema" 
-            onClick={() => setIsEditingVisual(true)}
-          />
-        </div>
-      </section>
 
       {user.role !== 'student' && (
         <section className="space-y-4">
@@ -846,43 +1206,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({ academy, user, onLogout, th
             </div>
           </div>
         </section>
-      )}
-
-      {/* Modal Visual */}
-      {isEditingVisual && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800">
-            <h2 className="text-xl font-black text-slate-800 dark:text-white tracking-tight uppercase italic mb-6">Personalizar Visual</h2>
-            <div className="space-y-6">
-              <div>
-                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">Cor de Destaque</p>
-                <div className="grid grid-cols-4 gap-3">
-                  {[
-                    { id: 'indigo', color: 'bg-indigo-600' },
-                    { id: 'blue', color: 'bg-blue-600' },
-                    { id: 'emerald', color: 'bg-emerald-600' },
-                    { id: 'rose', color: 'bg-rose-600' }
-                  ].map(c => (
-                    <button 
-                      key={c.id}
-                      onClick={() => handleSaveVisual(c.id)}
-                      className={`h-12 rounded-2xl ${c.color} flex items-center justify-center text-white transition-all transform hover:scale-110 ${accentColor === c.id ? 'ring-4 ring-offset-4 ring-slate-200 dark:ring-slate-700' : ''}`}
-                    >
-                      {accentColor === c.id && <CheckCircle2 size={24} />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <p className="text-[10px] text-slate-400 font-medium italic">Ao trocar a cor, o sistema será reiniciado para aplicar as novas configurações visuais.</p>
-              <button 
-                onClick={() => setIsEditingVisual(false)}
-                className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-4 rounded-2xl active:scale-95 transition-all text-sm uppercase tracking-widest"
-              >
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
       )}
 
       {/* Modal Planos */}

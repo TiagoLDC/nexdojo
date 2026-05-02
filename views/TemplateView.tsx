@@ -42,12 +42,15 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
   const [duration, setDuration] = useState(60);
   const [absenceLimit, setAbsenceLimit] = useState<number | undefined>(undefined);
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
+  const [schedules, setSchedules] = useState<{ dayOfWeek: number; startTime: string; endTime: string }[]>([]);
   
   const [search, setSearch] = useState('');
   const [notificationMsg, setNotificationMsg] = useState('');
   
   // Sistema de Notificações
   const [toast, setToast] = useState<{message: string, type: 'success' | 'delete'} | null>(null);
+
+  const DAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
   useEffect(() => {
     if (academy) {
@@ -80,6 +83,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
     setDuration(60);
     setAbsenceLimit(undefined);
     setSelectedStudents(new Set());
+    setSchedules([]);
     setIsModalOpen(true);
   };
 
@@ -89,6 +93,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
     setDuration(template.durationMinutes);
     setAbsenceLimit(template.absenceLimit);
     setSelectedStudents(new Set(template.assignedStudentIds));
+    setSchedules(template.schedules || []);
     setIsModalOpen(true);
   };
 
@@ -98,11 +103,43 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
     setIsRenameModalOpen(true);
   };
 
+  const addSchedule = () => {
+    // Calcula o término padrão com base na duração atual
+    const start = '19:00';
+    const [h, m] = start.split(':').map(Number);
+    const date = new Date();
+    date.setHours(h, m + duration, 0);
+    const endTime = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    
+    setSchedules([...schedules, { dayOfWeek: 1, startTime: start, endTime }]);
+  };
+
+  const removeSchedule = (index: number) => {
+    setSchedules(schedules.filter((_, i) => i !== index));
+  };
+
+  const updateSchedule = (index: number, field: 'dayOfWeek' | 'startTime' | 'endTime', value: any) => {
+    const next = [...schedules];
+    next[index] = { ...next[index], [field]: value };
+    
+    // Sincroniza a duração se mudar o horário de início ou término do primeiro item (opcional, para conveniência)
+    if (field === 'startTime' || field === 'endTime') {
+      const [sh, sm] = next[index].startTime.split(':').map(Number);
+      const [eh, em] = next[index].endTime.split(':').map(Number);
+      const diff = (eh * 60 + em) - (sh * 60 + sm);
+      if (diff > 0) {
+        setDuration(diff);
+      }
+    }
+    
+    setSchedules(next);
+  };
+
   const handleSave = () => {
     if (editingTemplateId) {
       const updated = templates.map(t => 
         t.id === editingTemplateId 
-          ? { ...t, name, durationMinutes: duration, assignedStudentIds: Array.from(selectedStudents), absenceLimit }
+          ? { ...t, name, durationMinutes: duration, assignedStudentIds: Array.from(selectedStudents), absenceLimit, schedules }
           : t
       );
       setTemplates(updated);
@@ -115,7 +152,8 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
         name,
         durationMinutes: duration,
         assignedStudentIds: Array.from(selectedStudents),
-        absenceLimit
+        absenceLimit,
+        schedules
       };
       const updated = [...templates, newTemplate];
       setTemplates(updated);
@@ -222,7 +260,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                       <Type size={14} />
                     </button>
                   </h3>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
                     <span className="flex items-center gap-1 text-xs font-bold text-slate-400">
                       <Clock size={14} /> {t.durationMinutes} min
                     </span>
@@ -230,6 +268,23 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                     <span className="text-xs font-bold text-slate-400">
                       {t.assignedStudentIds.length} Atletas
                     </span>
+                    {t.schedules && t.schedules.length > 0 && (
+                      <>
+                        <span className="w-1 h-1 bg-slate-200 rounded-full" />
+                        <div className="flex flex-wrap gap-1">
+                          {t.schedules.slice(0, 3).map((s, idx) => (
+                            <span key={idx} className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md font-black italic">
+                              {DAYS[s.dayOfWeek]} {s.startTime} - {s.endTime}
+                            </span>
+                          ))}
+                          {t.schedules.length > 3 && (
+                            <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md font-black italic">
+                              +{t.schedules.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -355,6 +410,65 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
               </div>
 
               <div>
+                <div className="flex items-center justify-between mb-4">
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest">Horários de Aula</label>
+                  <button 
+                    onClick={addSchedule}
+                    className="flex items-center gap-1.5 text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl hover:bg-indigo-100 transition-colors uppercase italic"
+                  >
+                    <Plus size={14} /> Adicionar Horário
+                  </button>
+                </div>
+                
+                <div className="space-y-3">
+                  {schedules.map((schedule, idx) => (
+                    <div key={idx} className="flex flex-wrap md:flex-nowrap items-center gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100 animate-in slide-in-from-left duration-200">
+                      <div className="flex-1 min-w-[120px]">
+                        <select 
+                          value={schedule.dayOfWeek}
+                          onChange={(e) => updateSchedule(idx, 'dayOfWeek', parseInt(e.target.value))}
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
+                        >
+                          {DAYS.map((day, dIdx) => (
+                            <option key={dIdx} value={dIdx}>{day}</option>
+                          ))}
+                        </select>
+                      </div>
+                    <div className="w-full md:w-32">
+                      <label className="text-[8px] font-black text-slate-400 uppercase ml-1">Início <span className="text-red-500">*</span></label>
+                      <input 
+                        type="time" 
+                        value={schedule.startTime}
+                        onChange={(e) => updateSchedule(idx, 'startTime', e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
+                      />
+                    </div>
+                    <div className="w-full md:w-32">
+                      <label className="text-[8px] font-black text-slate-400 uppercase ml-1">Término <span className="text-red-500">*</span></label>
+                      <input 
+                        type="time" 
+                        value={schedule.endTime}
+                        onChange={(e) => updateSchedule(idx, 'endTime', e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
+                      />
+                    </div>
+                      <button 
+                        onClick={() => removeSchedule(idx)}
+                        className="p-2.5 text-slate-300 hover:text-red-500 bg-white border border-slate-200 rounded-xl hover:bg-red-50 transition-all ml-auto"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  {schedules.length === 0 && (
+                    <div className="text-center py-6 bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-100">
+                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest italic">Nenhum horário definido</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 block">
                   Vincular Atletas ({selectedStudents.size})
                 </label>
@@ -369,7 +483,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-64 md:max-h-96 overflow-y-auto pr-1 custom-scrollbar">
                   {filteredStudents.map(s => (
                     <button
                       key={s.id}
@@ -420,14 +534,16 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
               </div>
             </div>
 
-            <button 
-              onClick={handleSave}
-              disabled={!name}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-6 rounded-3xl shadow-2xl shadow-indigo-600/30 transition-all mt-8 shrink-0 disabled:opacity-50 active:scale-95 flex items-center justify-center gap-3"
-            >
-              <SaveIcon size={20} />
-              Salvar Turma
-            </button>
+            <div className="pt-4 pb-10 md:pb-2">
+              <button 
+                onClick={handleSave}
+                disabled={!name}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-6 rounded-3xl shadow-2xl shadow-indigo-600/30 transition-all shrink-0 disabled:opacity-50 active:scale-95 flex items-center justify-center gap-3"
+              >
+                <SaveIcon size={20} />
+                Salvar Turma
+              </button>
+            </div>
           </div>
         </div>
       )}

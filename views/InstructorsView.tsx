@@ -417,7 +417,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-slate-800">Ficha do Professor</h2>
-                  <p className="text-xs text-slate-400 font-medium">Informações detalhadas do mestre</p>
+                  <p className="text-xs text-slate-400 font-medium">Preencha os campos obrigatórios (*)</p>
                 </div>
               </div>
               <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 p-2 hover:bg-slate-100 rounded-full">
@@ -425,7 +425,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
               </button>
             </div>
 
-            <div className="space-y-10 pb-10">
+            <div className="space-y-10 pb-32">
               {/* Seção 1: Dados Pessoais */}
               <div className="space-y-4">
                 <h3 className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
@@ -455,11 +455,11 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                   
                   <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Nome Completo *</label>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Nome Completo <span className="text-red-500">*</span></label>
                       <input type="text" value={editingInstructor.name} onChange={(e) => setEditingInstructor({...editingInstructor, name: e.target.value})} placeholder="Ex: Professor Hélio Gracie" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-medium" />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Data de Nascimento *</label>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Data de Nascimento <span className="text-red-500">*</span></label>
                       <input type="date" value={editingInstructor.birthDate} onChange={(e) => setEditingInstructor({...editingInstructor, birthDate: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-slate-800 text-lg" />
                     </div>
                     <div>
@@ -578,14 +578,17 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                   <div className="space-y-6">
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase ml-1 mb-2">Graus na Faixa Atual</label>
-                      <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
-                        <button onClick={() => setEditingInstructor({...editingInstructor, stripes: Math.max(0, (editingInstructor.stripes || 0) - 1)})}><Minus size={18} /></button>
-                        <div className="flex gap-1.5">
+                      <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${BELT_COLORS[editingInstructor.belt || Belt.WHITE]}`}>
+                        <button type="button" onClick={() => setEditingInstructor({...editingInstructor, stripes: Math.max(0, (editingInstructor.stripes || 0) - 1)})} className="text-white/50 hover:scale-125 transition-all outline-none md:p-2"><Minus size={20} /></button>
+                        <div className={`flex gap-1.5 p-1 rounded-md px-3 bg-opacity-90 ${editingInstructor.belt === Belt.BLACK ? 'bg-red-600' : 'bg-zinc-900 shadow-lg'}`}>
                           {[...Array(editingInstructor.belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
-                            <div key={i} className={`w-3.5 h-3.5 rounded-full transition-all ${i < (editingInstructor.stripes || 0) ? 'bg-indigo-600' : 'bg-slate-200'}`} />
+                            <div 
+                              key={i} 
+                              className={`w-2.5 h-7 rounded-sm transition-all ${i < (editingInstructor.stripes || 0) ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-y-110' : 'bg-white/10'}`} 
+                            />
                           ))}
                         </div>
-                        <button onClick={() => setEditingInstructor({...editingInstructor, stripes: Math.min(editingInstructor.belt === Belt.BLACK ? 6 : 4, (editingInstructor.stripes || 0) + 1)})}><Plus size={18} /></button>
+                        <button type="button" onClick={() => setEditingInstructor({...editingInstructor, stripes: Math.min(editingInstructor.belt === Belt.BLACK ? 6 : 4, (editingInstructor.stripes || 0) + 1)})} className="text-white/50 hover:scale-125 transition-all outline-none md:p-2"><Plus size={20} /></button>
                       </div>
                       <p className="text-[9px] text-slate-400 mt-1 ml-1 font-medium">
                         {editingInstructor.belt === Belt.BLACK ? 'Faixa preta possui até 6 graus.' : 'Faixas coloridas possuem até 4 graus.'}
@@ -670,10 +673,10 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
               </div>
 
               {/* Botões de Ação */}
-              <div className="flex gap-3 pt-6 border-t border-slate-100 sticky bottom-0 bg-white z-10">
+              <div className="flex gap-3 pt-6 pb-12 md:pb-2 border-t border-slate-100 sticky -bottom-1 bg-white z-10 mt-auto">
                 <button 
                   onClick={() => setIsDeleteModalOpen(true)}
-                  className="flex-1 bg-white hover:bg-red-50 text-red-500 font-bold py-4 rounded-2xl transition-all border border-slate-200"
+                  className="flex-1 bg-white hover:bg-red-50 text-red-500 font-bold py-4 rounded-2xl transition-all border border-slate-200 shadow-sm"
                 >
                   <Trash2 size={20} className="inline mr-2" /> Excluir
                 </button>
@@ -681,7 +684,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                   onClick={handleSaveInstructor}
                   className="flex-[2] bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl shadow-xl transition-all"
                 >
-                  <Save size={20} className="inline mr-2" /> Salvar Ficha Completa
+                  <Save size={20} className="inline mr-2" /> Salvar Ficha
                 </button>
               </div>
             </div>

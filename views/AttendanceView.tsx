@@ -42,17 +42,19 @@ const calculateAge = (birthDate: string) => {
 };
 
 const getGraduationMilestone = (student: Student) => {
-  const age = calculateAge(student.birthDate);
-  if (age < 16) return null;
-
   const nextTotal = student.totalClasses + 1;
   
   if (student.belt === Belt.WHITE) {
-    if (nextTotal === 80) return "Elegível para Faixa Azul!";
-    if (nextTotal % 20 === 0) return `Marco atingido: ${nextTotal / 20}º Grau!`;
+    if (nextTotal === 80) return "Elegível para Nova Faixa!";
+    if (nextTotal % 20 === 0 && student.stripes < 4) return `Marco atingido: ${nextTotal / 20}º Grau!`;
+  } else if ([Belt.GREY, Belt.YELLOW, Belt.ORANGE, Belt.GREEN].includes(student.belt)) {
+    if (nextTotal === 100) return "Elegível para Nova Faixa!";
+    if (nextTotal % 25 === 0 && student.stripes < 4) return `Marco atingido: ${nextTotal / 25}º Grau!`;
   } else if ([Belt.BLUE, Belt.PURPLE, Belt.BROWN].includes(student.belt)) {
     if (nextTotal === 160) return "Elegível para Troca de Faixa!";
-    if (nextTotal % 40 === 0) return `Marco atingido: ${nextTotal / 40}º Grau!`;
+    if (nextTotal % 40 === 0 && student.stripes < 4) return `Marco atingido: ${nextTotal / 40}º Grau!`;
+  } else if (student.belt === Belt.BLACK) {
+    if (nextTotal % 300 === 0 && student.stripes < 6) return `Marco atingido: ${nextTotal / 300}º Grau!`;
   }
   return null;
 };
@@ -154,10 +156,18 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
           const html5QrCode = new Html5Qrcode("qr-reader");
           html5QrCodeRef.current = html5QrCode;
 
+          const qrBoxFunction = (viewfinderWidth: number, viewfinderHeight: number) => {
+            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+            const qrboxSize = Math.floor(minEdge * 0.7);
+            return {
+              width: qrboxSize,
+              height: qrboxSize
+            };
+          };
+
           const config = { 
             fps: 15,
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0,
+            qrbox: qrBoxFunction,
             disableFlip: false
           };
 
@@ -949,13 +959,13 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
             
             <div className="flex-1 bg-black flex items-center justify-center relative overflow-hidden">
               {/* O div do scanner deve permanecer montado para que a câmera não feche */}
-              <div id="qr-reader" className="w-full h-full"></div>
+              <div id="qr-reader" className="w-full h-full [&>video]:object-cover"></div>
               
-              <div className="absolute border-4 border-white/20 w-64 h-64 md:w-72 md:h-72 rounded-[50px] md:rounded-[60px] pointer-events-none z-10">
-                <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-indigo-500 -mt-1 -ml-1 rounded-tl-[20px]" />
-                <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-indigo-500 -mt-1 -mr-1 rounded-tr-[20px]" />
-                <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-indigo-500 -mb-1 -ml-1 rounded-bl-[20px]" />
-                <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-indigo-500 -mb-1 -mr-1 rounded-br-[20px]" />
+              <div className="absolute border-4 border-white/20 w-[60%] aspect-square max-w-[280px] rounded-[40px] md:rounded-[60px] pointer-events-none z-10 transition-all">
+                <div className="absolute top-0 left-0 w-10 h-10 border-t-4 border-l-4 border-indigo-500 -mt-1 -ml-1 rounded-tl-[15px]" />
+                <div className="absolute top-0 right-0 w-10 h-10 border-t-4 border-r-4 border-indigo-500 -mt-1 -mr-1 rounded-tr-[15px]" />
+                <div className="absolute bottom-0 left-0 w-10 h-10 border-b-4 border-l-4 border-indigo-500 -mb-1 -ml-1 rounded-bl-[15px]" />
+                <div className="absolute bottom-0 right-0 w-10 h-10 border-b-4 border-r-4 border-indigo-500 -mb-1 -mr-1 rounded-br-[15px]" />
               </div>
 
               {/* Feedback de scan: agora é um card elegante sobre a câmera ativa */}

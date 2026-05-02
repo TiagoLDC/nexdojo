@@ -4,37 +4,22 @@ import { Student, Belt, Academy, User, ClassSession, ClassTemplate, AttendanceRe
 export const MOCK_ACADEMY: Academy = {
   id: 'mock_acad_1',
   name: 'NexDojo',
-  logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTcDiOKOZSy0MCLzV0wFkySbFY3Y-f-S5dpNw&s',
+  logo: 'https://images.unsplash.com/photo-1552072092-7f9b8d63efcb?q=80&w=400&h=400&auto=format&fit=crop',
   ownerName: 'Prof. Carlos Gracie Jr.',
   email: 'admin@oss.com',
   cep: '',
   address: '',
   addressNumber: '',
-  phone: ''
+  phone: '',
+  plans: [
+    { id: 'ap1', name: 'Mensal Adulto', durationMonths: 1, classesPerWeek: 3, price: 150, category: 'Adultos' },
+    { id: 'ap2', name: 'Semestral Elite', durationMonths: 6, classesPerWeek: 5, price: 800, category: 'Adultos' },
+    { id: 'ap3', name: 'Plano Kids', durationMonths: 1, classesPerWeek: 2, price: 120, category: 'Crianças' }
+  ]
 };
 
 export const MOCK_ACADEMIES: Academy[] = [
-  MOCK_ACADEMY,
-  {
-    id: 'mock_acad_2',
-    name: 'SAIKO',
-    logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTcDiOKOZSy0MCLzV0wFkySbFY3Y-f-S5dpNw&s',
-    ownerName: 'Leo Vieira',
-    email: 'saiko@oss.com',
-    cep: '04543-011',
-    address: 'Rua Olimpíadas, Vila Olímpia, São Paulo - SP',
-    addressNumber: '200'
-  },
-  {
-    id: 'mock_acad_3',
-    name: 'CHECKMAT',
-    logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcThl9F99l477l7S9Zl9Xl9Xl9Xl9Xl9Xl9Xl9Xl9Xl9&s', // Placeholder
-    ownerName: 'Leo Vieira',
-    email: 'checkmat@oss.com',
-    cep: '04543-011',
-    address: 'Rua Olimpíadas, Vila Olímpia, São Paulo - SP',
-    addressNumber: '200'
-  }
+  MOCK_ACADEMY
 ];
 
 export const MOCK_USER: User = {
@@ -88,10 +73,10 @@ export const MOCK_SUPERUSER: User = {
 };
 
 export const MOCK_STUDENTS: Student[] = [
-  { id: 's1', academyId: 'mock_acad_1', name: 'Carlos Oliveira', email: 'aluno@oss.com', belt: Belt.WHITE, stripes: 2, lastGraduationDate: '2024-01-10', birthDate: '1995-04-12', totalClasses: 45, totalHours: 67.5, absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: '2023-10-01', phone: '11988887777', photo: 'https://picsum.photos/seed/s1/400/400' },
-  { id: 's2', academyId: 'mock_acad_1', name: 'Juliana Santos', belt: Belt.BLUE, stripes: 1, lastGraduationDate: '2023-11-20', birthDate: '1998-08-22', totalClasses: 120, totalHours: 180, absentCount: 4, status: 'Active', hasLoanedKimono: true, joinDate: '2022-05-15', phone: '11977776666', photo: 'https://picsum.photos/seed/s2/400/400' },
-  { id: 's3', academyId: 'mock_acad_1', name: 'Marcos Pereira', belt: Belt.PURPLE, stripes: 3, lastGraduationDate: '2023-06-15', birthDate: '1990-01-30', totalClasses: 350, totalHours: 525, absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: '2020-02-10', phone: '11966665555', photo: 'https://picsum.photos/seed/s3/400/400' },
-  { id: 's4', academyId: 'mock_acad_1', name: 'Arthur Silva', belt: Belt.GREY, stripes: 3, lastGraduationDate: '2024-03-05', birthDate: '2016-05-10', totalClasses: 30, totalHours: 30, absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: '2023-12-01', guardianPhone: '11955554444', photo: 'https://picsum.photos/seed/s4/400/400' },
+  { id: 's1', academyId: 'mock_acad_1', name: 'Carlos Oliveira', email: 'aluno@oss.com', belt: Belt.WHITE, stripes: 2, lastGraduationDate: '2024-01-10', birthDate: '1995-04-12', totalClasses: 45, totalHours: 67.5, absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: '2023-10-01', phone: '11988887777', photo: 'https://picsum.photos/seed/s1/400/400', planId: 'ap1' },
+  { id: 's2', academyId: 'mock_acad_1', name: 'Juliana Santos', belt: Belt.BLUE, stripes: 1, lastGraduationDate: '2023-11-20', birthDate: '1998-08-22', totalClasses: 120, totalHours: 180, absentCount: 4, status: 'Active', hasLoanedKimono: true, joinDate: '2022-05-15', phone: '11977776666', photo: 'https://picsum.photos/seed/s2/400/400', planId: 'ap2' },
+  { id: 's3', academyId: 'mock_acad_1', name: 'Marcos Pereira', belt: Belt.PURPLE, stripes: 3, lastGraduationDate: '2023-06-15', birthDate: '1990-01-30', totalClasses: 350, totalHours: 525, absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: '2020-02-10', phone: '11966665555', photo: 'https://picsum.photos/seed/s3/400/400', planId: 'ap2' },
+  { id: 's4', academyId: 'mock_acad_1', name: 'Arthur Silva', belt: Belt.GREY, stripes: 3, lastGraduationDate: '2024-03-05', birthDate: '2016-05-10', totalClasses: 30, totalHours: 30, absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: '2023-12-01', guardianPhone: '11955554444', photo: 'https://picsum.photos/seed/s4/400/400', planId: 'ap3' },
   { id: 's5', academyId: 'mock_acad_1', name: 'Mariana Costa', belt: Belt.YELLOW, stripes: 1, lastGraduationDate: '2024-02-12', birthDate: '2014-02-20', totalClasses: 80, totalHours: 80, absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: '2023-01-15', guardianPhone: '11944443333', photo: 'https://picsum.photos/seed/s5/400/400' },
   { id: 's6', academyId: 'mock_acad_1', name: 'Ricardo Mendes', belt: Belt.BROWN, stripes: 0, lastGraduationDate: '2022-08-25', birthDate: '1988-11-05', totalClasses: 500, totalHours: 750, absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: '2018-03-20', phone: '11933332222', photo: 'https://picsum.photos/seed/s6/400/400' },
   { id: 's7', academyId: 'mock_acad_1', name: 'Beatriz Lima', belt: Belt.BLACK, stripes: 1, lastGraduationDate: '2021-12-01', birthDate: '1985-07-14', totalClasses: 1200, totalHours: 1800, absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: '2010-01-10', phone: '11922221111', photo: 'https://picsum.photos/seed/s7/400/400' },
@@ -101,10 +86,10 @@ export const MOCK_STUDENTS: Student[] = [
 ];
 
 export const MOCK_TEMPLATES: ClassTemplate[] = [
-  { id: 't1', academyId: 'mock_acad_1', name: 'Kids 5-9 anos (Seg/Qua)', durationMinutes: 60, assignedStudentIds: ['s4', 's5'] },
-  { id: 't2', academyId: 'mock_acad_1', name: 'Kids 10-15 anos (Ter/Qui)', durationMinutes: 60, assignedStudentIds: ['s8', 's9'] },
-  { id: 't3', academyId: 'mock_acad_1', name: 'Adulto Iniciante (Noite)', durationMinutes: 90, assignedStudentIds: ['s1', 's10', 's2'] },
-  { id: 't4', academyId: 'mock_acad_1', name: 'Adulto Avançado / Competição', durationMinutes: 120, assignedStudentIds: ['s3', 's6', 's7'] }
+  { id: 't1', academyId: 'mock_acad_1', name: 'Kids 5-9 anos', durationMinutes: 60, assignedStudentIds: ['s4', 's5'], schedules: [{ dayOfWeek: 1, startTime: '18:00', endTime: '19:00' }, { dayOfWeek: 3, startTime: '18:00', endTime: '19:00' }] },
+  { id: 't2', academyId: 'mock_acad_1', name: 'Kids 10-15 anos', durationMinutes: 60, assignedStudentIds: ['s8', 's9'], schedules: [{ dayOfWeek: 2, startTime: '18:00', endTime: '19:00' }, { dayOfWeek: 4, startTime: '18:00', endTime: '19:00' }] },
+  { id: 't3', academyId: 'mock_acad_1', name: 'Adulto Iniciante', durationMinutes: 90, assignedStudentIds: ['s1', 's10', 's2'], schedules: [{ dayOfWeek: 1, startTime: '19:30', endTime: '21:00' }, { dayOfWeek: 3, startTime: '19:30', endTime: '21:00' }, { dayOfWeek: 5, startTime: '19:00', endTime: '20:30' }] },
+  { id: 't4', academyId: 'mock_acad_1', name: 'Adulto Avançado', durationMinutes: 120, assignedStudentIds: ['s3', 's6', 's7'], schedules: [{ dayOfWeek: 2, startTime: '19:30', endTime: '21:30' }, { dayOfWeek: 4, startTime: '19:30', endTime: '21:30' }, { dayOfWeek: 6, startTime: '10:00', endTime: '12:00' }] }
 ];
 
 const today = new Date().toISOString().split('T')[0];

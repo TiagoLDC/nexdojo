@@ -31,6 +31,19 @@ const ChatView: React.FC<ChatViewProps> = ({ academy, user }) => {
     scrollToBottom();
   }, [messages]);
 
+  // Rolar para o fim quando o viewport mudar (teclado mobile abrindo)
+  useEffect(() => {
+    const handleResize = () => {
+      scrollToBottom();
+    };
+    window.visualViewport?.addEventListener('resize', handleResize);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleResize);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -61,26 +74,26 @@ const ChatView: React.FC<ChatViewProps> = ({ academy, user }) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto h-[calc(100vh-160px)] flex flex-col bg-white dark:bg-slate-900 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
+    <div className="max-w-4xl mx-auto flex-1 h-full min-h-0 flex flex-col bg-white dark:bg-slate-900 md:rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
       {/* Header do Chat */}
-      <header className="p-6 border-b border-slate-50 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-10 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="bg-indigo-600 p-3 rounded-2xl text-white">
-            <MessageSquare size={24} />
+      <header className="px-6 py-4 border-b border-slate-50 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 p-2.5 rounded-2xl text-white shadow-lg shadow-indigo-600/20">
+            <MessageSquare size={20} />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-800 dark:text-white tracking-tight">Mural Interno</h1>
-            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Comunicação Oficial da Equipe</p>
+            <h1 className="text-lg font-black text-slate-800 dark:text-white tracking-tight uppercase italic">Mural Interno</h1>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mt-0.5">Comunicados da Equipe</p>
           </div>
         </div>
-        <div className="hidden md:flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-4 py-2 rounded-xl">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Canal Ativo</span>
+        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-full border border-slate-100 dark:border-slate-700">
+          <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+          <span className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Ativo</span>
         </div>
       </header>
 
       {/* Lista de Mensagens */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-slate-50/50 dark:bg-slate-950/20">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar bg-slate-50/30 dark:bg-slate-950/20">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center opacity-30 select-none">
             <MessageSquare size={64} className="mb-4 text-slate-400" />
@@ -156,21 +169,21 @@ const ChatView: React.FC<ChatViewProps> = ({ academy, user }) => {
 
       {/* Input de Mensagem */}
       {user.role !== 'student' ? (
-        <footer className="p-6 bg-white dark:bg-slate-900 border-t border-slate-50 dark:border-slate-800 transition-colors">
-          <form onSubmit={handleSendMessage} className="flex items-center gap-3">
+        <footer className="p-4 md:p-6 bg-white dark:bg-slate-900 border-t border-slate-50 dark:border-slate-800 transition-colors shrink-0">
+          <form onSubmit={handleSendMessage} className="flex items-center gap-2 md:gap-3 bg-slate-50 dark:bg-slate-800 rounded-3xl p-1.5 border border-slate-100 dark:border-slate-700 focus-within:ring-4 focus-within:ring-indigo-500/10 focus-within:border-indigo-500 transition-all">
             <input 
               type="text" 
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Digite um aviso para a equipe..."
-              className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-6 py-4 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium text-slate-700 dark:text-white"
+              placeholder="Digite um aviso..."
+              className="flex-1 bg-transparent border-none px-4 py-2 outline-none font-medium text-sm text-slate-700 dark:text-white placeholder:text-slate-400"
             />
             <button 
               type="submit"
               disabled={!newMessage.trim()}
-              className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white p-4 rounded-2xl shadow-xl shadow-indigo-600/20 transition-all active:scale-95"
+              className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white p-3 rounded-2xl shadow-lg shadow-indigo-600/20 transition-all active:scale-90 flex items-center justify-center shrink-0"
             >
-              <Send size={24} />
+              <Send size={18} />
             </button>
           </form>
         </footer>

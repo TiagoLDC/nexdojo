@@ -18,6 +18,7 @@ import {
   Save,
   X,
   Plus,
+  Minus,
   ArrowLeft,
   MapPin,
   Phone,
@@ -83,6 +84,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isLoadingCep, setIsLoadingCep] = useState(false);
+  const [isFromSharedLink, setIsFromSharedLink] = useState(false);
 
   // Detecção de AcademyId via URL para branding e pré-seleção
   React.useEffect(() => {
@@ -92,6 +94,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     if (academyIdFromUrl) {
       const found = StorageService.getAcademyById(academyIdFromUrl);
       if (found) {
+        setIsFromSharedLink(true);
         setAcademyData(prev => ({ 
           ...prev, 
           name: found.name, 
@@ -113,7 +116,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const academies = StorageService.getAcademies();
   const [academyData, setAcademyData] = useState({ 
     name: '', 
-    logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcThl9F99l477l7S9Zl9Xl9Xl9Xl9Xl9Xl9Xl9Xl9Xl9&s', 
+    logo: 'https://images.unsplash.com/photo-1511884642898-4c92249e20b6?q=80&w=400&h=400&auto=format&fit=crop', 
     owner: '', 
     email: '', 
     password: '', 
@@ -234,7 +237,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       return;
     }
 
-    if (foundUser.status === 'Pending') {
+    if (foundUser.status === 'Pending' && foundUser.role !== 'admin' && foundUser.role !== 'superuser') {
       showNotification("Seu acesso ainda está pendente de aprovação. OSS!", 'error');
       return;
     }
@@ -420,7 +423,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const isMinor = studentAge > 0 && studentAge < 18;
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 transition-colors relative">
+    <div className="min-h-[100dvh] h-[100dvh] overflow-y-auto bg-slate-900 flex flex-col items-center justify-start py-8 px-4 transition-colors relative custom-scrollbar">
       {/* Toast Notification */}
       {toast && (
         <div className={`fixed top-8 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl animate-in slide-in-from-top duration-300 ${
@@ -454,7 +457,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
         {/* VIEW: LOGIN */}
         {view === 'login' && (
-          <div className="max-w-md mx-auto space-y-6">
+          <div className="max-w-md mx-auto space-y-6 w-full pb-10">
             <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-4 flex items-start gap-3">
               <div className="bg-amber-500/20 p-2 rounded-xl"><Info className="text-amber-500" size={20} /></div>
               <div>
@@ -527,8 +530,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             <button onClick={() => setView('login')} className="text-white flex items-center gap-2 mb-4 hover:text-indigo-400 transition-colors font-bold text-xs uppercase tracking-[0.2em]">
               <ChevronLeft size={18} /> Voltar ao Login
             </button>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <ChoiceCard icon={<Trophy size={28} />} title="Nova Academia" desc="Para professores e gestores." onClick={() => setView('signup-academy')} />
+            <div className={`grid grid-cols-1 ${isFromSharedLink ? 'sm:grid-cols-2' : 'sm:grid-cols-3'} gap-4`}>
+              {!isFromSharedLink && <ChoiceCard icon={<Trophy size={28} />} title="Nova Academia" desc="Para professores e gestores." onClick={() => setView('signup-academy')} />}
               <ChoiceCard icon={<Users size={28} />} title="Sou Aluno" desc="Fazer matrícula agora." onClick={() => setView('signup-student')} />
               <ChoiceCard icon={<Award size={28} />} title="Sou Instrutor" desc="Ficha técnica do mestre." onClick={() => setView('signup-instructor')} />
             </div>
@@ -537,8 +540,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
         {/* VIEW: SIGNUP ACADEMY */}
         {view === 'signup-academy' && (
-          <form onSubmit={handleRegisterAcademy} className="max-w-md mx-auto bg-white dark:bg-slate-900 rounded-[40px] p-6 md:p-10 shadow-2xl space-y-6 animate-in zoom-in duration-300 max-h-[90vh] overflow-y-auto pb-32">
-            <div className="flex items-center gap-4 mb-2 sticky top-0 bg-white dark:bg-slate-900 py-2 z-10">
+          <form onSubmit={handleRegisterAcademy} className="max-w-md mx-auto bg-white dark:bg-slate-900 rounded-[40px] p-6 md:p-10 shadow-2xl space-y-6 animate-in zoom-in duration-300 pb-32">
+            <div className="flex items-center gap-4 mb-2 sticky top-0 bg-white dark:bg-slate-900 py-2 z-10 border-b dark:border-slate-800 mb-4">
               <button type="button" onClick={() => setView('choice')} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500"><ArrowLeft size={20} /></button>
               <h2 className="text-2xl font-black text-slate-800 dark:text-white">Criar Academia</h2>
             </div>
@@ -617,7 +620,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
         {/* VIEW: SIGNUP STUDENT */}
         {view === 'signup-student' && (
-          <div className="bg-white dark:bg-slate-900 rounded-[40px] p-6 md:p-12 shadow-2xl space-y-10 animate-in slide-in-from-bottom duration-500 max-h-[92vh] md:max-h-[90vh] overflow-y-auto custom-scrollbar pb-40">
+          <div className="bg-white dark:bg-slate-900 rounded-[40px] p-6 md:p-12 shadow-2xl space-y-10 animate-in slide-in-from-bottom duration-500 pb-40">
             <header className="flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900 py-4 z-20 border-b dark:border-slate-800 -mx-6 md:-mx-12 px-6 md:px-12">
               <div className="flex items-center gap-4">
                 <div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-lg shadow-indigo-600/20"><Users size={28} /></div>
@@ -629,6 +632,35 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               <button onClick={() => setView('choice')} className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-red-500 rounded-full transition-colors"><X size={24} /></button>
             </header>
 
+            {!studentData.academyId && (
+              <div className="bg-amber-50 dark:bg-amber-950/20 border-2 border-amber-500/30 p-6 rounded-[32px] flex items-center gap-4 animate-in slide-in-from-top duration-500">
+                <AlertCircle className="text-amber-500 shrink-0" size={24} />
+                <div>
+                  <h4 className="font-black text-amber-800 dark:text-amber-400 text-sm uppercase tracking-tight">Link da Unidade Necessário</h4>
+                  <p className="text-amber-700/70 dark:text-amber-500/60 text-xs font-bold mt-1">Para realizar sua matrícula, você deve utilizar o link oficial enviado pela sua academia. Caso não possua, solicite-o ao seu professor. OSS!</p>
+                </div>
+              </div>
+            )}
+
+            {studentData.academyId && (
+              <div className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/50 p-4 rounded-2xl flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center shadow-sm">
+                    {StorageService.getAcademyById(studentData.academyId!)?.logo ? (
+                      <img src={StorageService.getAcademyById(studentData.academyId!)?.logo} className="w-full h-full object-contain p-1.5" />
+                    ) : (
+                      <Award size={20} className="text-indigo-600" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-1">Você está se matriculando na:</p>
+                    <p className="text-sm font-black text-indigo-600 uppercase italic tracking-tight">{StorageService.getAcademyById(studentData.academyId!)?.name || 'Academia Selecionada'}</p>
+                  </div>
+                </div>
+                <div className="bg-indigo-600 text-white p-1 rounded-full px-2 text-[8px] font-black uppercase tracking-tighter shadow-sm">Ativo</div>
+              </div>
+            )}
+
             <div className="space-y-12">
               <div className="flex flex-col items-center gap-4">
                 <div onClick={() => photoRef.current?.click()} className="w-40 h-40 rounded-[40px] bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 overflow-hidden relative group cursor-pointer shadow-inner">
@@ -639,28 +671,14 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               </div>
 
               <div className="space-y-6">
+                <p className="text-[10px] font-black text-red-500 uppercase tracking-[0.2em] mb-4 bg-red-50 dark:bg-red-950/20 p-3 rounded-xl border border-red-100 dark:border-red-900/30">* Informações Obrigatórias para Matrícula</p>
                 <SectionHeader icon={<UserIcon size={16} />} title="Informações Pessoais" />
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="md:col-span-3">
-                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 mb-1 font-bold">Unidade (Academia) *</label>
-                    <select 
-                      value={studentData.academyId || ''} 
-                      onChange={e => setStudentData({...studentData, academyId: e.target.value})}
-                      disabled={!!studentData.academyId && !!new URLSearchParams(window.location.search || window.location.hash.split('?')[1]).get('academyId')}
-                      className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-slate-800 dark:text-white transition-all font-bold text-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      <option value="">Escolha a Academia...</option>
-                      {academies.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                    </select>
-                    {!!new URLSearchParams(window.location.search || window.location.hash.split('?')[1]).get('academyId') && (
-                      <p className="text-[10px] text-indigo-600 font-bold mt-1 ml-1 uppercase">Acesso direto à esta unidade ativado via link.</p>
-                    )}
-                  </div>
                   <div className="md:col-span-2">
-                    <Input label="Nome Completo *" value={studentData.name || ''} onChange={v => setStudentData({...studentData, name: v})} placeholder="Digite seu nome" />
+                    <Input label="Nome Completo" required value={studentData.name || ''} onChange={v => setStudentData({...studentData, name: v})} placeholder="Digite seu nome" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 mb-1">Sexo</label>
+                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 mb-1">Sexo <span className="text-red-500">*</span></label>
                     <select 
                       value={studentData.gender || 'M'} 
                       onChange={e => setStudentData({...studentData, gender: e.target.value as any})}
@@ -671,13 +689,13 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                       <option value="Outro">Outro</option>
                     </select>
                   </div>
-                  <Input label="Data de Nascimento *" type="date" value={studentData.birthDate || ''} onChange={v => setStudentData({...studentData, birthDate: v})} />
-                  <Input label="E-mail (Para Login) *" type="email" value={studentData.email || ''} onChange={v => setStudentData({...studentData, email: v})} placeholder="seu@email.com" />
+                  <Input label="Data de Nascimento" required type="date" value={studentData.birthDate || ''} onChange={v => setStudentData({...studentData, birthDate: v})} />
+                  <Input label="E-mail (Para Login)" required type="email" value={studentData.email || ''} onChange={v => setStudentData({...studentData, email: v})} placeholder="seu@email.com" />
                   <div className="md:col-span-1">
-                    <Input label="Definir Senha *" type="password" value={regPassword} onChange={setRegPassword} placeholder="••••••••" icon={<Lock size={18} />} />
+                    <Input label="Definir Senha" required type="password" value={regPassword} onChange={setRegPassword} placeholder="••••••••" icon={<Lock size={18} />} />
                   </div>
                   <div className="md:col-span-1">
-                    <Input label="Confirmar Senha *" type="password" value={confirmPassword} onChange={setConfirmPassword} placeholder="••••••••" icon={<Lock size={18} />} />
+                    <Input label="Confirmar Senha" required type="password" value={confirmPassword} onChange={setConfirmPassword} placeholder="••••••••" icon={<Lock size={18} />} />
                   </div>
                   <Input label="WhatsApp" value={studentData.phone || ''} onChange={v => setStudentData({...studentData, phone: maskPhone(v)})} placeholder="(00) 00000-0000" />
                   <Input label="CPF" value={studentData.cpf || ''} onChange={v => setStudentData({...studentData, cpf: maskCPF(v)})} placeholder="000.000.000-00" />
@@ -736,10 +754,31 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
               <div className="space-y-6">
                 <SectionHeader icon={<GraduationCap size={16} />} title="Sua Graduação" />
-                <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
-                  {[Belt.WHITE, Belt.BLUE, Belt.PURPLE, Belt.BROWN, Belt.BLACK].map(b => (
-                    <button key={b} onClick={() => setStudentData({...studentData, belt: b})} className={`py-4 rounded-2xl border-2 font-black text-[10px] uppercase transition-all ${studentData.belt === b ? `${BELT_COLORS[b]} scale-105 shadow-lg` : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-400'}`}>{b}</button>
-                  ))}
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+                    {[Belt.WHITE, Belt.GREY, Belt.YELLOW, Belt.ORANGE, Belt.GREEN, Belt.BLUE, Belt.PURPLE, Belt.BROWN, Belt.BLACK].map(b => (
+                      <button key={b} onClick={() => setStudentData({...studentData, belt: b, stripes: 0})} className={`py-4 rounded-2xl border-2 font-black text-[10px] uppercase transition-all ${studentData.belt === b ? `${BELT_COLORS[b]} scale-105 shadow-lg` : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-400'}`}>{b}</button>
+                    ))}
+                  </div>
+
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-100 dark:border-slate-800">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Graus na Faixa</label>
+                    <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${BELT_COLORS[studentData.belt || Belt.WHITE]}`}>
+                      <button type="button" onClick={() => setStudentData({...studentData, stripes: Math.max(0, (studentData.stripes || 0) - 1)})} className="text-white/50 hover:scale-125 transition-all outline-none md:p-2"><Minus size={20} /></button>
+                      <div className={`flex gap-1.5 p-1 rounded-md px-3 bg-opacity-90 ${studentData.belt === Belt.BLACK ? 'bg-red-600' : 'bg-zinc-900 shadow-lg'}`}>
+                        {[...Array(studentData.belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
+                          <div 
+                            key={i} 
+                            className={`w-3 h-8 rounded-sm border transition-all ${i < (studentData.stripes || 0) ? 'bg-white border-white/20 shadow-md' : 'bg-white/10 border-transparent'}`} 
+                          />
+                        ))}
+                      </div>
+                      <button type="button" onClick={() => setStudentData({...studentData, stripes: Math.min(studentData.belt === Belt.BLACK ? 6 : 4, (studentData.stripes || 0) + 1)})} className="text-white/50 hover:scale-125 transition-all outline-none md:p-2"><Plus size={20} /></button>
+                    </div>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase mt-4 italic">
+                      {studentData.belt === Belt.BLACK ? 'Faixa preta possui até 6 graus.' : 'Faixas coloridas possuem até 4 graus.'}
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -755,7 +794,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
         {/* VIEW: SIGNUP INSTRUCTOR */}
         {view === 'signup-instructor' && (
-          <div className="bg-white dark:bg-slate-900 rounded-[40px] p-6 md:p-12 shadow-2xl space-y-10 animate-in slide-in-from-bottom duration-500 max-h-[92vh] md:max-h-[90vh] overflow-y-auto custom-scrollbar pb-40">
+          <div className="bg-white dark:bg-slate-900 rounded-[40px] p-6 md:p-12 shadow-2xl space-y-10 animate-in slide-in-from-bottom duration-500 pb-40">
             <header className="flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900 py-4 z-20 border-b dark:border-slate-800 -mx-6 md:-mx-12 px-6 md:px-12">
               <div className="flex items-center gap-4">
                 <div className="bg-slate-900 dark:bg-slate-800 p-3 rounded-2xl text-white shadow-lg"><Award size={28} /></div>
@@ -766,6 +805,35 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               </div>
               <button onClick={() => setView('choice')} className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-red-500 rounded-full transition-colors"><X size={24} /></button>
             </header>
+
+            {!instructorData.academyId && (
+              <div className="bg-amber-50 dark:bg-amber-950/20 border-2 border-amber-500/30 p-6 rounded-[32px] flex items-center gap-4 animate-in slide-in-from-top duration-500">
+                <AlertCircle className="text-amber-500 shrink-0" size={24} />
+                <div>
+                  <h4 className="font-black text-amber-800 dark:text-amber-400 text-sm uppercase tracking-tight">Link da Unidade Necessário</h4>
+                  <p className="text-amber-700/70 dark:text-amber-500/60 text-xs font-bold mt-1">Sua ficha profissional deve ser vinculada a uma academia. Utilize o link oficial da sua unidade para realizar o cadastro. OSS!</p>
+                </div>
+              </div>
+            )}
+
+            {instructorData.academyId && (
+              <div className="bg-slate-900 dark:bg-slate-800 border border-slate-700 p-4 rounded-2xl flex items-center justify-between text-white">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center shadow-sm">
+                    {StorageService.getAcademyById(instructorData.academyId!)?.logo ? (
+                      <img src={StorageService.getAcademyById(instructorData.academyId!)?.logo} className="w-full h-full object-contain p-1.5" />
+                    ) : (
+                      <Trophy size={20} className="text-white" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Vínculo Profissional com:</p>
+                    <p className="text-sm font-black text-white uppercase italic tracking-tight">{StorageService.getAcademyById(instructorData.academyId!)?.name || 'Academia Selecionada'}</p>
+                  </div>
+                </div>
+                <div className="bg-emerald-500 text-white p-1 rounded-full px-2 text-[8px] font-black uppercase tracking-tighter shadow-sm">Confirmado</div>
+              </div>
+            )}
 
             <div className="space-y-12">
               <div className="flex flex-col items-center gap-4">
@@ -778,23 +846,11 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               <div className="space-y-8">
                 <SectionHeader icon={<UserIcon size={16} />} title="Dados do Professor" />
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="md:col-span-3">
-                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 mb-1 font-bold">Unidade de Atuação *</label>
-                    <select 
-                      value={instructorData.academyId || ''} 
-                      onChange={e => setInstructorData({...instructorData, academyId: e.target.value})}
-                      disabled={!!instructorData.academyId && !!new URLSearchParams(window.location.search || window.location.hash.split('?')[1]).get('academyId')}
-                      className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-slate-800 dark:text-white transition-all font-bold text-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      <option value="">Escolha a Academia...</option>
-                      {academies.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                    </select>
-                  </div>
                   <div className="md:col-span-2">
-                    <Input label="Nome Completo *" value={instructorData.name || ''} onChange={v => setInstructorData({...instructorData, name: v})} placeholder="Ex: Prof. Hélio" />
+                    <Input label="Nome Completo" required value={instructorData.name || ''} onChange={v => setInstructorData({...instructorData, name: v})} placeholder="Ex: Prof. Hélio" />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 mb-1">Sexo</label>
+                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 mb-1">Sexo <span className="text-red-500">*</span></label>
                     <select 
                       value={instructorData.gender || 'M'} 
                       onChange={e => setInstructorData({...instructorData, gender: e.target.value as any})}
@@ -805,13 +861,13 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                       <option value="Outro">Outro</option>
                     </select>
                   </div>
-                  <Input label="Data de Nascimento *" type="date" value={instructorData.birthDate || ''} onChange={v => setInstructorData({...instructorData, birthDate: v})} />
-                  <Input label="E-mail (Para Login) *" type="email" value={instructorData.email || ''} onChange={v => setInstructorData({...instructorData, email: v})} placeholder="mestre@ct.com" />
+                  <Input label="Data de Nascimento" required type="date" value={instructorData.birthDate || ''} onChange={v => setInstructorData({...instructorData, birthDate: v})} />
+                  <Input label="E-mail (Para Login)" required type="email" value={instructorData.email || ''} onChange={v => setInstructorData({...instructorData, email: v})} placeholder="mestre@ct.com" />
                   <div className="md:col-span-1">
-                    <Input label="Definir Senha *" type="password" value={regPassword} onChange={setRegPassword} placeholder="••••••••" icon={<Lock size={18} />} />
+                    <Input label="Definir Senha" required type="password" value={regPassword} onChange={setRegPassword} placeholder="••••••••" icon={<Lock size={18} />} />
                   </div>
                   <div className="md:col-span-1">
-                    <Input label="Confirmar Senha *" type="password" value={confirmPassword} onChange={setConfirmPassword} placeholder="••••••••" icon={<Lock size={18} />} />
+                    <Input label="Confirmar Senha" required type="password" value={confirmPassword} onChange={setConfirmPassword} placeholder="••••••••" icon={<Lock size={18} />} />
                   </div>
                   <Input label="CPF" value={instructorData.cpf || ''} onChange={v => setInstructorData({...instructorData, cpf: maskCPF(v)})} placeholder="000.000.000-00" />
                   <Input label="RG" value={instructorData.rg || ''} onChange={v => setInstructorData({...instructorData, rg: maskRG(v)})} placeholder="00.000.000-0" />
@@ -864,8 +920,24 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2">Selecione sua Graduação</label>
                     <div className="grid grid-cols-2 gap-2">
                       {[Belt.BLUE, Belt.PURPLE, Belt.BROWN, Belt.BLACK].map(b => (
-                        <button key={b} onClick={() => setInstructorData({...instructorData, belt: b})} className={`py-4 rounded-2xl border-2 font-black text-[10px] uppercase transition-all ${instructorData.belt === b ? `${BELT_COLORS[b]} scale-105 shadow-lg` : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-400'}`}>{b}</button>
+                        <button key={b} onClick={() => setInstructorData({...instructorData, belt: b, stripes: 0})} className={`py-4 rounded-2xl border-2 font-black text-[10px] uppercase transition-all ${instructorData.belt === b ? `${BELT_COLORS[b]} scale-105 shadow-lg` : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-400'}`}>{b}</button>
                       ))}
+                    </div>
+
+                    <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 mt-4">
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Graus na Faixa</label>
+                    <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${BELT_COLORS[instructorData.belt || Belt.BLACK]}`}>
+                        <button type="button" onClick={() => setInstructorData({...instructorData, stripes: Math.max(0, (instructorData.stripes || 0) - 1)})} className="text-white/50 hover:scale-125 transition-all outline-none"><Minus size={20} /></button>
+                        <div className={`flex gap-1.5 p-1 rounded-md px-3 bg-opacity-90 ${instructorData.belt === Belt.BLACK ? 'bg-red-600' : 'bg-zinc-900 shadow-lg'}`}>
+                          {[...Array(instructorData.belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
+                            <div 
+                              key={i} 
+                              className={`w-3 h-8 rounded-sm border transition-all ${i < (instructorData.stripes || 0) ? 'bg-white border-white/20 shadow-md' : 'bg-black/10 border-transparent'}`} 
+                            />
+                          ))}
+                        </div>
+                        <button type="button" onClick={() => setInstructorData({...instructorData, stripes: Math.min(instructorData.belt === Belt.BLACK ? 6 : 4, (instructorData.stripes || 0) + 1)})} className="text-white/50 hover:scale-125 transition-all outline-none"><Plus size={20} /></button>
+                      </div>
                     </div>
                   </div>
                   <div className="space-y-6">
@@ -901,14 +973,16 @@ const ChoiceCard: React.FC<{ icon: React.ReactNode; title: string; desc: string;
   </button>
 );
 
-const Input: React.FC<{ label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; icon?: React.ReactNode; inputMode?: any }> = ({ label, value, onChange, type = 'text', placeholder, icon, inputMode }) => {
+const Input: React.FC<{ label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; icon?: React.ReactNode; inputMode?: any; required?: boolean }> = ({ label, value, onChange, type = 'text', placeholder, icon, inputMode, required }) => {
   const [show, setShow] = useState(false);
   const isPassword = type === 'password';
   const inputType = isPassword ? (show ? 'text' : 'password') : type;
 
   return (
     <div className="space-y-1">
-      <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">{label}</label>
+      <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
       <div className="relative">
         {icon && <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">{icon}</div>}
         <input 

@@ -29,6 +29,8 @@ import {
   AlertCircle,
   CheckCircle2,
   X,
+  Plus,
+  Minus,
   Printer,
   Share2,
   Shirt,
@@ -496,8 +498,8 @@ const handleSave = () => {
                   className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-800 dark:text-white transition-all disabled:opacity-60"
                 />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                <div className="md:col-span-2">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:col-span-2">
+                <div className="md:col-span-3">
                   <Input 
                     label="CEP" 
                     value={editData.cep || ''} 
@@ -516,7 +518,7 @@ const handleSave = () => {
                     disabled={!isEditing}
                   />
                 </div>
-                <div className="md:col-span-8">
+                <div className="md:col-span-7">
                   <Input 
                     label="Endereço Completo (Auto)" 
                     value={editData.address || ''} 
@@ -553,7 +555,7 @@ const handleSave = () => {
           </section>
 
           {/* Seção 3: Responsável (Contextual) */}
-          <section className={`space-y-6 pt-12 border-t border-slate-100 dark:border-slate-800 transition-all ${isMinor ? 'opacity-100' : 'opacity-40 grayscale pointer-events-none'}`}>
+          <section className={`space-y-6 pt-12 border-t border-slate-100 dark:border-slate-800 transition-all ${isMinor || isEditing ? 'opacity-100' : 'opacity-40 grayscale pointer-events-none'}`}>
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-xs font-black text-amber-600 uppercase tracking-[0.2em] flex items-center gap-2">
                 <UsersIcon size={16} /> RESPONSÁVEL LEGAL {isMinor && <span className="bg-amber-100 text-amber-700 text-[8px] px-2 py-1 rounded-full ml-1 font-black">OBRIGATÓRIO</span>}
@@ -697,33 +699,35 @@ const handleSave = () => {
               <div className="space-y-6">
                 <div className="space-y-3">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Graus na Faixa</label>
-                  <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-3xl border border-slate-100 dark:border-slate-800">
+                  <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${BELT_COLORS[editData.belt || Belt.WHITE]}`}>
                     <button 
                       type="button"
                       disabled={!isEditing}
                       onClick={() => setEditData(prev => prev ? {...prev, stripes: Math.max(0, (prev.stripes || 0) - 1)} : null)}
-                      className="w-10 h-10 rounded-full bg-white dark:bg-slate-700 shadow-sm border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 disabled:opacity-40"
+                      className={`${editData.belt === Belt.WHITE ? 'text-slate-400' : 'text-white/50'} hover:scale-125 transition-all outline-none disabled:opacity-40`}
                     >
-                      -
+                      <Minus size={20} />
                     </button>
-                    <div className="flex-1 flex gap-2 justify-center">
-                      {[...Array(4)].map((_, i) => (
+                    <div className={`flex gap-1.5 p-1 rounded-md px-3 bg-opacity-90 ${editData.belt === Belt.BLACK ? 'bg-red-600' : 'bg-zinc-900 shadow-lg'}`}>
+                      {[...Array(editData.belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
                         <div 
                           key={i} 
-                          className={`w-3 h-8 rounded-sm border ${i < (editData.stripes || 0) ? 'bg-white border-slate-300 shadow-sm' : 'bg-slate-200/50 dark:bg-slate-700/50 border-transparent'}`} 
+                          className={`w-2.5 h-7 rounded-sm transition-all ${i < (editData.stripes || 0) ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-y-110' : 'bg-white/10'}`} 
                         />
                       ))}
                     </div>
                     <button 
                       type="button"
                       disabled={!isEditing}
-                      onClick={() => setEditData(prev => prev ? {...prev, stripes: Math.min(4, (prev.stripes || 0) + 1)} : null)}
-                      className="w-10 h-10 rounded-full bg-white dark:bg-slate-700 shadow-sm border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 disabled:opacity-40"
+                      onClick={() => setEditData(prev => prev ? {...prev, stripes: Math.min(editData.belt === Belt.BLACK ? 6 : 4, (prev.stripes || 0) + 1)} : null)}
+                      className={`${editData.belt === Belt.WHITE ? 'text-slate-400' : 'text-white/50'} hover:scale-125 transition-all outline-none disabled:opacity-40`}
                     >
-                      +
+                      <Plus size={20} />
                     </button>
                   </div>
-                  <p className="text-[9px] font-medium text-slate-400 italic ml-1">* Faixas coloridas possuem até 4 graus.</p>
+                  <p className="text-[9px] font-medium text-slate-400 italic ml-1">
+                    * Faixas coloridas possuem até 4 graus.
+                  </p>
                 </div>
 
                 <Input 
@@ -739,9 +743,11 @@ const handleSave = () => {
                     label="Total de aulas na ficha" 
                     value={String(editData.totalClasses || 0)} 
                     onChange={v => setEditData({...editData, totalClasses: parseInt(v) || 0})} 
-                    disabled={!isEditing}
+                    disabled={!isEditing || user.role === 'student'}
                   />
-                  <p className="text-[9px] font-medium text-slate-400 italic ml-1">* Este número é usado para calcular a prontidão para graduação.</p>
+                  <p className="text-[9px] font-medium text-slate-400 italic ml-1">
+                    {user.role === 'student' ? '* O histórico de aulas é atualizado automaticamente pelo professor.' : '* Este número é usado para calcular a prontidão para graduação.'}
+                  </p>
                 </div>
               </div>
 
@@ -778,7 +784,7 @@ const handleSave = () => {
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Status de Matrícula</label>
                   <select 
-                    disabled={!isEditing}
+                    disabled={!isEditing || user.role === 'student'}
                     value={editData.status || 'Active'}
                     onChange={(e) => setEditData({...editData, status: e.target.value as any})}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none font-bold text-slate-700 dark:text-white transition-all disabled:opacity-60"
@@ -792,7 +798,7 @@ const handleSave = () => {
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Limite de faltas personalizado</label>
                   <select 
-                    disabled={!isEditing}
+                    disabled={!isEditing || user.role === 'student'}
                     value={editData.customAbsenceLimit || 'standard'}
                     onChange={(e) => setEditData({...editData, customAbsenceLimit: e.target.value as any})}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none font-bold text-slate-700 dark:text-white transition-all disabled:opacity-60"

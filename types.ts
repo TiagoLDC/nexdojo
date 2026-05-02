@@ -1,4 +1,6 @@
 
+export type Language = 'pt' | 'en' | 'es';
+
 export enum Belt {
   // Kids (até 15 anos)
   WHITE = 'Branca',
@@ -64,6 +66,7 @@ export interface Student {
   joinDate: string;
   absenceLimit?: number;
   nextPaymentDate?: string;
+  planId?: string;
 }
 
 export interface Instructor {
@@ -116,8 +119,7 @@ export interface ClassTemplate {
   id: string;
   academyId: string;
   name: string;
-  dayOfWeek?: number;
-  startTime?: string;
+  schedules?: { dayOfWeek: number; startTime: string; endTime: string }[];
   durationMinutes: number;
   assignedStudentIds: string[];
   absenceLimit?: number;
@@ -187,6 +189,16 @@ export interface SystemConfig {
   supportEmail: string;
 }
 
+export interface AcademyPlan {
+  id: string;
+  name: string;
+  durationMonths: number;
+  classesPerWeek: number;
+  price: number;
+  category: string; // "Crianças", "Adolescentes", "Adultos", etc.
+  description?: string;
+}
+
 export interface Academy {
   id: string;
   name: string;
@@ -207,6 +219,7 @@ export interface Academy {
   planStatus?: 'Active' | 'Expired' | 'Trial' | 'Suspended' | 'Canceled';
   planExpirationDate?: string;
   paymentWarningDays?: number;
+  plans?: AcademyPlan[];
 }
 
 export interface User {

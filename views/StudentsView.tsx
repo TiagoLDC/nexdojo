@@ -46,7 +46,8 @@ import {
   Star,
   Loader2,
   Eye,
-  EyeOff
+  EyeOff,
+  Book
 } from 'lucide-react';
 import { BeltBadge } from '../components/BeltBadge';
 import { BELT_COLORS } from '../constants';
@@ -159,6 +160,43 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
       age--;
     }
     return age;
+  };
+
+  const exportStudentsToCSV = () => {
+    if (students.length === 0) return;
+    
+    // Header for CSV
+    const headers = ['Nome', 'Email', 'Telefone', 'Faixa', 'Graus', 'Status', 'Data Nascimento', 'CPF', 'RG', 'CEP', 'Endereco', 'Cidade', 'UF'];
+    const csvRows = students.map(s => [
+      s.name,
+      s.email,
+      s.phone || '',
+      s.belt,
+      s.degree || 0,
+      s.status,
+      s.birthDate || '',
+      s.cpf || '',
+      s.rg || '',
+      s.addressCep || '',
+      s.address || '',
+      s.addressCity || '',
+      s.addressState || ''
+    ]);
+    
+    const csvString = [
+      headers.join(','),
+      ...csvRows.map(row => row.map(val => {
+        const escaped = String(val).replace(/"/g, '""');
+        return `"${escaped}"`;
+      }).join(','))
+    ].join('\n');
+    
+    const blob = new Blob(["\uFEFF" + csvString], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `alunos_${academy.name.replace(/\s+/g, '_').toLowerCase()}.csv`;
+    link.click();
+    showNotification('Lista de alunos exportada com sucesso!', 'success');
   };
 
   const handleOpenNewStudent = () => {
@@ -373,16 +411,21 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     // Regras básicas (podem ser ajustadas conforme a academia)
     if (student.belt === Belt.WHITE) {
       const readyForBelt = student.totalClasses >= 80;
-      const readyForStripe = student.totalClasses >= 20 && Math.floor(student.totalClasses / 20) > student.stripes;
+      const readyForStripe = student.totalClasses >= 20 && Math.floor(student.totalClasses / 20) > student.stripes && student.stripes < 4;
+      return { readyForBelt, readyForStripe };
+    }
+    if ([Belt.GREY, Belt.YELLOW, Belt.ORANGE, Belt.GREEN].includes(student.belt)) {
+      const readyForBelt = student.totalClasses >= 100;
+      const readyForStripe = student.totalClasses >= 25 && Math.floor(student.totalClasses / 25) > student.stripes && student.stripes < 4;
       return { readyForBelt, readyForStripe };
     }
     if ([Belt.BLUE, Belt.PURPLE, Belt.BROWN].includes(student.belt)) {
       const readyForBelt = student.totalClasses >= 160;
-      const readyForStripe = student.totalClasses >= 40 && Math.floor(student.totalClasses / 40) > student.stripes;
+      const readyForStripe = student.totalClasses >= 40 && Math.floor(student.totalClasses / 40) > student.stripes && student.stripes < 4;
       return { readyForBelt, readyForStripe };
     }
     if (student.belt === Belt.BLACK) {
-      // Faixa preta: graus a cada 3 anos em média, mas aqui usamos aulas como métrica simplificada ou manual
+      // Faixa preta: graus a cada 300 aulas (simplificado)
       const readyForStripe = student.totalClasses >= 300 && Math.floor(student.totalClasses / 300) > student.stripes && student.stripes < 6;
       return { readyForBelt: false, readyForStripe };
     }
@@ -405,7 +448,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
   const filtered = students.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === 'All' ? s.status !== 'Pending' : s.status === statusFilter;
+    const matchesStatus = statusFilter === 'All' ? s.status !== 'Inactive' : s.status === statusFilter;
     const matchesBelt = beltFilter === 'All' || s.belt === beltFilter;
     
     let matchesReadiness = true;
@@ -448,7 +491,14 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
           <h1 className="text-3xl font-black text-slate-800 dark:text-white uppercase italic tracking-tighter">Alunos</h1>
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Gestão de atletas e documentos.</p>
         </div>
-        <div className="grid grid-cols-2 md:flex gap-2">
+        <div className="grid grid-cols-3 md:flex gap-2">
+          <button 
+            onClick={exportStudentsToCSV}
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 px-4 py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 text-xs uppercase tracking-widest"
+          >
+            <Download size={18} className="text-emerald-500" />
+            CSV
+          </button>
           <button 
             onClick={() => {
               window.focus();
@@ -481,28 +531,29 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
           />
         </div>
 
-        <div className="flex overflow-x-auto pb-2 gap-2 no-scrollbar -mx-1 px-1">
-          <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl px-4 py-3 shadow-sm shrink-0">
+        <div className="flex flex-wrap md:flex-nowrap items-center justify-center md:justify-start gap-2 no-print">
+          <div className="flex items-center gap-2 flex-1 md:flex-none bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl px-4 py-3 shadow-sm min-w-0">
             <Filter size={14} className="text-slate-400" />
             <select 
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="text-xs font-black text-slate-700 dark:text-slate-300 outline-none bg-transparent uppercase tracking-tighter"
+              className="text-xs font-black text-slate-700 dark:text-slate-300 outline-none bg-transparent uppercase tracking-tighter w-full"
             >
-              <option value="All">Todos Status</option>
+              <option value="All">Todos (Ativos/Pendentes)</option>
               <option value="Active">Ativos</option>
               <option value="Inactive">Inativos</option>
+              <option value="Pending">Pendentes</option>
               <option value="Pending">Pendentes</option>
               <option value="Dropped">Desistentes</option>
             </select>
           </div>
 
-          <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl px-4 py-3 shadow-sm shrink-0">
+          <div className="flex items-center gap-2 flex-1 md:flex-none bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl px-4 py-3 shadow-sm min-w-0">
             <GraduationCap size={14} className="text-slate-400" />
             <select 
               value={beltFilter}
               onChange={(e) => setBeltFilter(e.target.value)}
-              className="text-xs font-black text-slate-700 dark:text-slate-300 outline-none bg-transparent uppercase tracking-tighter"
+              className="text-xs font-black text-slate-700 dark:text-slate-300 outline-none bg-transparent uppercase tracking-tighter w-full"
             >
               <option value="All">Todas Faixas</option>
               {allBeltOptions.map(belt => (
@@ -511,31 +562,33 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
             </select>
           </div>
 
-          <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl px-4 py-3 shadow-sm shrink-0">
-            <Star size={14} className="text-amber-500" />
-            <select 
-              value={readinessFilter}
-              onChange={(e) => setReadinessFilter(e.target.value)}
-              className="text-xs font-black text-slate-700 dark:text-slate-300 outline-none bg-transparent uppercase tracking-tighter"
-            >
-              <option value="All">Pronto p/...</option>
-              <option value="Stripe">Grau</option>
-              <option value="Belt">Faixa</option>
-              <option value="Any">Qualquer</option>
-            </select>
-          </div>
+          <div className="flex items-center justify-center gap-2 w-full md:w-auto">
+            <div className="flex items-center gap-2 flex-1 md:flex-none bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl px-4 py-3 shadow-sm min-w-0">
+              <Star size={14} className="text-amber-500" />
+              <select 
+                value={readinessFilter}
+                onChange={(e) => setReadinessFilter(e.target.value)}
+                className="text-xs font-black text-slate-700 dark:text-slate-300 outline-none bg-transparent uppercase tracking-tighter w-full"
+              >
+                <option value="All">Pronto p/...</option>
+                <option value="Stripe">Grau</option>
+                <option value="Belt">Faixa</option>
+                <option value="Any">Qualquer</option>
+              </select>
+            </div>
 
-          <button 
-            onClick={() => setAbsenceFilter(!absenceFilter)}
-            className={`flex items-center gap-2 border rounded-2xl px-4 py-3 shadow-sm transition-all shrink-0 ${
-              absenceFilter 
-                ? 'bg-red-500 border-red-500 text-white' 
-                : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-400'
-            }`}
-          >
-            <AlertTriangle size={14} />
-            <span className="text-xs font-black uppercase tracking-tighter">Faltas</span>
-          </button>
+            <button 
+              onClick={() => setAbsenceFilter(!absenceFilter)}
+              className={`flex items-center justify-center gap-2 border rounded-2xl px-4 py-3 shadow-sm transition-all flex-1 md:flex-none ${
+                absenceFilter 
+                  ? 'bg-red-500 border-red-500 text-white' 
+                  : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-400'
+              }`}
+            >
+              <AlertTriangle size={14} />
+              <span className="text-xs font-black uppercase tracking-tighter">Faltas</span>
+            </button>
+          </div>
         </div>
 
         {(statusFilter !== 'All' || beltFilter !== 'All' || readinessFilter !== 'All' || search !== '' || absenceFilter) && (
@@ -592,12 +645,21 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         <BeltBadge belt={student.belt} stripes={student.stripes} />
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter ${
                           student.status === 'Active' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 
+                          student.status === 'Pending' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 animate-pulse' :
                           student.status === 'Inactive' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 
                           'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
                         }`}>
-                          {student.status === 'Active' ? 'Ativo' : student.status === 'Inactive' ? 'Inativo' : 'Desistente'}
+                          {student.status === 'Active' ? 'Ativo' : student.status === 'Pending' ? 'Pendente' : student.status === 'Inactive' ? 'Inativo' : 'Desistente'}
                         </span>
                       </div>
+                      {student.planId && (
+                        <div className="mt-2 flex items-center gap-1.5">
+                          <Book size={10} className="text-indigo-500" />
+                          <span className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
+                            Plano: {academy.plans?.find(p => p.id === student.planId)?.name || 'N/A'}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -738,6 +800,12 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                           </div>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <BeltBadge belt={student.belt} stripes={student.stripes} />
+                            {student.planId && (
+                              <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                                <Book size={8} className="text-indigo-500" />
+                                {academy.plans?.find(p => p.id === student.planId)?.name}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -756,9 +824,10 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     <td className="px-6 py-4">
                       <span className={`text-[10px] px-2 py-1 rounded-full font-black uppercase ${
                         student.status === 'Active' ? 'bg-green-100 text-green-700' : 
+                        student.status === 'Pending' ? 'bg-indigo-100 text-indigo-700 animate-pulse' :
                         student.status === 'Inactive' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
                       }`}>
-                        {student.status === 'Active' ? 'Ativo' : student.status === 'Inactive' ? 'Inativo' : 'Desistente'}
+                        {student.status === 'Active' ? 'Ativo' : student.status === 'Pending' ? 'Pendente' : student.status === 'Inactive' ? 'Inativo' : 'Desistente'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -842,11 +911,11 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
               <h3 className="text-xl font-bold text-slate-800">{qrStudent.name}</h3>
               <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">{qrStudent.belt}</p>
               
-              <div className="my-8 p-4 bg-slate-50 rounded-3xl border-2 border-slate-100">
+              <div className="my-8 p-4 bg-white rounded-3xl border-2 border-slate-100 flex items-center justify-center">
                 <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrStudent.id}`} 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${qrStudent.id}`} 
                   alt="QR Code do Aluno"
-                  className="w-48 h-48 mix-blend-multiply"
+                  className="w-56 h-56 md:w-64 md:h-64"
                 />
               </div>
 
@@ -894,7 +963,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                 <div>
                   <h2 className="text-xl font-bold text-slate-800">{isNewStudent ? 'Novo Aluno' : 'Ficha do Aluno'}</h2>
                   <p className="text-xs text-slate-400 font-medium">
-                    {isNewStudent ? 'Preencha os dados para matrícula' : `Cadastrado em ${new Date(editingStudent.joinDate).toLocaleDateString()}`}
+                    {isNewStudent ? 'Preencha os dados obrigatórios (*)' : `Cadastrado em ${new Date(editingStudent.joinDate).toLocaleDateString()}`}
                   </p>
                 </div>
               </div>
@@ -993,7 +1062,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   
                   <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
                     <div className="md:col-span-2">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Nome Completo *</label>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Nome Completo <span className="text-red-500">*</span></label>
                       <input 
                         type="text" 
                         value={editingStudent.name}
@@ -1002,7 +1071,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Sexo *</label>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Sexo <span className="text-red-500">*</span></label>
                       <select 
                         value={editingStudent.gender || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, gender: e.target.value as any})}
@@ -1015,7 +1084,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Nascimento *</label>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Nascimento <span className="text-red-500">*</span></label>
                       <input 
                         type="date" 
                         value={editingStudent.birthDate}
@@ -1025,7 +1094,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1 flex items-center justify-between">
-                        CPF *
+                        <span>CPF <span className="text-red-500">*</span></span>
                         <button onClick={() => toggleSensitive('cpf')} className="text-slate-400">
                           {showSensitive['cpf'] ? <EyeOff size={12} /> : <Eye size={12} />}
                         </button>
@@ -1093,7 +1162,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">WhatsApp *</label>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">WhatsApp <span className="text-red-500">*</span></label>
                     <input 
                       type="tel" 
                       value={editingStudent.phone || ''}
@@ -1102,7 +1171,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:col-span-2">
-                    <div className="md:col-span-2">
+                    <div className="md:col-span-4">
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1 flex items-center justify-between">
                         CEP
                         {isLoadingCep && <Loader2 size={10} className="animate-spin text-indigo-500" />}
@@ -1125,8 +1194,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                       />
                     </div>
-                    <div className="md:col-span-8">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Endereço Completo (Auto) *</label>
+                    <div className="md:col-span-6">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Endereço Completo <span className="text-red-500">*</span></label>
                       <input 
                         type="text" 
                         value={editingStudent.address || ''}
@@ -1173,7 +1242,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="md:col-span-2">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Nome do Responsável *</label>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Nome do Responsável <span className="text-red-500">*</span></label>
                     <input 
                       type="text" 
                       value={editingStudent.guardianName || ''}
@@ -1192,7 +1261,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">CPF do Responsável *</label>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">CPF do Responsável <span className="text-red-500">*</span></label>
                     <input 
                       type="text" 
                       value={editingStudent.guardianCpf || ''}
@@ -1210,7 +1279,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">WhatsApp do Responsável *</label>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">WhatsApp do Responsável <span className="text-red-500">*</span></label>
                     <input 
                       type="tel" 
                       value={editingStudent.guardianPhone || ''}
@@ -1310,17 +1379,17 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   <div className="space-y-6">
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase ml-1 mb-2">Graus na Faixa</label>
-                      <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4">
-                        <button type="button" onClick={() => setEditingStudent({...editingStudent, stripes: Math.max(0, (editingStudent.stripes || 0) - 1)})} className="text-slate-400 hover:text-indigo-600 transition-colors"><Minus size={20} /></button>
-                        <div className="flex gap-2">
+                      <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${BELT_COLORS[editingStudent.belt || Belt.WHITE]}`}>
+                        <button type="button" onClick={() => setEditingStudent({...editingStudent, stripes: Math.max(0, (editingStudent.stripes || 0) - 1)})} className="text-white/50 hover:scale-125 transition-all outline-none md:p-2"><Minus size={20} /></button>
+                        <div className={`flex gap-1.5 p-1 rounded-md px-3 bg-opacity-90 ${editingStudent.belt === Belt.BLACK ? 'bg-red-600' : 'bg-zinc-900 shadow-lg'}`}>
                           {[...Array(editingStudent.belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
                             <div 
                               key={i} 
-                              className={`w-3 h-8 rounded-sm border transition-all ${i < (editingStudent.stripes || 0) ? 'bg-white border-slate-300 shadow-sm' : 'bg-slate-200/50 border-transparent'}`} 
+                              className={`w-2.5 h-7 rounded-sm transition-all ${i < (editingStudent.stripes || 0) ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-y-110' : 'bg-white/10'}`} 
                             />
                           ))}
                         </div>
-                        <button type="button" onClick={() => setEditingStudent({...editingStudent, stripes: Math.min(editingStudent.belt === Belt.BLACK ? 6 : 4, (editingStudent.stripes || 0) + 1)})} className="text-slate-400 hover:text-indigo-600 transition-colors"><PlusIcon size={20} /></button>
+                        <button type="button" onClick={() => setEditingStudent({...editingStudent, stripes: Math.min(editingStudent.belt === Belt.BLACK ? 6 : 4, (editingStudent.stripes || 0) + 1)})} className="text-white/50 hover:scale-125 transition-all outline-none md:p-2"><PlusIcon size={20} /></button>
                       </div>
                       <p className="text-[9px] text-slate-400 mt-1 ml-1 font-medium">
                         {editingStudent.belt === Belt.BLACK ? 'Faixa preta possui até 6 graus.' : 'Faixas coloridas possuem até 4 graus.'}
@@ -1400,6 +1469,21 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       <option value="Active">Ativo</option>
                       <option value="Inactive">Inativo</option>
                       <option value="Dropped">Desistente</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Plano de Matrícula</label>
+                    <select 
+                      value={editingStudent.planId || ''}
+                      onChange={(e) => setEditingStudent({...editingStudent, planId: e.target.value})}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700"
+                    >
+                      <option value="">Nenhum Plano Vinculado</option>
+                      {(academy.plans || []).map(plan => (
+                        <option key={plan.id} value={plan.id}>
+                          {plan.name} - R$ {plan.price.toLocaleString('pt-BR')} ({plan.category})
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div>
