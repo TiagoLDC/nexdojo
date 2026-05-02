@@ -388,11 +388,6 @@ const App: React.FC = () => {
         )}
 
         <main className={`flex-1 overflow-y-auto overflow-x-hidden ${isInputFocused ? 'p-4 pb-10' : 'p-4 pb-32 md:p-8'} transition-all duration-300 custom-scrollbar`}>
-          {/* TAG DE VERSÃO QAS */}
-          <div className="bg-amber-500/90 text-white text-[10px] font-black px-4 py-1 rounded-full w-fit mb-4 uppercase tracking-widest shadow-lg shadow-amber-500/20 animate-pulse no-print">
-            VERSÃO QAS 02/05/2026 08:33:51
-          </div>
-
           {/* INDICADOR DE MODO MASTER (SUPERUSER) */}
           {user.role === 'superuser' && (
             <div className="mb-6 bg-indigo-600 text-white p-4 rounded-[32px] shadow-lg shadow-indigo-600/20 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top duration-500">
@@ -715,6 +710,10 @@ const Sidebar: React.FC<{
       </nav>
 
       <div className="mt-auto space-y-1 p-4 border-t border-slate-800 bg-slate-900/50">
+        {/* TAG DE VERSÃO QAS */}
+        <div className="bg-amber-500/90 text-white text-[8px] font-black px-3 py-1 rounded-full w-fit mb-2 uppercase tracking-widest shadow-lg shadow-amber-500/20 animate-pulse no-print mx-auto">
+          VERSÃO QAS 02/05/2026 08:33:51
+        </div>
         {!isCollapsed && (
           <div className="flex items-center justify-around mb-3 bg-slate-800/50 p-2 rounded-2xl border border-slate-700/50">
             {languages.map((lang) => (
