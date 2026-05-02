@@ -1,0 +1,13 @@
+services:
+  nexdojo:
+    build: .
+    container_name: nexdojo-qas
+    restart: always
+    ports:
+      - "3003:80"
+    networks:
+      - nexdojo-net
+
+networks:
+  nexdojo-net:
+    driver: bridge
