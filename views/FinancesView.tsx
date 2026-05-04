@@ -228,6 +228,33 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
+        onclone: (clonedDoc) => {
+          // Fix for html2canvas oklch parsing error (Tailwind v4)
+          const style = clonedDoc.createElement('style');
+          style.innerHTML = `
+            * {
+              --color-indigo-600: #4f46e5 !important;
+              --color-green-600: #16a34a !important;
+              --color-red-600: #dc2626 !important;
+              --color-slate-50: #f8fafc !important;
+              --color-slate-100: #f1f5f9 !important;
+              --color-slate-200: #e2e8f0 !important;
+              --color-slate-400: #94a3b8 !important;
+              --color-slate-500: #64748b !important;
+              --color-slate-600: #475569 !important;
+              --color-slate-800: #1e293b !important;
+              --color-slate-900: #0f172a !important;
+              --color-slate-950: #020617 !important;
+              
+              --color-emerald-50: #ecfdf5 !important;
+              --color-emerald-600: #059669 !important;
+              
+              --color-amber-50: #fffbeb !important;
+              --color-amber-500: #f59e0b !important;
+            }
+          `;
+          clonedDoc.head.appendChild(style);
+        },
         ignoreElements: (element) => {
           return element.classList.contains('no-print');
         }

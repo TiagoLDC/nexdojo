@@ -1,9 +1,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Student, Belt, StudentDocument, ClassTemplate, Academy, User } from '../types';
+import { Student, Belt, StudentDocument, ClassTemplate, Academy, User, GraduationHistoryItem } from '../types';
 import { StorageService } from '../services/storage';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
+import { calculateAge, isReadyForGraduation, getNextRank, BELT_LIST } from '../services/graduation';
 import { PrivacyValue } from '../components/PrivacyValue';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, 
   UserPlus, 
@@ -47,7 +49,9 @@ import {
   Loader2,
   Eye,
   EyeOff,
-  Book
+  Book,
+  ChevronRight,
+  Clipboard
 } from 'lucide-react';
 import { BeltBadge } from '../components/BeltBadge';
 import { BELT_COLORS } from '../constants';
@@ -121,6 +125,9 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
   const [qrStudent, setQrStudent] = useState<Student | null>(null);
   const [search, setSearch] = useState('');
   
+  const [isGraduationCenterOpen, setIsGraduationCenterOpen] = useState(false);
+  const [isPromoting, setIsPromoting] = useState(false);
+  
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error' | 'delete'} | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [beltFilter, setBeltFilter] = useState<string>('All');
@@ -148,18 +155,6 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
   const showNotification = (message: string, type: 'success' | 'error' | 'delete' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
-  };
-
-  const calculateAge = (birthDate: string) => {
-    if (!birthDate) return 0;
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const m = today.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return age;
   };
 
   const exportStudentsToCSV = () => {
@@ -406,30 +401,42 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     setIsQRModalOpen(true);
   };
 
-  const isReadyForGraduation = (student: Student) => {
-    const age = calculateAge(student.birthDate);
-    // Regras básicas (podem ser ajustadas conforme a academia)
-    if (student.belt === Belt.WHITE) {
-      const readyForBelt = student.totalClasses >= 80;
-      const readyForStripe = student.totalClasses >= 20 && Math.floor(student.totalClasses / 20) > student.stripes && student.stripes < 4;
-      return { readyForBelt, readyForStripe };
+  const handlePromoteStudent = (student: Student, newBelt: Belt, newStripes: number, notes: string = '') => {
+    try {
+      const historyItem: GraduationHistoryItem = {
+        id: Math.random().toString(36).substr(2, 9),
+        previousBelt: student.belt,
+        newBelt: newBelt,
+        previousStripes: student.stripes,
+        newStripes: newStripes,
+        date: new Date().toISOString(),
+        instructorId: currentUser.id,
+        notes: notes
+      };
+
+      const updatedStudent: Student = {
+        ...student,
+        belt: newBelt,
+        stripes: newStripes,
+        lastGraduationDate: new Date().toISOString(),
+        totalClasses: 0,
+        graduationHistory: [...(student.graduationHistory || []), historyItem]
+      };
+
+      const currentStudents = StorageService.getStudents();
+      const updated = currentStudents.map(s => s.id === updatedStudent.id ? updatedStudent : s);
+      StorageService.saveStudents(updated);
+      setStudents(updated);
+      
+      if (editingStudent?.id === student.id) {
+        setEditingStudent(updatedStudent);
+      }
+
+      showNotification(`Promoção realizada: ${student.name} agora é ${newBelt}${newStripes > 0 ? ` (${newStripes}º grau)` : ''}!`);
+    } catch (e) {
+      console.error(e);
+      showNotification("Erro ao realizar promoção.", 'error');
     }
-    if ([Belt.GREY, Belt.YELLOW, Belt.ORANGE, Belt.GREEN].includes(student.belt)) {
-      const readyForBelt = student.totalClasses >= 100;
-      const readyForStripe = student.totalClasses >= 25 && Math.floor(student.totalClasses / 25) > student.stripes && student.stripes < 4;
-      return { readyForBelt, readyForStripe };
-    }
-    if ([Belt.BLUE, Belt.PURPLE, Belt.BROWN].includes(student.belt)) {
-      const readyForBelt = student.totalClasses >= 160;
-      const readyForStripe = student.totalClasses >= 40 && Math.floor(student.totalClasses / 40) > student.stripes && student.stripes < 4;
-      return { readyForBelt, readyForStripe };
-    }
-    if (student.belt === Belt.BLACK) {
-      // Faixa preta: graus a cada 300 aulas (simplificado)
-      const readyForStripe = student.totalClasses >= 300 && Math.floor(student.totalClasses / 300) > student.stripes && student.stripes < 6;
-      return { readyForBelt: false, readyForStripe };
-    }
-    return { readyForBelt: false, readyForStripe: false };
   };
 
   const getEffectiveAbsenceLimit = (student: Student) => {
@@ -492,6 +499,13 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Gestão de atletas e documentos.</p>
         </div>
         <div className="grid grid-cols-3 md:flex gap-2">
+          <button 
+            onClick={() => setIsGraduationCenterOpen(true)}
+            className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-4 py-3.5 rounded-2xl font-black flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 text-xs uppercase tracking-widest border border-indigo-100 dark:border-indigo-800"
+          >
+            <Trophy size={18} />
+            Graduação
+          </button>
           <button 
             onClick={exportStudentsToCSV}
             className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 px-4 py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 text-xs uppercase tracking-widest"
@@ -1412,24 +1426,69 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       <label className="block text-[10px] font-bold text-slate-400 uppercase ml-1 mb-2 flex items-center gap-1">
                         <Activity size={12} /> Total de Aulas na Faixa
                       </label>
-                      <input 
-                        type="number" 
-                        min="0"
-                        disabled={!canEditTotalClasses}
-                        value={editingStudent.totalClasses}
-                        onChange={(e) => setEditingStudent({...editingStudent, totalClasses: parseInt(e.target.value) || 0})}
-                        className={`w-full border rounded-xl px-4 py-3 outline-none font-bold ${
-                          canEditTotalClasses 
-                            ? "bg-slate-50 border-slate-200 focus:ring-2 focus:ring-indigo-500 text-slate-700" 
-                            : "bg-slate-100 border-slate-100 text-slate-400 cursor-not-allowed"
-                        }`}
-                      />
+                      <div className="flex gap-2">
+                        <input 
+                          type="number" 
+                          min="0"
+                          disabled={!canEditTotalClasses}
+                          value={editingStudent.totalClasses}
+                          onChange={(e) => setEditingStudent({...editingStudent, totalClasses: parseInt(e.target.value) || 0})}
+                          className={`flex-1 border rounded-xl px-4 py-3 outline-none font-bold ${
+                            canEditTotalClasses 
+                              ? "bg-slate-50 border-slate-200 focus:ring-2 focus:ring-indigo-500 text-slate-700" 
+                              : "bg-slate-100 border-slate-100 text-slate-400 cursor-not-allowed"
+                          }`}
+                        />
+                        {(() => {
+                           const { readyForBelt, readyForStripe } = isReadyForGraduation(editingStudent);
+                           if (readyForBelt || readyForStripe) {
+                             const { nextBelt, nextStripes } = getNextRank(editingStudent.belt, editingStudent.stripes);
+                             return (
+                               <button 
+                                 onClick={() => handlePromoteStudent(editingStudent, nextBelt, nextStripes)}
+                                 className="bg-amber-500 text-slate-900 px-4 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
+                               >
+                                 Promover
+                               </button>
+                             );
+                           }
+                           return null;
+                        })()}
+                      </div>
                       <p className="text-[9px] text-slate-400 mt-1 ml-1 font-medium italic">
                         {canEditTotalClasses 
                           ? "* Este número é usado para calcular a prontidão para graduação."
                           : "* Somente administradores e professores podem alterar este valor."}
                       </p>
                     </div>
+
+                    {/* Histórico Local do Aluno */}
+                    {editingStudent.graduationHistory && editingStudent.graduationHistory.length > 0 && (
+                      <div className="mt-8 border-t border-slate-100 pt-6">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase ml-1 mb-4 flex items-center gap-1">
+                          <Activity size={12} /> Histórico de Graduações
+                        </label>
+                        <div className="space-y-3">
+                          {editingStudent.graduationHistory.slice().reverse().map(h => (
+                            <div key={h.id} className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="bg-white p-1.5 rounded-lg text-emerald-600 shadow-sm"><Check size={14} /></div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black text-slate-500 uppercase">{h.previousBelt}</span>
+                                    <ChevronRight size={10} className="text-slate-300" />
+                                    <span className="text-[10px] font-black text-emerald-600 uppercase italic">{h.newBelt}</span>
+                                  </div>
+                                  <p className="text-[9px] text-slate-400 font-bold mt-0.5">
+                                    {h.newStripes}º Grau • {new Date(h.date).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -1549,7 +1608,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
         </div>
       )}
 
-      {/* Modal de Confirmação de Exclusão de Aluno */}
+      {/* Modal de Confirmação de Exclusão de Aluno (Mantido original) */}
       {isDeleteModalOpen && editingStudent && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-sm rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl text-center">
@@ -1578,6 +1637,238 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
           </div>
         </div>
       )}
+
+      {/* NOVO: CENTRAL DE GRADUAÇÃO (CONTROLE DE ADM) */}
+      <AnimatePresence>
+        {isGraduationCenterOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[300] flex flex-col no-print"
+          >
+            <div className="p-6 flex items-center justify-between border-b border-white/10 shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="bg-amber-500 p-3 rounded-2xl text-white shadow-lg shadow-amber-500/20">
+                  <Trophy size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-white uppercase italic tracking-tight leading-none">Central de Graduação</h2>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Controle de Promoções e Graus</p>
+                </div>
+              </div>
+              <button onClick={() => setIsGraduationCenterOpen(false)} className="p-3 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
+              <div className="max-w-4xl mx-auto space-y-8">
+                {/* STATUS CARDS */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-white/5 border border-white/10 rounded-[32px] p-6 text-center">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Prontos p/ Grau</p>
+                    <p className="text-3xl font-black text-amber-500 leading-none">
+                      {students.filter(s => isReadyForGraduation(s).readyForStripe).length}
+                    </p>
+                  </div>
+                  <div className="bg-white/5 border border-white/10 rounded-[32px] p-6 text-center">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Prontos p/ Faixa</p>
+                    <p className="text-3xl font-black text-indigo-500 leading-none">
+                      {students.filter(s => isReadyForGraduation(s).readyForBelt).length}
+                    </p>
+                  </div>
+                  <div className="bg-white/5 border border-white/10 rounded-[32px] p-6 text-center">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Ativos</p>
+                    <p className="text-3xl font-black text-white leading-none">
+                      {students.filter(s => s.status === 'Active').length}
+                    </p>
+                  </div>
+                  <div className="bg-white/5 border border-white/10 rounded-[32px] p-6 text-center">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Graduações (30d)</p>
+                    <p className="text-3xl font-black text-emerald-500 leading-none">
+                      {students.filter(s => {
+                        if (!s.lastGraduationDate) return false;
+                        const date = new Date(s.lastGraduationDate);
+                        const thirtyDaysAgo = new Date();
+                        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                        return date > thirtyDaysAgo;
+                      }).length}
+                    </p>
+                  </div>
+                </div>
+
+                {/* FILA DE PROMOÇÃO */}
+                <div>
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    <h3 className="text-sm font-black text-white uppercase italic tracking-widest flex items-center gap-2 flex-grow">
+                      <UsersIcon size={16} className="text-indigo-500" /> Fila de Promoção Sugerida
+                    </h3>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => {
+                          const ready = students.filter(s => isReadyForGraduation(s).readyForBelt);
+                          const names = ready.map(s => s.name).join('\n');
+                          navigator.clipboard.writeText(names);
+                          showNotification(`${ready.length} nomes de Faixa copiados!`);
+                        }}
+                        className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all"
+                      >
+                        Copiar Faixas
+                      </button>
+                      <button 
+                        onClick={() => {
+                          const ready = students.filter(s => isReadyForGraduation(s).readyForStripe);
+                          const names = ready.map(s => s.name).join('\n');
+                          navigator.clipboard.writeText(names);
+                          showNotification(`${ready.length} nomes de Graus copiados!`);
+                        }}
+                        className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all"
+                      >
+                        Copiar Graus
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {students
+                      .filter(s => {
+                        const { readyForBelt, readyForStripe } = isReadyForGraduation(s);
+                        return readyForBelt || readyForStripe;
+                      })
+                      .sort((a, b) => b.totalClasses - a.totalClasses)
+                      .map(student => {
+                        const { readyForBelt, readyForStripe } = isReadyForGraduation(student);
+                        const { nextBelt, nextStripes } = getNextRank(student.belt, student.stripes);
+
+                        return (
+                          <motion.div 
+                            key={student.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-white/5 border border-white/10 rounded-[32px] p-6 flex items-start gap-4 hover:bg-white/10 transition-all border-l-4 border-l-amber-500"
+                          >
+                            <div className="relative shrink-0">
+                              {student.photo ? (
+                                <img src={student.photo} className="w-20 h-20 rounded-2xl object-cover" />
+                              ) : (
+                                <div className={`w-20 h-20 rounded-2xl flex items-center justify-center font-black text-3xl ${BELT_COLORS[student.belt]}`}>
+                                  {student.name.charAt(0)}
+                                </div>
+                              )}
+                              <div className="absolute -bottom-2 -right-2 bg-slate-900 border border-white/20 p-1.5 rounded-full text-amber-500 shadow-xl">
+                                <Star size={12} fill="currentColor" />
+                              </div>
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="font-black text-white text-lg truncate uppercase italic">{student.name}</h4>
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard.writeText(student.name);
+                                    showNotification('Nome copiado!');
+                                  }}
+                                  className="p-1.5 hover:bg-white/10 rounded-lg text-white/40 hover:text-white transition-all flex-shrink-0"
+                                  title="Copiar Nome"
+                                >
+                                  <Clipboard size={14} />
+                                </button>
+                              </div>
+                              <div className="flex items-center gap-2 mb-3">
+                                <BeltBadge belt={student.belt} stripes={student.stripes} />
+                                <ChevronRight size={14} className="text-slate-500" />
+                                <BeltBadge belt={nextBelt} stripes={nextStripes} />
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <div>
+                                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Treinos Atuais</p>
+                                  <p className="text-sm font-black text-white">{student.totalClasses} aulas</p>
+                                </div>
+                                <button 
+                                  onClick={() => handlePromoteStudent(student, nextBelt, nextStripes)}
+                                  className="ml-auto bg-amber-500 hover:bg-amber-400 text-slate-900 px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
+                                >
+                                  Promover
+                                </button>
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    
+                    {students.filter(s => {
+                      const { readyForBelt, readyForStripe } = isReadyForGraduation(s);
+                      return readyForBelt || readyForStripe;
+                    }).length === 0 && (
+                      <div className="col-span-full py-20 text-center text-slate-500">
+                        <div className="bg-white/5 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
+                          <Check size={32} />
+                        </div>
+                        <p className="font-bold">Todos os alunos estão em dia!</p>
+                        <p className="text-xs mt-1">Nenhum aluno atingiu os critérios mínimos para promoção hoje.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* HISTÓRICO RECENTE */}
+                <div className="pb-20">
+                  <h3 className="text-sm font-black text-white uppercase italic tracking-widest mb-6 flex items-center gap-2">
+                    <Activity size={16} className="text-emerald-500" /> Últimas Promoções (Academia)
+                  </h3>
+                  
+                  <div className="space-y-3">
+                    {students
+                      .filter(s => s.graduationHistory && s.graduationHistory.length > 0)
+                      .flatMap(s => (s.graduationHistory || []).map(h => ({ ...h, studentName: s.name, studentId: s.id })))
+                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                      .slice(0, 10)
+                      .map(history => (
+                        <div key={history.id} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center">
+                              <Check size={20} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-white">{history.studentName}</p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                                  {history.previousBelt} ({history.previousStripes}º)
+                                </span>
+                                <ChevronRight size={10} className="text-slate-600" />
+                                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">
+                                  {history.newBelt} ({history.newStripes}º)
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[10px] font-medium text-slate-500">{new Date(history.date).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                      ))}
+                    
+                    {students.every(s => !s.graduationHistory || s.graduationHistory.length === 0) && (
+                      <p className="text-center py-10 text-slate-600 text-sm italic">Nenhum histórico de graduação registrado recentemente.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-6 border-t border-white/10 bg-slate-950 shrink-0">
+               <button 
+                onClick={() => setIsGraduationCenterOpen(false)}
+                className="w-full bg-white text-slate-900 font-black py-4 rounded-2xl hover:bg-slate-100 transition-all active:scale-[0.98] uppercase tracking-widest shadow-xl"
+               >
+                 Sair da Central
+               </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

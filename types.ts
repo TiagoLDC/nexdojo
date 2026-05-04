@@ -26,6 +26,17 @@ export interface StudentDocument {
   uploadedAt: string;
 }
 
+export interface GraduationHistoryItem {
+  id: string;
+  previousBelt: Belt;
+  newBelt: Belt;
+  previousStripes: number;
+  newStripes: number;
+  date: string;
+  instructorId?: string;
+  notes?: string;
+}
+
 export interface Student {
   id: string;
   academyId: string;
@@ -34,6 +45,7 @@ export interface Student {
   belt: Belt;
   stripes: number;
   lastGraduationDate?: string;
+  graduationHistory?: GraduationHistoryItem[];
   birthDate: string; 
   gender?: 'M' | 'F' | 'Outro';
   phone?: string;

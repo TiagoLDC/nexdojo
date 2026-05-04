@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { Academy, Student, Belt, CalendarEvent, User, Instructor, Staff, ClassTemplate, SystemPlan, SystemConfig } from '../types';
 import { StorageService } from '../services/storage';
 import { PrivacyValue } from '../components/PrivacyValue';
+import { calculateAge, isReadyForGraduation } from '../services/graduation';
 import { 
   Users, 
   TrendingUp, 
@@ -53,17 +54,6 @@ import {
 import { BeltBadge } from '../components/BeltBadge';
 import { BELT_COLORS } from '../constants';
 
-const calculateAge = (birthDate: string) => {
-  if (!birthDate) return 0;
-  const today = new Date();
-  const birth = new Date(birthDate);
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-    age--;
-  }
-  return age;
-};
 
 const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAcademy?: (a: Academy) => void }> = ({ academy, user, onSwitchAcademy }) => {
   const [students, setStudents] = React.useState<Student[]>(academy ? StorageService.getStudents(academy.id) : []);
@@ -442,39 +432,12 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
 
   const graduationAlerts = useMemo(() => {
     return students.filter(s => {
-      const age = calculateAge(s.birthDate);
-      if (age < 16) return false;
-      
-      if (s.belt === Belt.WHITE) {
-        return s.totalClasses >= 80 || (s.totalClasses >= 20 && Math.floor(s.totalClasses / 20) > s.stripes);
-      }
-      if ([Belt.BLUE, Belt.PURPLE, Belt.BROWN].includes(s.belt)) {
-        return s.totalClasses >= 160 || (s.totalClasses >= 40 && Math.floor(s.totalClasses / 40) > s.stripes);
-      }
-      return false;
+      const { readyForBelt, readyForStripe } = isReadyForGraduation(s);
+      return readyForBelt || readyForStripe;
     }).map(s => {
-      let type: 'STRIPE' | 'BELT' = 'STRIPE';
-      let message = '';
-      
-      if (s.belt === Belt.WHITE) {
-        if (s.totalClasses >= 80) {
-          type = 'BELT';
-          message = 'Elegível para Faixa Azul (80 aulas)';
-        } else {
-          const expectedStripes = Math.floor(s.totalClasses / 20);
-          type = 'STRIPE';
-          message = `Elegível para o ${expectedStripes}º Grau`;
-        }
-      } else {
-        if (s.totalClasses >= 160) {
-          type = 'BELT';
-          message = 'Elegível para Próxima Faixa (160 aulas)';
-        } else {
-          const expectedStripes = Math.floor(s.totalClasses / 40);
-          type = 'STRIPE';
-          message = `Elegível para o ${expectedStripes}º Grau`;
-        }
-      }
+      const { readyForBelt, readyForStripe } = isReadyForGraduation(s);
+      let type: 'STRIPE' | 'BELT' = readyForBelt ? 'BELT' : 'STRIPE';
+      let message = readyForBelt ? 'Elegível para Próxima Faixa' : 'Elegível para Próximo Grau';
       return { ...s, alertType: type, alertMessage: message };
     }).sort((a, b) => a.name.localeCompare(b.name));
   }, [students]);
@@ -777,6 +740,56 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
           )}
         </div>
       </motion.header>
+
+      {/* ALERTAS DE GRADUAÇÃO (ADMIN/INSTRUCTOR) */}
+      {(user.role === 'admin' || user.role === 'superuser' || user.role === 'instructor') && graduationAlerts.length > 0 && (
+        <motion.div variants={itemVariants} className="px-2">
+          <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-[40px] p-8 text-white shadow-2xl relative overflow-hidden group">
+            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+              <div className="flex items-center gap-6">
+                <div className="bg-white/20 p-5 rounded-3xl backdrop-blur-sm group-hover:scale-110 transition-transform">
+                  <Trophy size={40} className="text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black italic tracking-tighter uppercase leading-none">PRONTOS PARA GRADUAR!</h2>
+                  <p className="text-[11px] font-bold text-amber-100 uppercase tracking-[0.2em] mt-2">
+                    {graduationAlerts.length} atletas atingiram os critérios de aulas/tempo para o próximo grau ou faixa.
+                  </p>
+                </div>
+              </div>
+              <Link 
+                to="/students" 
+                className="w-full md:w-auto bg-white text-amber-600 px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.1em] shadow-xl hover:scale-105 active:scale-95 transition-all text-center"
+              >
+                Gerenciar Graduações
+              </Link>
+            </div>
+            
+            {/* Atalho Rápido - Lista Horizontal */}
+            <div className="relative z-10 mt-8 flex gap-3 overflow-x-auto no-scrollbar pb-2">
+              {graduationAlerts.slice(0, 10).map(s => (
+                <div key={s.id} className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10 flex items-center gap-3 shrink-0">
+                  <div className="relative">
+                    {s.photo ? (
+                      <img src={s.photo} className="w-8 h-8 rounded-lg object-cover" />
+                    ) : (
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${BELT_COLORS[s.belt]}`}>
+                        {s.name.charAt(0)}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase truncate max-w-[100px] leading-tight">{s.name.split(' ')[0]}</p>
+                    <p className="text-[8px] font-bold text-amber-100 uppercase tracking-widest">{s.alertType === 'BELT' ? 'Próx. Faixa' : 'Próx. Grau'}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32" />
+          </div>
+        </motion.div>
+      )}
 
       {/* AVISO DE MENSAGENS NO MURAL */}
       {hasNewMessages && (
