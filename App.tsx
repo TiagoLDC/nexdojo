@@ -279,7 +279,7 @@ const App: React.FC = () => {
         {/* TAG DE VERSÃO QAS */}
         <div className="fixed top-0 left-0 right-0 z-[9999] pointer-events-none flex justify-center">
           <div className="bg-amber-500/90 text-white text-[10px] font-black px-4 py-1 rounded-b-xl shadow-lg backdrop-blur-sm border-x border-b border-amber-400/50 uppercase tracking-widest animate-in slide-in-from-top duration-500">
-            VERSÃO QAS 04/05/2026 09:30:00
+            VERSÃO QAS 04/05/2026 13:18:00
           </div>
         </div>
         <div className="no-print shrink-0">
