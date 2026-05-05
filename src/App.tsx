@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth, AuthProvider } from './context/AuthContext';
+import { useTheme } from './hooks/useTheme';
 import Layout from './components/layout/Layout';
 
 // Views
