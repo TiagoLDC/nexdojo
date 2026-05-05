@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { StorageService } from '../../services/storage';
-import { Student, User, Belt } from '../../types';
+import { ApiService } from '../../services/api';
+import { Belt } from '../../types';
 import Input from '../../components/common/Input';
 import { SectionHeader } from './AuthComponents';
-import { X, Camera, Users, User as UserIcon } from 'lucide-react';
+import { X, Camera, Users, User as UserIcon, Loader2 } from 'lucide-react';
 import AuthLayout from './AuthLayout';
 
 interface SignupStudentProps {
@@ -33,29 +33,26 @@ const SignupStudent: React.FC<SignupStudentProps> = ({ showNotification }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const photoRef = useRef<HTMLInputElement>(null);
-  
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [regPassword, setRegPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
-  const [studentData, setStudentData] = useState<Partial<Student>>({ 
-    name: '', belt: Belt.WHITE, stripes: 0, birthDate: '', status: 'Pending', 
-    academyId: '', 
-    joinDate: new Date().toISOString(), totalClasses: 0, totalHours: 0, 
-    absentCount: 0, hasLoanedKimono: false, gender: 'M', weight: '', height: '',
-    bloodType: '', emergencyContact: '', emergencyPhone: '', lastGraduationDate: '',
-    cep: '', address: '', addressNumber: ''
+  const [photo, setPhoto] = useState<string | undefined>();
+
+  const [formData, setFormData] = useState({
+    name: '', email: '', birthDate: '', gender: 'M', academyId: '',
+    belt: Belt.WHITE,
   });
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const academyIdFromUrl = params.get('academyId');
     if (academyIdFromUrl) {
-      setStudentData(prev => ({ ...prev, academyId: academyIdFromUrl }));
+      setFormData(prev => ({ ...prev, academyId: academyIdFromUrl }));
     }
   }, [location]);
 
-  const handleRegisterStudent = () => {
-    if (!studentData.name || !studentData.email || !regPassword || !studentData.academyId) {
+  const handleRegisterStudent = async () => {
+    if (!formData.name || !formData.email || !regPassword || !formData.academyId) {
       showNotification("Preencha todos os campos obrigatórios.", 'error');
       return;
     }
@@ -63,22 +60,16 @@ const SignupStudent: React.FC<SignupStudentProps> = ({ showNotification }) => {
       showNotification("As senhas não coincidem.", 'error');
       return;
     }
-    
-    const newStudent = { ...studentData, id: 's_pub_' + Math.random().toString(36).substr(2, 7) } as Student;
-    const newUser: User = {
-      id: 'u_s_' + Math.random().toString(36).substr(2, 7),
-      academyId: studentData.academyId,
-      role: 'student',
-      name: newStudent.name,
-      email: newStudent.email!,
-      password: regPassword,
-      status: 'Pending'
-    };
-
-    StorageService.saveStudents([...StorageService.getStudents(), newStudent]);
-    StorageService.saveUsers([...StorageService.getUsers(), newUser]);
-    showNotification("Matrícula realizada com sucesso! Aguarde aprovação. OSS!", 'success');
-    navigate('/login');
+    setIsSubmitting(true);
+    try {
+      await ApiService.registerStudent({ ...formData, password: regPassword });
+      showNotification("Matrícula realizada com sucesso! Aguarde aprovação. OSS!", 'success');
+      navigate('/login');
+    } catch (err: any) {
+      showNotification(err.message || 'Erro ao realizar matrícula.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,7 +78,7 @@ const SignupStudent: React.FC<SignupStudentProps> = ({ showNotification }) => {
     const reader = new FileReader();
     reader.onloadend = async () => {
       const compressed = await compressImage(reader.result as string);
-      setStudentData(prev => ({ ...prev, photo: compressed }));
+      setPhoto(compressed);
     };
     reader.readAsDataURL(file);
   };
@@ -105,21 +96,27 @@ const SignupStudent: React.FC<SignupStudentProps> = ({ showNotification }) => {
         <div className="space-y-12">
           <div className="flex flex-col items-center gap-4">
             <div onClick={() => photoRef.current?.click()} className="w-40 h-40 rounded-[40px] bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 overflow-hidden relative cursor-pointer shadow-inner">
-              {studentData.photo ? <img src={studentData.photo} className="w-full h-full object-cover" /> : <Camera size={40} className="text-slate-400 m-auto mt-12" />}
+              {photo ? <img src={photo} className="w-full h-full object-cover" /> : <Camera size={40} className="text-slate-400 m-auto mt-12" />}
             </div>
             <input type="file" ref={photoRef} className="hidden" accept="image/*" onChange={handlePhotoUpload} />
           </div>
           <div className="space-y-6">
             <SectionHeader icon={<UserIcon size={16} />} title="Informações Pessoais" />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-2"><Input label="Nome Completo" required value={studentData.name || ''} onChange={e => setStudentData({...studentData, name: e.target.value})} /></div>
-              <Input label="Data de Nascimento" required type="date" value={studentData.birthDate || ''} onChange={e => setStudentData({...studentData, birthDate: e.target.value})} />
-              <Input label="E-mail (Para Login)" required type="email" value={studentData.email || ''} onChange={e => setStudentData({...studentData, email: e.target.value})} />
+              <div className="md:col-span-2"><Input label="Nome Completo" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} /></div>
+              <Input label="Data de Nascimento" required type="date" value={formData.birthDate} onChange={e => setFormData({ ...formData, birthDate: e.target.value })} />
+              <Input label="E-mail (Para Login)" required type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
               <Input label="Definir Senha" required type="password" value={regPassword} onChange={e => setRegPassword(e.target.value)} />
               <Input label="Confirmar Senha" required type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
             </div>
           </div>
-          <button onClick={handleRegisterStudent} className="w-full py-6 bg-indigo-600 text-white font-black rounded-3xl shadow-2xl text-xl active:scale-95 transition-transform">CONCLUIR MATRÍCULA OSS!</button>
+          <button
+            onClick={handleRegisterStudent}
+            disabled={isSubmitting}
+            className="w-full py-6 bg-indigo-600 text-white font-black rounded-3xl shadow-2xl text-xl active:scale-95 transition-transform disabled:opacity-70 flex items-center justify-center gap-2"
+          >
+            {isSubmitting ? <><Loader2 size={22} className="animate-spin" /> Enviando...</> : 'CONCLUIR MATRÍCULA OSS!'}
+          </button>
         </div>
       </div>
     </AuthLayout>

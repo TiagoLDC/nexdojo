@@ -1,7 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { User, Academy } from '../types';
-import { StorageService } from '../services/storage';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 import LoginForm from './auth/LoginForm';
 import ForgotPassword from './auth/ForgotPassword';
@@ -9,25 +7,9 @@ import SignupChoice from './auth/SignupChoice';
 import SignupAcademy from './auth/SignupAcademy';
 import SignupStudent from './auth/SignupStudent';
 
-interface LoginViewProps {
-  onLogin: (user: User, academy: Academy) => void;
-}
-
-const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
+const LoginView: React.FC = () => {
   const location = useLocation();
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [isFromSharedLink, setIsFromSharedLink] = useState(false);
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const academyIdFromUrl = params.get('academyId');
-    if (academyIdFromUrl) {
-      const found = StorageService.getAcademyById(academyIdFromUrl);
-      if (found) {
-        setIsFromSharedLink(true);
-      }
-    }
-  }, [location]);
 
   const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -37,18 +19,18 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const renderView = () => {
     switch (location.pathname) {
       case '/login':
-        return <LoginForm onLogin={onLogin} showNotification={showNotification} />;
+        return <LoginForm showNotification={showNotification} />;
       case '/esqueci-senha':
         return <ForgotPassword showNotification={showNotification} />;
       case '/cadastro':
-        return <SignupChoice isFromSharedLink={isFromSharedLink} />;
+        return <SignupChoice isFromSharedLink={false} />;
       case '/cadastro/academia':
-        return <SignupAcademy onLogin={onLogin} showNotification={showNotification} />;
+        return <SignupAcademy showNotification={showNotification} />;
       case '/cadastro/aluno':
-      case '/cadastro/instrutor': 
+      case '/cadastro/instrutor':
         return <SignupStudent showNotification={showNotification} />;
       default:
-        return <LoginForm onLogin={onLogin} showNotification={showNotification} />;
+        return <LoginForm showNotification={showNotification} />;
     }
   };
 
@@ -62,7 +44,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           <span className="font-bold text-sm tracking-tight">{toast.message}</span>
         </div>
       )}
-      
+
       {renderView()}
     </div>
   );

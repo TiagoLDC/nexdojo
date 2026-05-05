@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Student, Belt, StudentDocument, ClassTemplate, Academy, User, GraduationHistoryItem } from '../types';
 import { StorageService } from '../services/storage';
+import ApiService from '../services/api';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
 import { calculateAge, isReadyForGraduation, getNextRank, BELT_LIST } from '../services/graduation';
 import { PrivacyValue } from '../components/PrivacyValue';
@@ -145,9 +146,25 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     setShowSensitive(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchStudents = async () => {
+    if (!academy?.id) return;
+    setIsLoading(true);
+    try {
+      const data = await ApiService.getStudents();
+      setStudents(data);
+    } catch (error) {
+      console.error('Erro ao buscar alunos:', error);
+      showNotification('Erro ao carregar alunos.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (academy?.id) {
-      setStudents(StorageService.getStudents(academy.id));
+      fetchStudents();
       setTemplates(StorageService.getTemplates(academy.id));
     }
   }, [academy?.id]);
@@ -259,7 +276,6 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
       }
     }
 
-    // Validação de Responsável para menores
     if (isMinor) {
       if (!editingStudent.guardianName || !editingStudent.guardianPhone || !editingStudent.guardianCpf) {
         showNotification("Para menores de idade, os dados do responsável são obrigatórios.", 'error');
@@ -267,53 +283,51 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
       }
     }
     
-    try {
-      const currentStudents = StorageService.getStudents();
-      const existingIndex = currentStudents.findIndex(s => s.id === editingStudent.id);
-      
-      let updated;
-      if (existingIndex >= 0) {
-        updated = currentStudents.map(s => s.id === editingStudent.id ? editingStudent : s);
-        showNotification("Ficha atualizada com sucesso!");
-      } else {
-        updated = [...currentStudents, editingStudent];
-        showNotification("Atleta cadastrado com sucesso!");
+    const save = async () => {
+      setIsLoading(true);
+      try {
+        if (isNewStudent) {
+          await ApiService.createStudent(editingStudent);
+          showNotification("Atleta cadastrado com sucesso!");
+        } else {
+          await ApiService.updateStudent(editingStudent.id, editingStudent);
+          showNotification("Ficha atualizada com sucesso!");
+        }
+        await fetchStudents();
+        setIsEditModalOpen(false);
+        setEditingStudent(null);
+      } catch (e: any) {
+        console.error(e);
+        showNotification(e.message || "Erro ao salvar aluno.", 'error');
+      } finally {
+        setIsLoading(false);
       }
-
-      StorageService.saveStudents(updated);
-      setStudents(updated);
-      
-      setIsEditModalOpen(false);
-      setEditingStudent(null);
-    } catch (e) {
-      console.error(e);
-      showNotification("Limite de armazenamento excedido! Remova fotos ou documentos.", 'error');
-    }
+    };
+    
+    save();
   };
 
   const handleDeleteStudent = () => {
     if (!editingStudent) return;
     
-    try {
-      const id = editingStudent.id;
-      const currentStudents = StorageService.getStudents();
-      const studentToDelete = currentStudents.find(s => s.id === id);
-      
-      if (studentToDelete) {
-        StorageService.moveToBin('student', studentToDelete, academy.id);
-        const updated = currentStudents.filter(s => s.id !== id);
-        StorageService.saveStudents(updated);
-        setStudents(updated.filter(s => s.academyId === academy.id));
-        showNotification("Atleta movido para a lixeira.", 'delete');
+    const del = async () => {
+      setIsLoading(true);
+      try {
+        await ApiService.deleteStudent(editingStudent.id);
+        showNotification("Atleta removido com sucesso.", 'delete');
+        await fetchStudents();
+        setIsDeleteModalOpen(false);
+        setIsEditModalOpen(false);
+        setEditingStudent(null);
+      } catch (error: any) {
+        console.error("Erro ao excluir aluno:", error);
+        showNotification(error.message || "Erro ao processar exclusão.", 'error');
+      } finally {
+        setIsLoading(false);
       }
-      
-      setIsDeleteModalOpen(false);
-      setIsEditModalOpen(false);
-      setEditingStudent(null);
-    } catch (error) {
-      console.error("Erro ao excluir aluno:", error);
-      showNotification("Erro ao processar exclusão.", 'error');
-    }
+    };
+
+    del();
   };
 
   const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -402,41 +416,46 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
   };
 
   const handlePromoteStudent = (student: Student, newBelt: Belt, newStripes: number, notes: string = '') => {
-    try {
-      const historyItem: GraduationHistoryItem = {
-        id: Math.random().toString(36).substr(2, 9),
-        previousBelt: student.belt,
-        newBelt: newBelt,
-        previousStripes: student.stripes,
-        newStripes: newStripes,
-        date: new Date().toISOString(),
-        instructorId: currentUser.id,
-        notes: notes
-      };
+    const promote = async () => {
+      setIsLoading(true);
+      try {
+        const historyItem: GraduationHistoryItem = {
+          id: Math.random().toString(36).substr(2, 9),
+          previousBelt: student.belt,
+          newBelt: newBelt,
+          previousStripes: student.stripes,
+          newStripes: newStripes,
+          date: new Date().toISOString(),
+          instructorId: currentUser.id,
+          notes: notes
+        };
 
-      const updatedStudent: Student = {
-        ...student,
-        belt: newBelt,
-        stripes: newStripes,
-        lastGraduationDate: new Date().toISOString(),
-        totalClasses: 0,
-        graduationHistory: [...(student.graduationHistory || []), historyItem]
-      };
+        const updatedStudent: Student = {
+          ...student,
+          belt: newBelt,
+          stripes: newStripes,
+          lastGraduationDate: new Date().toISOString(),
+          totalClasses: 0,
+          graduationHistory: [...(student.graduationHistory || []), historyItem]
+        };
 
-      const currentStudents = StorageService.getStudents();
-      const updated = currentStudents.map(s => s.id === updatedStudent.id ? updatedStudent : s);
-      StorageService.saveStudents(updated);
-      setStudents(updated);
-      
-      if (editingStudent?.id === student.id) {
-        setEditingStudent(updatedStudent);
+        await ApiService.updateStudent(student.id, updatedStudent);
+        await fetchStudents();
+        
+        if (editingStudent?.id === student.id) {
+          setEditingStudent(updatedStudent);
+        }
+
+        showNotification(`Promoção realizada: ${student.name} agora é ${newBelt}${newStripes > 0 ? ` (${newStripes}º grau)` : ''}!`);
+      } catch (e: any) {
+        console.error(e);
+        showNotification(e.message || "Erro ao realizar promoção.", 'error');
+      } finally {
+        setIsLoading(false);
       }
+    };
 
-      showNotification(`Promoção realizada: ${student.name} agora é ${newBelt}${newStripes > 0 ? ` (${newStripes}º grau)` : ''}!`);
-    } catch (e) {
-      console.error(e);
-      showNotification("Erro ao realizar promoção.", 'error');
-    }
+    promote();
   };
 
   const getEffectiveAbsenceLimit = (student: Student) => {

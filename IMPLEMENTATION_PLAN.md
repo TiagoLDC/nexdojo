@@ -44,7 +44,7 @@ Para garantir persistência real e modelagem de dados sólida, vamos substituir 
 - [x] **Configuração do Prisma ORM**: Schema criado com modelos `Academy`, `User`, `Student`.
 - [x] **Conexão com Banco de Dados**: Prisma conectado ao MySQL `162.240.167.149` / `qasnexdojo_qas`. Tabelas sincronizadas.
 - [x] **Criação dos Endpoints (Rotas)**: Rotas de Auth (login, register-academy, register-student), Alunos (CRUD) e Academias criadas.
-- [ ] **Refatoração do Frontend**: Atualizar o `StorageService` para consumir a nova API via chamadas HTTP assíncronas em vez de `localStorage`.
+- [x] **Refatoração do Frontend**: Atualizar o `StorageService` para consumir a nova API via chamadas HTTP assíncronas em vez de `localStorage`.
 - [x] **Atualização do Deploy**: `api/Dockerfile` criado; `docker-compose.yml` atualizado para subir o serviço `nexdojo-api` na porta 3005.
 
 ## 7. Implementação de Módulos (Baseado no Escopo)

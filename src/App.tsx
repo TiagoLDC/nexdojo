@@ -37,19 +37,29 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; roles: string[] }> =
 };
 
 const AppRoutes: React.FC = () => {
-  const { user, academy, login, logout, theme, accentColor, language, setLanguage, updateAcademy, setTheme, setAccentColor } = useAuth();
+  const { user, academy, isLoading, logout, theme, accentColor, language, setLanguage, updateAcademy, setTheme, setAccentColor } = useAuth();
   
   useTheme();
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-400 font-bold text-sm uppercase tracking-widest">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
   if (!user) {
     return (
       <Routes>
-        <Route path="/login" element={<LoginView onLogin={login} />} />
-        <Route path="/cadastro" element={<LoginView onLogin={login} />} />
-        <Route path="/cadastro/aluno" element={<LoginView onLogin={login} />} />
-        <Route path="/cadastro/academia" element={<LoginView onLogin={login} />} />
-        <Route path="/cadastro/instrutor" element={<LoginView onLogin={login} />} />
-        <Route path="/esqueci-senha" element={<LoginView onLogin={login} />} />
+        <Route path="/login" element={<LoginView />} />
+        <Route path="/cadastro" element={<LoginView />} />
+        <Route path="/cadastro/aluno" element={<LoginView />} />
+        <Route path="/cadastro/academia" element={<LoginView />} />
+        <Route path="/cadastro/instrutor" element={<LoginView />} />
+        <Route path="/esqueci-senha" element={<LoginView />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );

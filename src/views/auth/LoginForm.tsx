@@ -1,52 +1,34 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { StorageService } from '../../services/storage';
-import { User, Academy } from '../../types';
-import { MOCK_ACADEMY, MOCK_USER, MOCK_STUDENTS, MOCK_CLASSES, MOCK_TEMPLATES, MOCK_ATTENDANCE } from '../../services/mockData';
+import { useAuth } from '../../context/AuthContext';
 import Input from '../../components/common/Input';
-import { Mail, Lock, ArrowRight, Eye, EyeOff, Info, Award } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Eye, EyeOff, Info, Loader2 } from 'lucide-react';
 import AuthLayout from './AuthLayout';
+import { MOCK_ACADEMY } from '../../services/mockData';
 
 interface LoginFormProps {
-  onLogin: (user: User, academy: Academy) => void;
   showNotification: (message: string, type: 'success' | 'error') => void;
 }
 
-const LoginForm: React.FC<LoginFormProps> = ({ onLogin, showNotification }) => {
+const LoginForm: React.FC<LoginFormProps> = ({ showNotification }) => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [email, setEmail] = useState('admin@oss.com');
   const [password, setPassword] = useState('oss123');
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const users = StorageService.getUsers();
-    let foundUser = users.find(u => u.email === email && u.password === password);
-
-    if (!foundUser && email === 'admin@oss.com' && password === 'oss123') {
-      if (users.length === 0) {
-        StorageService.saveStudents(MOCK_STUDENTS);
-        StorageService.saveTemplates(MOCK_TEMPLATES);
-        StorageService.saveClasses(MOCK_CLASSES);
-        StorageService.saveAttendance(MOCK_ATTENDANCE);
-        StorageService.saveUsers([MOCK_USER]);
-      }
-      foundUser = MOCK_USER;
+    setIsSubmitting(true);
+    try {
+      await login(email, password);
+      navigate('/');
+    } catch (err: any) {
+      showNotification(err.message || 'E-mail ou senha incorretos.', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    if (!foundUser) {
-      showNotification("E-mail ou senha incorretos.", 'error');
-      return;
-    }
-
-    if (foundUser.status === 'Pending' && foundUser.role !== 'admin' && foundUser.role !== 'superuser') {
-      showNotification("Seu acesso ainda está pendente de aprovação. OSS!", 'error');
-      return;
-    }
-
-    const academy = StorageService.getAcademyById(foundUser.academyId) || StorageService.getAcademy();
-    onLogin(foundUser, academy || MOCK_ACADEMY);
-    navigate('/');
   };
 
   return (
@@ -71,8 +53,12 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, showNotification }) => {
               </button>
             </div>
           </div>
-          <button type="submit" className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95">
-            Entrar no Tatame <ArrowRight size={20} />
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-70 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95"
+          >
+            {isSubmitting ? <><Loader2 size={20} className="animate-spin" /> Entrando...</> : <>Entrar no Tatame <ArrowRight size={20} /></>}
           </button>
           <div className="pt-2 flex flex-col items-center gap-3">
             <button type="button" onClick={() => navigate('/esqueci-senha')} className="text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">Esqueci minha senha</button>

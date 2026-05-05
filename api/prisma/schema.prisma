@@ -56,6 +56,13 @@ model Student {
   address            String?
   addressNumber      String?
   
+  // Guardian info (for minors)
+  guardianName       String?
+  guardianPhone      String?
+  guardianCpf        String?
+  guardianRelation   String?
+  guardianEmail      String?
+
   belt               String   @default("WHITE")
   stripes            Int      @default(0)
   status             String   @default("Pending") // Active, Inactive, Pending

@@ -1,14 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { StorageService } from '../../services/storage';
 import { fetchAddressByCep, maskCEP, maskPhone } from '../../services/cep';
-import { User, Academy } from '../../types';
+import { ApiService } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import Input from '../../components/common/Input';
 import { ArrowLeft, Camera, Phone, MapPin, Loader2 } from 'lucide-react';
 import AuthLayout from './AuthLayout';
 
 interface SignupAcademyProps {
-  onLogin: (user: User, academy: Academy) => void;
   showNotification: (message: string, type: 'success' | 'error') => void;
 }
 
@@ -30,47 +29,42 @@ const compressImage = (base64Str: string): Promise<string> => {
   });
 };
 
-const SignupAcademy: React.FC<SignupAcademyProps> = ({ onLogin, showNotification }) => {
+const SignupAcademy: React.FC<SignupAcademyProps> = ({ showNotification }) => {
   const navigate = useNavigate();
+  const { loginDirect } = useAuth();
   const photoRef = useRef<HTMLInputElement>(null);
   const [isLoadingCep, setIsLoadingCep] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
-  
-  const [academyData, setAcademyData] = useState({ 
-    name: '', 
-    logo: 'https://images.unsplash.com/photo-1511884642898-4c92249e20b6?q=80&w=400&h=400&auto=format&fit=crop', 
-    owner: '', 
-    email: '', 
-    password: '', 
-    cep: '', 
-    address: '', 
-    addressNumber: '', 
-    phone: '' 
+
+  const [academyData, setAcademyData] = useState({
+    name: '',
+    logo: 'https://images.unsplash.com/photo-1511884642898-4c92249e20b6?q=80&w=400&h=400&auto=format&fit=crop',
+    ownerName: '',
+    email: '',
+    password: '',
+    cep: '',
+    address: '',
+    addressNumber: '',
+    phone: ''
   });
 
-  const handleRegisterAcademy = (e: React.FormEvent) => {
+  const handleRegisterAcademy = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!academyData.password || academyData.password !== confirmPassword) {
       showNotification("As senhas não coincidem ou são inválidas.", 'error');
       return;
     }
-    
-    const academyId = 'acad_' + Math.random().toString(36).substr(2, 5);
-    const academy: Academy = { ...academyData, id: academyId, ownerName: academyData.owner };
-    const user: User = { 
-      id: 'user_' + Math.random().toString(36).substr(2, 5), 
-      academyId, 
-      role: 'admin', 
-      name: academyData.owner, 
-      email: academyData.email, 
-      password: academyData.password,
-      status: 'Active'
-    };
-    
-    StorageService.saveAcademy(academy);
-    StorageService.saveUsers([...StorageService.getUsers(), user]);
-    onLogin(user, academy);
-    navigate('/');
+    setIsSubmitting(true);
+    try {
+      const data = await ApiService.registerAcademy(academyData);
+      loginDirect(data.user, data.academy);
+      navigate('/');
+    } catch (err: any) {
+      showNotification(err.message || 'Erro ao criar academia.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCepLookup = async (cep: string) => {
@@ -78,9 +72,9 @@ const SignupAcademy: React.FC<SignupAcademyProps> = ({ onLogin, showNotification
     if (masked.replace(/\D/g, '').length === 8) {
       setIsLoadingCep(true);
       const data = await fetchAddressByCep(masked);
-      if (data) setAcademyData(prev => ({...prev, cep: masked, address: data.fullAddress}));
+      if (data) setAcademyData(prev => ({ ...prev, cep: masked, address: data.fullAddress }));
       setIsLoadingCep(false);
-    } else setAcademyData(prev => ({...prev, cep: masked, address: ''}));
+    } else setAcademyData(prev => ({ ...prev, cep: masked, address: '' }));
   };
 
   return (
@@ -92,7 +86,7 @@ const SignupAcademy: React.FC<SignupAcademyProps> = ({ onLogin, showNotification
         </div>
         <div className="space-y-4">
           <div className="flex flex-col items-center gap-3 mb-6">
-            <div onClick={() => photoRef.current?.click()} className="w-32 h-32 bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-[32px] overflow-hidden flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500 transition-all shadow-inner group relative">
+            <div onClick={() => photoRef.current?.click()} className="w-32 h-32 bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-[32px] overflow-hidden flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500 transition-all shadow-inner">
               {academyData.logo ? <img src={academyData.logo} className="w-full h-full object-contain p-2" /> : <Camera size={32} className="text-slate-400" />}
             </div>
             <input type="file" ref={photoRef} className="hidden" accept="image/*" onChange={async (e) => {
@@ -103,25 +97,27 @@ const SignupAcademy: React.FC<SignupAcademyProps> = ({ onLogin, showNotification
                   reader.onloadend = () => r(reader.result as string);
                   reader.readAsDataURL(file);
                 }));
-                setAcademyData({...academyData, logo: compressed});
+                setAcademyData({ ...academyData, logo: compressed });
               }
             }} />
           </div>
-          <Input label="Seu Nome" value={academyData.owner} onChange={e => setAcademyData({...academyData, owner: e.target.value})} placeholder="Mestre Hélio" />
-          <Input label="Nome da Unidade" value={academyData.name} onChange={e => setAcademyData({...academyData, name: e.target.value})} placeholder="Ex: NexDojo" />
-          <Input label="E-mail de Contato" type="email" value={academyData.email} onChange={e => setAcademyData({...academyData, email: e.target.value})} placeholder="ct@oss.com" />
-          <Input label="WhatsApp / Telefone" value={academyData.phone} onChange={e => setAcademyData({...academyData, phone: maskPhone(e.target.value)})} placeholder="(00) 00000-0000" icon={<Phone size={16} />} />
+          <Input label="Seu Nome" value={academyData.ownerName} onChange={e => setAcademyData({ ...academyData, ownerName: e.target.value })} placeholder="Mestre Hélio" />
+          <Input label="Nome da Unidade" value={academyData.name} onChange={e => setAcademyData({ ...academyData, name: e.target.value })} placeholder="Ex: NexDojo" />
+          <Input label="E-mail de Contato" type="email" value={academyData.email} onChange={e => setAcademyData({ ...academyData, email: e.target.value })} placeholder="ct@oss.com" />
+          <Input label="WhatsApp / Telefone" value={academyData.phone} onChange={e => setAcademyData({ ...academyData, phone: maskPhone(e.target.value) })} placeholder="(00) 00000-0000" icon={<Phone size={16} />} />
           <div className="grid grid-cols-2 gap-4">
             <Input label="CEP" value={academyData.cep} onChange={e => handleCepLookup(e.target.value)} placeholder="00000-000" icon={isLoadingCep ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} />} />
-            <Input label="Número" value={academyData.addressNumber} onChange={e => setAcademyData({...academyData, addressNumber: e.target.value})} placeholder="Ex: 123" />
+            <Input label="Número" value={academyData.addressNumber} onChange={e => setAcademyData({ ...academyData, addressNumber: e.target.value })} placeholder="Ex: 123" />
           </div>
-          <Input label="Endereço (Auto)" value={academyData.address} onChange={e => setAcademyData({...academyData, address: e.target.value})} />
+          <Input label="Endereço (Auto)" value={academyData.address} onChange={e => setAcademyData({ ...academyData, address: e.target.value })} />
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Definir Senha Admin" type="password" value={academyData.password} onChange={e => setAcademyData({...academyData, password: e.target.value})} />
+            <Input label="Definir Senha Admin" type="password" value={academyData.password} onChange={e => setAcademyData({ ...academyData, password: e.target.value })} />
             <Input label="Confirmar Senha" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
           </div>
         </div>
-        <button type="submit" className="w-full py-5 bg-indigo-600 text-white font-black rounded-2xl shadow-xl active:scale-95 transition-transform">Finalizar Cadastro</button>
+        <button type="submit" disabled={isSubmitting} className="w-full py-5 bg-indigo-600 text-white font-black rounded-2xl shadow-xl active:scale-95 transition-transform disabled:opacity-70 flex items-center justify-center gap-2">
+          {isSubmitting ? <><Loader2 size={18} className="animate-spin" /> Criando...</> : 'Finalizar Cadastro'}
+        </button>
       </form>
     </AuthLayout>
   );

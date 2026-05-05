@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Academy, Language } from '../types';
 import { StorageService } from '../services/storage';
-import { MOCK_ACADEMY } from '../services/mockData';
+import { ApiService } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
@@ -9,7 +9,9 @@ interface AuthContextType {
   language: Language;
   theme: 'light' | 'dark';
   accentColor: string;
-  login: (user: User, academy: Academy) => void;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  loginDirect: (user: User, academy: Academy) => void;
   logout: () => void;
   setLanguage: (lang: Language) => void;
   setTheme: (theme: 'light' | 'dark') => void;
@@ -21,41 +23,52 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(StorageService.getCurrentUser());
-  const [academy, setAcademy] = useState<Academy | null>(() => {
-    const currentUser = StorageService.getCurrentUser();
-    if (!currentUser) return null;
-    if (currentUser.role === 'superuser') {
-      const savedAcadId = localStorage.getItem('oss_last_superuser_academy');
-      if (savedAcadId) {
-        const found = StorageService.getAcademyById(savedAcadId);
-        if (found) return found;
-      }
-      return StorageService.getAcademy() || StorageService.getAcademies()[0] || null;
-    }
-    return StorageService.getAcademyById(currentUser.academyId);
-  });
-  
+  const [user, setUser] = useState<User | null>(null);
+  const [academy, setAcademy] = useState<Academy | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [language, setLanguageState] = useState<Language>(StorageService.getLanguage());
   const [theme, setThemeState] = useState<'light' | 'dark'>(StorageService.getTheme());
   const [accentColor, setAccentColorState] = useState<string>(StorageService.getAccentColor());
 
-  const login = (loggedUser: User, currentAcademy: Academy) => {
-    setUser(loggedUser);
-    
-    let academyToSet = currentAcademy;
-    if (loggedUser.role === 'superuser') {
-      const allAcademies = StorageService.getAcademies();
-      const savedAcadId = localStorage.getItem('oss_last_superuser_academy');
-      academyToSet = allAcademies.find(a => a.id === savedAcadId) || allAcademies[0] || MOCK_ACADEMY;
+  // ── Restaura sessão ao iniciar ──────────────────────────────────────────────
+  useEffect(() => {
+    const token = ApiService.getToken();
+    const savedUser = StorageService.getCurrentUser();
+    const savedAcademy = StorageService.getAcademy();
+
+    if (token && savedUser) {
+      setUser(savedUser);
+      setAcademy(savedAcademy);
     }
 
-    setAcademy(academyToSet);
+    setIsLoading(false);
+  }, []);
+
+  // ── Login via API (novo fluxo) ─────────────────────────────────────────────
+  const login = async (email: string, password: string): Promise<void> => {
+    const data = await ApiService.login(email, password);
+    const loggedUser: User = data.user;
+    const loggedAcademy: Academy = data.academy;
+
+    setUser(loggedUser);
+    setAcademy(loggedAcademy);
+
+    // Persiste localmente para restaurar a sessão no próximo acesso
     StorageService.saveCurrentUser(loggedUser);
-    StorageService.saveAcademy(academyToSet);
+    if (loggedAcademy) StorageService.saveAcademy(loggedAcademy);
+  };
+
+  // ── Login direto para fluxos de cadastro (legacy) ──────────────────────────
+  const loginDirect = (loggedUser: User, loggedAcademy: Academy) => {
+    setUser(loggedUser);
+    setAcademy(loggedAcademy);
+    StorageService.saveCurrentUser(loggedUser);
+    StorageService.saveAcademy(loggedAcademy);
   };
 
   const logout = () => {
+    ApiService.clearToken();
     StorageService.clear();
     setAcademy(null);
     setUser(null);
@@ -88,9 +101,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, academy, language, theme, accentColor,
-      login, logout, setLanguage, setTheme, setAccentColor, switchAcademy, updateAcademy 
+    <AuthContext.Provider value={{
+      user, academy, language, theme, accentColor, isLoading,
+      login, loginDirect, logout,
+      setLanguage, setTheme, setAccentColor, switchAcademy, updateAcademy
     }}>
       {children}
     </AuthContext.Provider>

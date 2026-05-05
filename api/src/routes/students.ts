@@ -39,19 +39,56 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
 router.post('/', authMiddleware, async (req: Request, res: Response) => {
   try {
     const { academyId } = (req as any).user;
-    const data = { ...req.body, academyId: req.body.academyId || academyId };
+    const { 
+      id, name, email, phone, birthDate, gender, bloodType, weight, height, 
+      emergencyContact, emergencyPhone, cep, address, addressNumber,
+      guardianName, guardianPhone, guardianCpf, guardianRelation, guardianEmail,
+      belt, stripes, status, lastGraduationDate, totalClasses, totalHours, 
+      absentCount, hasLoanedKimono, photo 
+    } = req.body;
+
+    const data = {
+      name, email, phone, birthDate, gender, bloodType, weight, height,
+      emergencyContact, emergencyPhone, cep, address, addressNumber,
+      guardianName, guardianPhone, guardianCpf, guardianRelation, guardianEmail,
+      belt, stripes, status, lastGraduationDate, totalClasses, totalHours,
+      absentCount, hasLoanedKimono, photo,
+      academyId: req.body.academyId || academyId
+    };
+
+    // Remove undefined values
+    Object.keys(data).forEach(key => (data as any)[key] === undefined && delete (data as any)[key]);
+
     const student = await prisma.student.create({ data });
     return res.status(201).json(student);
   } catch (error) {
     console.error('[POST /students]', error);
-    return res.status(500).json({ error: 'Erro interno.' });
+    return res.status(500).json({ error: 'Erro interno ao criar aluno.' });
   }
 });
 
 // PUT /api/students/:id
 router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { id, createdAt, updatedAt, ...data } = req.body;
+    const { 
+      name, email, phone, birthDate, gender, bloodType, weight, height, 
+      emergencyContact, emergencyPhone, cep, address, addressNumber,
+      guardianName, guardianPhone, guardianCpf, guardianRelation, guardianEmail,
+      belt, stripes, status, lastGraduationDate, totalClasses, totalHours, 
+      absentCount, hasLoanedKimono, photo 
+    } = req.body;
+
+    const data = {
+      name, email, phone, birthDate, gender, bloodType, weight, height,
+      emergencyContact, emergencyPhone, cep, address, addressNumber,
+      guardianName, guardianPhone, guardianCpf, guardianRelation, guardianEmail,
+      belt, stripes, status, lastGraduationDate, totalClasses, totalHours,
+      absentCount, hasLoanedKimono, photo
+    };
+
+    // Remove undefined values
+    Object.keys(data).forEach(key => (data as any)[key] === undefined && delete (data as any)[key]);
+
     const student = await prisma.student.update({
       where: { id: String(req.params.id) },
       data
@@ -59,7 +96,7 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
     return res.json(student);
   } catch (error) {
     console.error('[PUT /students]', error);
-    return res.status(500).json({ error: 'Erro interno.' });
+    return res.status(500).json({ error: 'Erro interno ao atualizar aluno.' });
   }
 });
 
