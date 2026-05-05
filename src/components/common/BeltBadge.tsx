@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Belt } from '../types';
+import { Belt } from '../../types';
 
 interface BeltBadgeProps {
   belt: Belt;
