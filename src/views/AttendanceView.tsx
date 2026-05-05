@@ -485,7 +485,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <button 
               onClick={() => startClass('Chamada Geral', undefined, 60)} 
-              className="col-span-full bg-gradient-to-br from-indigo-600 to-indigo-800 p-6 rounded-[32px] text-white shadow-xl shadow-indigo-200 text-left hover:scale-[1.02] transition-all group"
+              className="col-span-full bg-gradient-to-br from-indigo-600 to-indigo-800 p-6 rounded-[32px] text-white shadow-xl shadow-indigo-200 dark:shadow-indigo-900/20 text-left hover:scale-[1.02] transition-all group"
             >
               <div className="bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
                 <Globe size={24} />
@@ -770,7 +770,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
           
           return (
             <div key={student.id} onClick={() => handleCheckIn(student)}
-              className={`flex items-center justify-between p-4 rounded-[28px] border transition-all cursor-pointer ${isChecked ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900/30 ring-1 ring-green-100 dark:ring-green-900/10' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-slate-300'}`}>
+              className={`flex items-center justify-between p-4 rounded-[28px] border transition-all cursor-pointer ${isChecked ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900/30 ring-1 ring-green-100 dark:ring-green-900/10' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm'}`}>
               <div className="flex items-center gap-4">
                 <div className="relative">
                   {student.photo ? (
@@ -872,8 +872,8 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
       {/* Modal de Confirmação de Encerramento */}
       {isFinishModalOpen && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl text-center">
-            <div className="bg-green-100 dark:bg-green-950/30 w-20 h-20 rounded-full flex items-center justify-center text-green-600 dark:text-green-400 mx-auto mb-6">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl text-center border border-slate-200 dark:border-slate-800">
+            <div className="bg-green-100 dark:bg-green-950/30 w-20 h-20 rounded-full flex items-center justify-center text-green-600 dark:text-green-400 mx-auto mb-6 shadow-inner">
               <CheckCircle size={40} />
             </div>
             <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-2 tracking-tight">Computar Presença?</h2>

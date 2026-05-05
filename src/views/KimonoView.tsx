@@ -139,7 +139,7 @@ const KimonoView: React.FC<{ academy: Academy; user: User }> = ({ academy, user 
                     <div className={`w-3 h-10 rounded-full border shadow-sm ${BELT_COLORS[student.belt]}`} />
                     <div>
                       <h4 className="font-bold text-slate-800 dark:text-white">{student.name}</h4>
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                      <p className="text-[9px] font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-1">
                         Retirado em: {new Date(loan.borrowedAt).toLocaleDateString('pt-BR')} • {new Date(loan.borrowedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})}
                       </p>
                     </div>

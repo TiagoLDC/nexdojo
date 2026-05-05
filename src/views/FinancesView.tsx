@@ -283,7 +283,7 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-32 animate-in fade-in duration-500">
-      <div ref={financeRef} className="bg-white p-4 md:p-8 rounded-[48px] print:p-0">
+      <div ref={financeRef} className="bg-white dark:bg-slate-950 p-4 md:p-8 rounded-[48px] print:p-0 shadow-sm transition-colors border border-slate-100 dark:border-slate-900">
         <PrintHeader title="Relatório Financeiro e Fluxo de Caixa" academy={academy} />
         {toast && (
           <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[110] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl animate-in slide-in-from-top duration-300 no-print ${
@@ -319,7 +319,7 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
               onClick={() => setIsPaymentModalOpen(true)}
               className="hidden lg:flex bg-white dark:bg-slate-900 text-slate-800 dark:text-white px-6 py-4 rounded-3xl font-bold items-center justify-center gap-2 border border-slate-200 dark:border-slate-800 shadow-sm transition-all active:scale-95"
             >
-              <QrCode size={20} className="text-indigo-500" />
+              <QrCode size={20} className="text-indigo-600 dark:text-indigo-400" />
               Cobrança
             </button>
           </div>

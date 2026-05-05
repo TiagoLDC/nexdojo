@@ -58,10 +58,8 @@ export const useTheme = () => {
   useEffect(() => {
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
-      document.body.style.backgroundColor = '#020617';
     } else {
       document.documentElement.classList.remove('dark');
-      document.body.style.backgroundColor = '#f8fafc';
     }
   }, [theme]);
 };

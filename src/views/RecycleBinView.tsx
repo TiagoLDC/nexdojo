@@ -250,7 +250,7 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                 <div>
                   <div className="flex items-center gap-2">
                     <h4 className="font-bold text-slate-800 dark:text-white">{item.originalData.name}</h4>
-                    <span className="text-[10px] font-black uppercase tracking-tighter bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full text-slate-500">
+                    <span className="text-[10px] font-black uppercase tracking-tighter bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full text-slate-500 dark:text-slate-400">
                       {item.type === 'student' ? 'Atleta' : item.type === 'instructor' ? 'Professor' : 'Turma'}
                     </span>
                   </div>
@@ -283,8 +283,8 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
         }) : (
           <div className="py-20 text-center bg-white dark:bg-slate-900/50 rounded-[40px] border border-dashed border-slate-200 dark:border-slate-800 text-slate-400">
             <Trash2 size={80} className="mx-auto mb-4 opacity-10" />
-            <h3 className="font-bold text-slate-500">Lixeira Vazia</h3>
-            <p className="text-sm max-w-xs mx-auto mt-2">Nenhum item encontrado para restaurar.</p>
+            <h3 className="font-bold text-slate-500 dark:text-slate-400">Lixeira Vazia</h3>
+            <p className="text-sm max-w-xs mx-auto mt-2 text-slate-400 dark:text-slate-600">Nenhum item encontrado para restaurar.</p>
           </div>
         )}
       </div>

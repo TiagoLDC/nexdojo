@@ -248,12 +248,12 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
 
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Instrutores</h1>
-          <p className="text-slate-500">Gestão completa do corpo docente.</p>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Instrutores</h1>
+          <p className="text-slate-500 dark:text-slate-400">Gestão completa do corpo docente.</p>
         </div>
         <button 
           onClick={handleOpenNewInstructor}
-          className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg transition-all"
+          className="bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg transition-all"
         >
           <UserPlus size={20} />
           Novo Professor
@@ -268,17 +268,17 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
             placeholder="Buscar por nome..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-4 py-4 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
+            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl pl-12 pr-4 py-4 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm dark:text-white"
           />
         </div>
 
-        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm w-fit">
+        <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 shadow-sm w-fit">
           <Filter size={14} className="text-slate-400" />
           <span className="text-xs font-bold text-slate-400 uppercase">Status:</span>
           <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="text-xs font-bold text-slate-700 outline-none bg-transparent"
+            className="text-xs font-bold text-slate-700 dark:text-slate-300 outline-none bg-transparent"
           >
             <option value="All">Todos</option>
             <option value="Active">Ativos</option>
@@ -288,9 +288,9 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
         </div>
       </div>
 
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
         {/* Mobile Card View */}
-        <div className="md:hidden divide-y divide-slate-100">
+        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
           {filtered.map(instructor => (
             <div key={instructor.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
               <div className="flex items-center gap-3">
@@ -302,7 +302,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                   )}
                 </div>
                 <div>
-                  <div className="font-bold text-slate-800 text-sm">{instructor.name || "Sem nome"}</div>
+                  <div className="font-bold text-slate-800 dark:text-white text-sm">{instructor.name || "Sem nome"}</div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <BeltBadge belt={instructor.belt} stripes={instructor.stripes} />
                     <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-black uppercase ${instructor.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}`}>
@@ -339,7 +339,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
         {/* Desktop Table View */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left min-w-[600px]">
-            <thead className="bg-slate-50 border-b border-slate-100">
+            <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
               <tr>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Professor</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Especialidade</th>
@@ -347,7 +347,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filtered.map(instructor => (
                 <tr key={instructor.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-4">
@@ -360,13 +360,13 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                         )}
                       </div>
                       <div>
-                        <div className="font-bold text-slate-800">{instructor.name || "Sem nome"}</div>
+                        <div className="font-bold text-slate-800 dark:text-white">{instructor.name || "Sem nome"}</div>
                         <BeltBadge belt={instructor.belt} stripes={instructor.stripes} />
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-sm font-medium text-slate-600">{instructor.specialties || 'Geral'}</span>
+                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">{instructor.specialties || 'Geral'}</span>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`text-[10px] px-2 py-1 rounded-full font-black uppercase ${instructor.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}`}>
@@ -409,18 +409,18 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
       {/* Modal Unificado: Ficha do Professor */}
       {isEditModalOpen && editingInstructor && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-0 md:p-4">
-          <div className="bg-white w-full max-w-4xl rounded-t-3xl md:rounded-3xl p-6 md:p-8 animate-in slide-in-from-bottom duration-300 max-h-[95vh] overflow-y-auto">
-             <div className="flex items-center justify-between mb-8 sticky top-0 bg-white py-2 z-20 border-b border-slate-50">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-t-3xl md:rounded-3xl p-6 md:p-8 animate-in slide-in-from-bottom duration-300 max-h-[95vh] overflow-y-auto border border-slate-200 dark:border-slate-800">
+             <div className="flex items-center justify-between mb-8 sticky top-0 bg-white dark:bg-slate-900 py-2 z-20 border-b border-slate-50 dark:border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="bg-slate-900 p-2 rounded-xl text-white">
+                <div className="bg-slate-900 dark:bg-indigo-600 p-2 rounded-xl text-white">
                   <Award size={24} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-slate-800">Ficha do Professor</h2>
-                  <p className="text-xs text-slate-400 font-medium">Preencha os campos obrigatórios (*)</p>
+                  <h2 className="text-xl font-bold text-slate-800 dark:text-white">Ficha do Professor</h2>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">Preencha os campos obrigatórios (*)</p>
                 </div>
               </div>
-              <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 p-2 hover:bg-slate-100 rounded-full">
+              <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
                 <X size={24} />
               </button>
             </div>
@@ -428,19 +428,19 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
             <div className="space-y-10 pb-32">
               {/* Seção 1: Dados Pessoais */}
               <div className="space-y-4">
-                <h3 className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
+                <h3 className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-2">
                   <UserCheck size={14} /> Dados Pessoais
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   <div className="flex flex-col items-center gap-3 shrink-0">
                     <div 
-                      className="w-32 h-32 rounded-3xl bg-slate-100 border border-slate-200 overflow-hidden relative group cursor-pointer shadow-sm"
+                      className="w-32 h-32 rounded-3xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden relative group cursor-pointer shadow-sm"
                       onClick={() => editPhotoInputRef.current?.click()}
                     >
                       {editingInstructor.photo ? (
                         <img src={editingInstructor.photo} alt={editingInstructor.name} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-50">
+                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50">
                           <UserIcon size={40} />
                           <span className="text-[10px] font-black uppercase tracking-widest mt-2">Sem Foto</span>
                         </div>
@@ -456,15 +456,15 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                   <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2">
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Nome Completo <span className="text-red-500">*</span></label>
-                      <input type="text" value={editingInstructor.name} onChange={(e) => setEditingInstructor({...editingInstructor, name: e.target.value})} placeholder="Ex: Professor Hélio Gracie" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-medium" />
+                      <input type="text" value={editingInstructor.name} onChange={(e) => setEditingInstructor({...editingInstructor, name: e.target.value})} placeholder="Ex: Professor Hélio Gracie" className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none font-medium dark:text-white" />
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Data de Nascimento <span className="text-red-500">*</span></label>
-                      <input type="date" value={editingInstructor.birthDate} onChange={(e) => setEditingInstructor({...editingInstructor, birthDate: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-slate-800 text-lg" />
+                      <input type="date" value={editingInstructor.birthDate} onChange={(e) => setEditingInstructor({...editingInstructor, birthDate: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none font-bold text-slate-800 dark:text-white text-lg" />
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Sexo</label>
-                      <select value={editingInstructor.gender || ''} onChange={(e) => setEditingInstructor({...editingInstructor, gender: e.target.value as any})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-medium text-slate-700">
+                      <select value={editingInstructor.gender || ''} onChange={(e) => setEditingInstructor({...editingInstructor, gender: e.target.value as any})} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none font-medium dark:text-white text-slate-700">
                         <option value="">Selecionar</option>
                         <option value="M">Masculino</option>
                         <option value="F">Feminino</option>
@@ -483,7 +483,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                         value={editingInstructor.cpf || ''} 
                         onChange={(e) => setEditingInstructor({...editingInstructor, cpf: maskCPF(e.target.value)})} 
                         placeholder="000.000.000-00" 
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-medium" 
+                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none font-medium dark:text-white" 
                       />
                     </div>
                     <div>
@@ -498,12 +498,12 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                         value={editingInstructor.rg || ''} 
                         onChange={(e) => setEditingInstructor({...editingInstructor, rg: maskRG(e.target.value)})} 
                         placeholder="00.000.000-0" 
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-medium" 
+                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none font-medium dark:text-white" 
                       />
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Estado Civil</label>
-                      <select value={editingInstructor.maritalStatus || ''} onChange={(e) => setEditingInstructor({...editingInstructor, maritalStatus: e.target.value as any})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-medium text-slate-700">
+                      <select value={editingInstructor.maritalStatus || ''} onChange={(e) => setEditingInstructor({...editingInstructor, maritalStatus: e.target.value as any})} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none font-medium dark:text-white text-slate-700">
                         <option value="">Selecionar</option>
                         <option value="Solteiro">Solteiro(a)</option>
                         <option value="Casado">Casado(a)</option>
@@ -514,7 +514,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Status na Academia</label>
-                      <select value={editingInstructor.status} onChange={(e) => setEditingInstructor({...editingInstructor, status: e.target.value as any})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-slate-700">
+                      <select value={editingInstructor.status} onChange={(e) => setEditingInstructor({...editingInstructor, status: e.target.value as any})} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 dark:text-slate-200">
                         <option value="Active">Ativo</option>
                         <option value="Inactive">Inativo</option>
                       </select>
@@ -525,7 +525,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
 
               {/* Seção 2: Contato & Localização */}
               <div className="space-y-4">
-                <h3 className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
+                <h3 className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-2">
                   <Phone size={14} /> Contato & Endereço
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -533,14 +533,14 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">WhatsApp</label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
-                      <input type="tel" value={editingInstructor.phone || ''} onChange={(e) => setEditingInstructor({...editingInstructor, phone: maskPhone(e.target.value)})} placeholder="(00) 00000-0000" className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-3 outline-none font-medium" />
+                      <input type="tel" value={editingInstructor.phone || ''} onChange={(e) => setEditingInstructor({...editingInstructor, phone: maskPhone(e.target.value)})} placeholder="(00) 00000-0000" className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 outline-none font-medium dark:text-white" />
                     </div>
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">E-mail Profissional</label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
-                      <input type="email" value={editingInstructor.email || ''} onChange={(e) => setEditingInstructor({...editingInstructor, email: e.target.value})} placeholder="exemplo@academia.com" className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-3 outline-none font-medium" />
+                      <input type="email" value={editingInstructor.email || ''} onChange={(e) => setEditingInstructor({...editingInstructor, email: e.target.value})} placeholder="exemplo@academia.com" className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 outline-none font-medium dark:text-white" />
                     </div>
                   </div>
                   <div className="md:col-span-2">
@@ -555,7 +555,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                         value={editingInstructor.cep || ''} 
                         onChange={handleCepChange} 
                         placeholder="00000-000" 
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-3 outline-none font-medium" 
+                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 outline-none font-medium dark:text-white" 
                       />
                     </div>
                   </div>
@@ -563,7 +563,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Endereço Residencial (Preenchido auto via CEP)</label>
                     <div className="relative">
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
-                      <input type="text" value={editingInstructor.address || ''} onChange={(e) => setEditingInstructor({...editingInstructor, address: e.target.value})} placeholder="Rua, Número, Bairro, Cidade - UF" className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-3 outline-none font-medium" />
+                      <input type="text" value={editingInstructor.address || ''} onChange={(e) => setEditingInstructor({...editingInstructor, address: e.target.value})} placeholder="Rua, Número, Bairro, Cidade - UF" className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 outline-none font-medium dark:text-white" />
                     </div>
                   </div>
                 </div>
@@ -571,14 +571,14 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
 
               {/* Seção 3: Carreira e Graduação */}
               <div className="space-y-4">
-                <h3 className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
+                <h3 className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-2">
                   <GraduationCap size={14} /> Graduação & Carreira
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase ml-1 mb-2">Graus na Faixa Atual</label>
-                      <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${BELT_COLORS[editingInstructor.belt || Belt.WHITE]}`}>
+                      <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${BELT_COLORS[editingInstructor.belt || Belt.WHITE]} dark:border-slate-800`}>
                         <button type="button" onClick={() => setEditingInstructor({...editingInstructor, stripes: Math.max(0, (editingInstructor.stripes || 0) - 1)})} className="text-white/50 hover:scale-125 transition-all outline-none md:p-2"><Minus size={20} /></button>
                         <div className={`flex gap-1.5 p-1 rounded-md px-3 bg-opacity-90 ${editingInstructor.belt === Belt.BLACK ? 'bg-red-600' : 'bg-zinc-900 shadow-lg'}`}>
                           {[...Array(editingInstructor.belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
@@ -598,11 +598,11 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                       <label className="block text-[10px] font-bold text-slate-400 uppercase ml-1 mb-2 flex items-center gap-1">
                         <CalendarClock size={12} /> Data da Última Graduação
                       </label>
-                      <input type="date" value={editingInstructor.lastGraduationDate || ''} onChange={(e) => setEditingInstructor({...editingInstructor, lastGraduationDate: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-medium" />
+                      <input type="date" value={editingInstructor.lastGraduationDate || ''} onChange={(e) => setEditingInstructor({...editingInstructor, lastGraduationDate: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none font-medium dark:text-white" />
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase ml-1 mb-2">Especialidades / Foco</label>
-                      <input type="text" value={editingInstructor.specialties || ''} onChange={(e) => setEditingInstructor({...editingInstructor, specialties: e.target.value})} placeholder="Ex: Kids, No-Gi, Competição..." className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-medium" />
+                      <input type="text" value={editingInstructor.specialties || ''} onChange={(e) => setEditingInstructor({...editingInstructor, specialties: e.target.value})} placeholder="Ex: Kids, No-Gi, Competição..." className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none font-medium dark:text-white" />
                     </div>
                   </div>
                   <div>
@@ -614,8 +614,8 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                           onClick={() => setEditingInstructor({...editingInstructor, belt})}
                           className={`px-2 py-2 rounded-lg border text-[9px] font-black transition-all ${
                             editingInstructor.belt === belt 
-                              ? `${BELT_COLORS[belt]} shadow-md transform scale-105 ring-2 ring-offset-1 ring-slate-100` 
-                              : 'bg-white text-slate-400 border-slate-200 hover:border-slate-400'
+                              ? `${BELT_COLORS[belt]} shadow-md transform scale-105 ring-2 ring-offset-1 ring-slate-100 dark:ring-slate-800` 
+                              : 'bg-white dark:bg-slate-900 text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-600'
                           }`}
                         >
                           {belt.toUpperCase()}
@@ -640,9 +640,9 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {editingInstructor.documents && editingInstructor.documents.length > 0 ? (
                     editingInstructor.documents.map(doc => (
-                      <div key={doc.id} className="bg-slate-50 border border-slate-100 p-4 rounded-2xl flex items-center justify-between group hover:border-indigo-200 transition-all">
+                      <div key={doc.id} className="bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 p-4 rounded-2xl flex items-center justify-between group hover:border-indigo-200 dark:hover:border-indigo-500 transition-all">
                         <div className="flex items-center gap-3">
-                          <div className="bg-white p-2 rounded-xl text-slate-400 group-hover:text-indigo-600 transition-colors shadow-sm">
+                          <div className="bg-white dark:bg-slate-900 p-2 rounded-xl text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors shadow-sm">
                             <FileIcon size={20} />
                           </div>
                           <div className="overflow-hidden">
@@ -657,7 +657,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                       </div>
                     ))
                   ) : (
-                    <div className="col-span-full py-8 flex flex-col items-center justify-center bg-slate-50 border border-dashed border-slate-200 rounded-3xl text-slate-400">
+                    <div className="col-span-full py-8 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800/30 border border-dashed border-slate-200 dark:border-slate-700 rounded-3xl text-slate-400 dark:text-slate-500">
                       <p className="text-xs font-medium">Sem documentos anexados.</p>
                     </div>
                   )}
@@ -669,20 +669,20 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                 <h3 className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
                   <Activity size={14} /> Histórico de Saúde / Restrições
                 </h3>
-                <textarea rows={3} placeholder="Alergias, cirurgias recentes ou condições crônicas que o mestre possua..." value={editingInstructor.medicalNotes || ''} onChange={(e) => setEditingInstructor({...editingInstructor, medicalNotes: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-4 outline-none font-medium text-sm focus:ring-2 focus:ring-indigo-500" />
+                <textarea rows={3} placeholder="Alergias, cirurgias recentes ou condições crônicas que o mestre possua..." value={editingInstructor.medicalNotes || ''} onChange={(e) => setEditingInstructor({...editingInstructor, medicalNotes: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-4 outline-none font-medium text-sm focus:ring-2 focus:ring-indigo-500 dark:text-white" />
               </div>
 
               {/* Botões de Ação */}
-              <div className="flex gap-3 pt-6 pb-12 md:pb-2 border-t border-slate-100 sticky -bottom-1 bg-white z-10 mt-auto">
+              <div className="flex gap-3 pt-6 pb-12 md:pb-2 border-t border-slate-100 dark:border-slate-800 sticky -bottom-1 bg-white dark:bg-slate-900 z-10 mt-auto">
                 <button 
                   onClick={() => setIsDeleteModalOpen(true)}
-                  className="flex-1 bg-white hover:bg-red-50 text-red-500 font-bold py-4 rounded-2xl transition-all border border-slate-200 shadow-sm"
+                  className="flex-1 bg-white dark:bg-slate-900 hover:bg-red-50 dark:hover:bg-red-900/10 text-red-500 font-bold py-4 rounded-2xl transition-all border border-slate-200 dark:border-slate-800 shadow-sm"
                 >
                   <Trash2 size={20} className="inline mr-2" /> Excluir
                 </button>
                 <button 
                   onClick={handleSaveInstructor}
-                  className="flex-[2] bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl shadow-xl transition-all"
+                  className="flex-[2] bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 dark:hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-xl transition-all"
                 >
                   <Save size={20} className="inline mr-2" /> Salvar Ficha
                 </button>
@@ -695,13 +695,13 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
       {/* Modal de Confirmação de Exclusão */}
       {isDeleteModalOpen && editingInstructor && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-sm rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl text-center">
-            <div className="bg-red-100 w-20 h-20 rounded-full flex items-center justify-center text-red-600 mx-auto mb-6">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl text-center border border-slate-200 dark:border-slate-800">
+            <div className="bg-red-100 dark:bg-red-900/20 w-20 h-20 rounded-full flex items-center justify-center text-red-600 dark:text-red-500 mx-auto mb-6">
               <AlertTriangle size={40} />
             </div>
-            <h2 className="text-2xl font-black text-slate-800 mb-2">Excluir Professor?</h2>
-            <p className="text-sm text-slate-500 font-medium mb-8 leading-relaxed">
-              Deseja realmente remover o professor <span className="text-slate-900 font-bold">{editingInstructor.name}</span>? 
+            <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-2">Excluir Professor?</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-8 leading-relaxed">
+              Deseja realmente remover o professor <span className="text-slate-900 dark:text-white font-bold">{editingInstructor.name}</span>? 
               Todos os registros e documentos dele serão apagados permanentemente.
             </p>
             <div className="flex flex-col gap-3">

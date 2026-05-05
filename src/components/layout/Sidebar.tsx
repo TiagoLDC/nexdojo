@@ -5,10 +5,14 @@ import {
   ChevronLeft, 
   Award, 
   ShieldCheck, 
+  LogOut,
   Settings, 
   Sun, 
-  Moon 
+  Moon,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react';
+import { motion } from 'motion/react';
 import { Academy, User, Language } from '../../types';
 import { StorageService } from '../../services/storage';
 import { getTranslation } from '../../services/translations';
@@ -193,10 +197,29 @@ const Sidebar: React.FC<SidebarProps> = ({
           <Settings size={18} />
           {!isCollapsed && <span className="font-bold text-xs">{t.settings}</span>}
         </Link>
-        <button onClick={onToggleTheme} className={`flex items-center text-slate-400 hover:text-indigo-400 h-10 rounded-xl hover:bg-slate-800/50 ${isCollapsed ? 'justify-center w-10 mx-auto' : 'px-4 gap-3'}`}>
-          {theme === 'dark' ? <Sun size={18} className="text-amber-500" /> : <Moon size={18} />}
-          {!isCollapsed && <span className="font-bold text-xs">{theme === 'dark' ? t.light : t.dark}</span>}
-        </button>
+        
+        <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'px-4 justify-between'} h-12 mt-2`}>
+          {!isCollapsed && (
+            <div className="flex items-center gap-2">
+              {theme === 'dark' ? <Moon size={16} className="text-indigo-400" /> : <Sun size={16} className="text-amber-500" />}
+              <span className="font-black text-[10px] uppercase tracking-widest text-slate-400">
+                {theme === 'dark' ? 'Escuro' : 'Claro'}
+              </span>
+            </div>
+          )}
+          
+          <button 
+            onClick={onToggleTheme}
+            className={`relative w-10 h-5 rounded-full transition-colors duration-300 focus:outline-none ${theme === 'dark' ? 'bg-indigo-600' : 'bg-slate-300'}`}
+          >
+            <motion.div 
+              animate={{ x: theme === 'dark' ? 22 : 2 }}
+              initial={false}
+              className="absolute top-1 w-3 h-3 bg-white rounded-full shadow-sm"
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            />
+          </button>
+        </div>
       </div>
     </aside>
   );

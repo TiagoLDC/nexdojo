@@ -244,7 +244,7 @@ const handleSave = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-20 animate-in fade-in duration-700">
       {/* Header Premium - Estilo Ficha do Aluno */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 bg-white dark:bg-slate-900 p-6 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 bg-card p-6 rounded-[32px] border border-border shadow-sm">
         <div className="flex items-center gap-4">
           <div className="bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-2xl text-indigo-600 dark:text-indigo-400 shrink-0">
             <GraduationCap size={32} />
@@ -310,11 +310,11 @@ const handleSave = () => {
       )}
 
       {/* Grid Principal Conteúdo (Igual à Ficha do Aluno do Admin) */}
-      <div className="space-y-8 no-scrollbar bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[40px] p-4 sm:p-6 md:p-10 shadow-sm">
+      <div className="space-y-12 no-scrollbar bg-card border border-border rounded-[40px] p-4 sm:p-6 md:p-10 shadow-sm">
         {/* Alertas e Widgets Rápidos */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
           {/* Gráfico de Performance (Radar) */}
-          <div className="bg-slate-50 dark:bg-slate-800/30 p-6 sm:p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 flex flex-col items-center">
+          <div className="bg-muted p-6 sm:p-8 rounded-[40px] border border-border flex flex-col items-center">
             <h3 className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-4 sm:mb-6 self-start">
               PERFORMANCE TÉCNICA
             </h3>
@@ -379,7 +379,7 @@ const handleSave = () => {
             </h3>
             <div className="flex flex-col md:flex-row gap-10 items-start">
               <div className="flex flex-col items-center gap-4 shrink-0 mx-auto md:mx-0">
-                <div className="w-40 h-40 rounded-[48px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden relative group shadow-inner">
+                <div className="w-40 h-40 rounded-[48px] bg-muted border border-border overflow-hidden relative group shadow-inner">
                   {editData.photo ? (
                     <img src={editData.photo} alt={editData.name} className="w-full h-full object-cover" />
                   ) : (
@@ -435,7 +435,7 @@ const handleSave = () => {
                     type="text" 
                     value={editData.name}
                     onChange={(e) => setEditData({...editData, name: e.target.value})}
-                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 outline-none font-bold text-slate-800 dark:text-white transition-all disabled:opacity-60"
+                    className="w-full bg-muted border border-border rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 outline-none font-bold text-foreground transition-all disabled:opacity-60 placeholder:text-muted-foreground"
                   />
                 </div>
                 <div>
@@ -855,7 +855,7 @@ const handleSave = () => {
                     alert("Para excluir sua conta definitivamente, entre em contato com a administração da academia.");
                   }
                 }}
-                className="flex-1 bg-white hover:bg-red-50 text-red-500 py-5 rounded-3xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all border border-slate-200 flex items-center justify-center gap-2"
+                className="flex-1 bg-white dark:bg-slate-900 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-500 py-5 rounded-3xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all border border-slate-200 dark:border-slate-800 flex items-center justify-center gap-2"
               >
                 <Trash2 size={20} />
                 Excluir
@@ -917,7 +917,7 @@ const handleSave = () => {
                  </div>
               </div>
               
-              <div className="my-10 p-6 bg-white rounded-3xl border-2 border-slate-50 shadow-inner">
+              <div className="my-10 p-6 bg-white dark:bg-white rounded-3xl border-2 border-slate-50 dark:border-slate-700 shadow-inner">
                 <QRCodeSVG 
                   value={profile.id}
                   size={180}

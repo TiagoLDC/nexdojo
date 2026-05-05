@@ -337,7 +337,7 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-20 px-2 md:px-0">
-      <div ref={reportRef} className="bg-white p-4 md:p-8 rounded-[48px] print:p-0">
+      <div ref={reportRef} className="bg-white dark:bg-slate-950 p-4 md:p-8 rounded-[48px] print:p-0 shadow-sm">
         <PrintHeader title="Análise de Percepções da Academia" academy={academy} />
         
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 no-print mb-8">
@@ -431,16 +431,16 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
         ].map((item, idx) => (
           <div key={idx} className="bg-white dark:bg-slate-900 p-6 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-md hover:-translate-y-1">
             <div className={`w-10 h-10 rounded-2xl flex items-center justify-center mb-4 ${
-              item.color === 'blue' ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/30' :
-              item.color === 'indigo' ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/30' :
-              item.color === 'amber' ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/30' :
-              item.color === 'emerald' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30' :
-              'bg-slate-100 text-slate-600 dark:bg-slate-800'
+              item.color === 'blue' ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400' :
+              item.color === 'indigo' ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/30 dark:text-indigo-400' :
+              item.color === 'amber' ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400' :
+              item.color === 'emerald' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400' :
+              'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
             }`}>
               {item.icon}
             </div>
             <div className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{item.value}</div>
-            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.label}</div>
+            <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{item.label}</div>
           </div>
         ))}
       </div>
@@ -465,10 +465,10 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
                   dataKey="date" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }}
+                  tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }}
                   dy={10}
                 />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#cbd5e1' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
                 <Tooltip 
                   cursor={{ fill: '#f8fafc', opacity: 0.4 }}
                   contentStyle={{ 
@@ -783,7 +783,7 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
                     </td>
                     <td className="px-6 py-4 text-right">
                       <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter ${
-                        student.readyForBelt ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30' : 'bg-amber-100 text-amber-600 dark:bg-amber-900/30'
+                        student.readyForBelt ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400' : 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400'
                       }`}>
                         {student.readyForBelt ? 'Elegível Faixa' : 'Elegível Grau'}
                       </span>

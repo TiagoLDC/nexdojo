@@ -233,8 +233,8 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
 
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Turmas & Horários</h1>
-          <p className="text-slate-500 font-medium">Modelos de aula para chamadas rápidas.</p>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white tracking-tight">Turmas & Horários</h1>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Modelos de aula para chamadas rápidas.</p>
         </div>
         <button 
           onClick={openCreateModal}
@@ -247,16 +247,16 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {templates.map(t => (
-          <div key={t.id} className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm space-y-4 hover:border-indigo-300 hover:shadow-md transition-all group overflow-hidden">
+          <div key={t.id} className="bg-white dark:bg-slate-900 p-6 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm space-y-4 hover:border-indigo-300 dark:hover:border-indigo-500 hover:shadow-md transition-all group overflow-hidden">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-4">
                 <div className="bg-indigo-50 w-14 h-14 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                   <Users size={28} />
                 </div>
                 <div>
-                  <h3 className="font-black text-slate-800 text-lg leading-tight flex items-center gap-2">
+                  <h3 className="font-black text-slate-800 dark:text-white text-lg leading-tight flex items-center gap-2">
                     {t.name}
-                    <button onClick={() => openRenameModal(t)} className="text-slate-300 hover:text-indigo-600 transition-colors p-1">
+                    <button onClick={() => openRenameModal(t)} className="text-slate-300 dark:text-slate-600 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors p-1">
                       <Type size={14} />
                     </button>
                   </h3>
@@ -273,12 +273,12 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                         <span className="w-1 h-1 bg-slate-200 rounded-full" />
                         <div className="flex flex-wrap gap-1">
                           {t.schedules.slice(0, 3).map((s, idx) => (
-                            <span key={idx} className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md font-black italic">
+                            <span key={idx} className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded-md font-black italic">
                               {DAYS[s.dayOfWeek]} {s.startTime} - {s.endTime}
                             </span>
                           ))}
                           {t.schedules.length > 3 && (
-                            <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md font-black italic">
+                            <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded-md font-black italic">
                               +{t.schedules.length - 3}
                             </span>
                           )}
@@ -290,18 +290,18 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
               </div>
             </div>
             
-            <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+            <div className="flex items-center justify-between pt-4 border-t border-slate-50 dark:border-slate-800">
               <div className="flex -space-x-2">
                 {t.assignedStudentIds.slice(0, 4).map(sid => {
                   const s = students.find(x => x.id === sid);
                   return (
-                    <div key={sid} className="h-9 w-9 rounded-xl ring-2 ring-white bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 border border-slate-200 overflow-hidden" title={s?.name}>
+                    <div key={sid} className="h-9 w-9 rounded-xl ring-2 ring-white dark:ring-slate-900 bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 overflow-hidden" title={s?.name}>
                       {s?.photo ? <img src={s.photo} className="w-full h-full object-cover" /> : s?.name.charAt(0)}
                     </div>
                   );
                 })}
                 {t.assignedStudentIds.length > 4 && (
-                  <div className="h-9 w-9 rounded-xl ring-2 ring-white bg-indigo-50 flex items-center justify-center text-[10px] font-black text-indigo-600 border border-indigo-100">
+                  <div className="h-9 w-9 rounded-xl ring-2 ring-white dark:ring-slate-900 bg-indigo-50 dark:bg-indigo-950 flex items-center justify-center text-[10px] font-black text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900">
                     +{t.assignedStudentIds.length - 4}
                   </div>
                 )}
@@ -320,7 +320,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                 </button>
                 <button 
                   onClick={() => openNotifyModal(t)}
-                  className="p-2.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all"
+                  className="p-2.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-xl transition-all"
                   title="Notificar Turma"
                 >
                   <Bell size={18} />
@@ -338,9 +338,9 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
         ))}
 
         {templates.length === 0 && (
-          <div className="col-span-full py-20 text-center bg-slate-50 rounded-[40px] border border-dashed border-slate-200 text-slate-400">
+          <div className="col-span-full py-20 text-center bg-slate-50 dark:bg-slate-900/50 rounded-[40px] border border-dashed border-slate-200 dark:border-slate-800 text-slate-400">
             <Calendar className="mx-auto mb-4 opacity-10" size={80} />
-            <h3 className="font-bold text-slate-500">Nenhuma Turma Criada</h3>
+            <h3 className="font-bold text-slate-500 dark:text-slate-400">Nenhuma Turma Criada</h3>
             <p className="text-sm max-w-xs mx-auto mt-2">Crie templates para facilitar a chamada dos horários fixos da sua academia.</p>
           </div>
         )}
@@ -349,7 +349,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
       {/* Modal Criar/Editar Turma (Completo) */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-end md:items-center justify-center p-0 md:p-4">
-          <div className="bg-white w-full max-w-2xl rounded-t-[40px] md:rounded-[40px] p-8 animate-in slide-in-from-bottom duration-300 max-h-[90vh] flex flex-col shadow-2xl">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-t-[40px] md:rounded-[40px] p-8 animate-in slide-in-from-bottom duration-300 max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800">
             <div className="flex items-center justify-between mb-8 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="bg-indigo-600 p-3 rounded-2xl text-white">
@@ -362,7 +362,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                   <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Configurações Completas</p>
                 </div>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="bg-slate-100 text-slate-400 p-3 rounded-full hover:bg-slate-200 transition-colors">
+              <button onClick={() => setIsModalOpen(false)} className="bg-slate-100 dark:bg-slate-800 text-slate-400 p-3 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
                 <X size={24} />
               </button>
             </div>
@@ -376,7 +376,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Ex: Kids 5-9 Sábado"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-slate-700"
+                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-slate-700 dark:text-white"
                   />
                 </div>
                 <div>
@@ -384,7 +384,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                   <select 
                     value={duration} 
                     onChange={(e) => setDuration(Number(e.target.value))}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none font-bold text-slate-700 appearance-none"
+                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none font-bold text-slate-700 dark:text-white appearance-none"
                   >
                     <option value={45}>45 min</option>
                     <option value={60}>60 min</option>
@@ -402,7 +402,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                   placeholder="Usar padrão da academia"
                   value={absenceLimit || ''}
                   onChange={(e) => setAbsenceLimit(parseInt(e.target.value) || undefined)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-slate-700"
+                  className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-slate-700 dark:text-white"
                 />
                 <p className="text-[10px] text-slate-400 mt-2 font-medium italic">
                   * Deixe vazio para usar o limite padrão da academia. Alunos com limite individual ignoram este valor.
@@ -414,7 +414,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                   <label className="block text-xs font-black text-slate-400 uppercase tracking-widest">Horários de Aula</label>
                   <button 
                     onClick={addSchedule}
-                    className="flex items-center gap-1.5 text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl hover:bg-indigo-100 transition-colors uppercase italic"
+                    className="flex items-center gap-1.5 text-[10px] font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 px-3 py-1.5 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900 transition-colors uppercase italic"
                   >
                     <Plus size={14} /> Adicionar Horário
                   </button>
@@ -422,12 +422,12 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                 
                 <div className="space-y-3">
                   {schedules.map((schedule, idx) => (
-                    <div key={idx} className="flex flex-wrap md:flex-nowrap items-center gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100 animate-in slide-in-from-left duration-200">
+                    <div key={idx} className="flex flex-wrap md:flex-nowrap items-center gap-3 bg-slate-50 dark:bg-slate-800/30 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 animate-in slide-in-from-left duration-200">
                       <div className="flex-1 min-w-[120px]">
                         <select 
                           value={schedule.dayOfWeek}
                           onChange={(e) => updateSchedule(idx, 'dayOfWeek', parseInt(e.target.value))}
-                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
                         >
                           {DAYS.map((day, dIdx) => (
                             <option key={dIdx} value={dIdx}>{day}</option>
@@ -454,7 +454,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                     </div>
                       <button 
                         onClick={() => removeSchedule(idx)}
-                        className="p-2.5 text-slate-300 hover:text-red-500 bg-white border border-slate-200 rounded-xl hover:bg-red-50 transition-all ml-auto"
+                        className="p-2.5 text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 transition-all ml-auto"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -479,7 +479,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                     placeholder="Pesquisar..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium"
+                    className="w-full pl-12 pr-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium dark:text-white"
                   />
                 </div>
 
@@ -491,7 +491,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                       className={`flex items-center justify-between p-3 rounded-2xl border transition-all text-left group ${
                         selectedStudents.has(s.id) 
                           ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-600/20' 
-                          : 'bg-white border-slate-100 hover:border-slate-300 text-slate-600'
+                          : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600 text-slate-600 dark:text-slate-300'
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
@@ -551,7 +551,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
       {/* Modal RENOMEAR */}
       {isRenameModalOpen && templateToRename && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-200 dark:border-slate-800">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
                 <div className="bg-indigo-50 p-3 rounded-2xl text-indigo-600">
@@ -576,7 +576,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                   onChange={(e) => setName(e.target.value)}
                   autoFocus
                   placeholder="Ex: Treino Competidores"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-3xl px-6 py-5 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-slate-700 text-lg"
+                  className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-3xl px-6 py-5 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-bold text-slate-700 dark:text-white text-lg"
                 />
               </div>
 
@@ -603,7 +603,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
       {/* Modal Notificar Turma */}
       {isNotifyModalOpen && notifyingTemplate && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-end md:items-center justify-center p-0 md:p-4">
-          <div className="bg-white w-full max-w-lg rounded-t-[40px] md:rounded-[40px] p-8 animate-in slide-in-from-bottom duration-300 shadow-2xl">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-t-[40px] md:rounded-[40px] p-8 animate-in slide-in-from-bottom duration-300 shadow-2xl border border-slate-200 dark:border-slate-800">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
                 <div className="bg-amber-100 p-3 rounded-2xl text-amber-600">
@@ -623,7 +623,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
               rows={4}
               value={notificationMsg}
               onChange={(e) => setNotificationMsg(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-[32px] px-6 py-5 focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none font-medium text-slate-700 text-sm leading-relaxed mb-6"
+              className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-[32px] px-6 py-5 focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none font-medium text-slate-700 dark:text-white text-sm leading-relaxed mb-6"
               placeholder="Escreva seu aviso aqui..."
             />
 
@@ -642,14 +642,14 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
       {/* Modal de Confirmação de Exclusão */}
       {isDeleteModalOpen && templateToDelete && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-sm rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl text-center">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl text-center border border-slate-200 dark:border-slate-800">
             <div className="bg-red-100 w-20 h-20 rounded-full flex items-center justify-center text-red-600 mx-auto mb-6">
               <AlertTriangle size={40} />
             </div>
             
-            <h2 className="text-2xl font-black text-slate-800 mb-2">Excluir Turma?</h2>
-            <p className="text-sm text-slate-500 font-medium mb-8 leading-relaxed">
-              Deseja realmente excluir a turma <span className="text-slate-800 font-bold">"{templateToDelete.name}"</span>? 
+            <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-2">Excluir Turma?</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-8 leading-relaxed">
+              Deseja realmente excluir a turma <span className="text-slate-800 dark:text-white font-bold">"{templateToDelete.name}"</span>? 
             </p>
 
             <div className="flex flex-col gap-3">
