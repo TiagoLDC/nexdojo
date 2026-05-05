@@ -1,0 +1,75 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Academy {
+  id            String      @id @default(uuid())
+  name          String
+  ownerName     String
+  logo          String?     @db.Text
+  email         String
+  phone         String?
+  cep           String?
+  address       String?
+  addressNumber String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  users         User[]
+  students      Student[]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   // superuser, admin, instructor, staff, student
+  status    String   @default("Active") // Active, Inactive, Pending
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  academy   Academy? @relation(fields: [academyId], references: [id])
+  academyId String?
+}
+
+model Student {
+  id                 String   @id @default(uuid())
+  name               String
+  email              String?
+  phone              String?
+  birthDate          String?
+  gender             String?
+  bloodType          String?
+  weight             String?
+  height             String?
+  emergencyContact   String?
+  emergencyPhone     String?
+  cep                String?
+  address            String?
+  addressNumber      String?
+  
+  belt               String   @default("WHITE")
+  stripes            Int      @default(0)
+  status             String   @default("Pending") // Active, Inactive, Pending
+  joinDate           DateTime @default(now())
+  lastGraduationDate String?
+  totalClasses       Int      @default(0)
+  totalHours         Int      @default(0)
+  absentCount        Int      @default(0)
+  hasLoanedKimono    Boolean  @default(false)
+  photo              String?  @db.Text
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  academy            Academy  @relation(fields: [academyId], references: [id])
+  academyId          String
+}

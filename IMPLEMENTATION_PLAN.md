@@ -37,14 +37,24 @@ O arquivo de login tem mais de 1000 linhas e lida com múltiplos formulários de
 - [x] **Componentes**: Padronizar a criação de componentes usando `React.FC` e garantindo que cada arquivo tenha uma única responsabilidade.
 - [x] **Estado Global**: Utilizar Context API para evitar "prop drilling" excessivo de `user`, `academy`, `theme`, etc.
 
-## 6. Implementação de Módulos (Baseado no Escopo)
+## 6. Criação do Banco de Dados e API Backend (Migração Fullstack)
+Para garantir persistência real e modelagem de dados sólida, vamos substituir os dados mockados (`StorageService` local) por uma API conectada a um banco MySQL.
+
+- [x] **Configuração do Backend**: Pasta `api/` criada com Node.js + Express + TypeScript.
+- [x] **Configuração do Prisma ORM**: Schema criado com modelos `Academy`, `User`, `Student`.
+- [x] **Conexão com Banco de Dados**: Prisma conectado ao MySQL `162.240.167.149` / `qasnexdojo_qas`. Tabelas sincronizadas.
+- [x] **Criação dos Endpoints (Rotas)**: Rotas de Auth (login, register-academy, register-student), Alunos (CRUD) e Academias criadas.
+- [ ] **Refatoração do Frontend**: Atualizar o `StorageService` para consumir a nova API via chamadas HTTP assíncronas em vez de `localStorage`.
+- [x] **Atualização do Deploy**: `api/Dockerfile` criado; `docker-compose.yml` atualizado para subir o serviço `nexdojo-api` na porta 3005.
+
+## 7. Implementação de Módulos (Baseado no Escopo)
 - [ ] **Dashboard Inteligente**: Refinar métricas e gráficos para visão geral da academia.
 - [ ] **Gestão de Alunos**: Melhorar CRUD, histórico de graduações e controle de status.
 - [ ] **Controle de Presença**: Desenvolver interface simplificada para instrutores realizarem chamadas.
 - [ ] **Gestão Financeira**: Estruturar controle de mensalidades e status de inadimplência.
 - [ ] **Perfis de Acesso (Roles)**: Implementar controle de permissões baseado nos perfis (Superuser, Admin, Instructor, Staff, Student).
 
-## 7. Internacionalização (i18n)
+## 8. Internacionalização (i18n)
 - [ ] **Configuração Base**: Integrar biblioteca de internacionalização (ex: `i18next`).
 - [ ] **Traduções**: Criar arquivos de idioma para Português, Inglês e Espanhol.
 - [ ] **Seletor de Idioma**: Adicionar componente acessível para troca de idioma em tempo real.

@@ -68,12 +68,12 @@ cd /home/qasnexdojo/nexdojo && git pull origin main && docker compose up -d --bu
 
 | Campo | Valor |
 |---|---|
-| **Tipo** | `<!-- PREENCHER (ex: PostgreSQL / MySQL / SQLite) -->` |
-| **Host** | `<!-- PREENCHER -->` |
-| **Porta** | `<!-- PREENCHER (ex: 5432) -->` |
-| **Nome do Banco** | `<!-- PREENCHER -->` |
-| **Usuário** | `<!-- PREENCHER -->` |
-| **Senha** | `<!-- PREENCHER -->` |
+| **Tipo** | `MySQL` |
+| **Host** | `162.240.167.149` |
+| **Porta** | `3306` |
+| **Nome do Banco** | `qasnexdojo_qas` |
+| **Usuário** | `qasnexdojo_qas` |
+| **Senha** | `yFkL8OvxPnr3` |
 
 ---
 
