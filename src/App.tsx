@@ -157,7 +157,7 @@ const App: React.FC = () => {
     <BrowserRouter>
       <AuthProvider>
         <div className="fixed bottom-0 right-0 bg-amber-500/90 text-white text-[10px] font-black px-2 py-1 z-50 rounded-tl-lg pointer-events-none">
-          VERSÃO QAS 05/05/2026 14:36:00
+          VERSÃO QAS 05/05/2026 16:29:00
         </div>
         <AppRoutes />
       </AuthProvider>
