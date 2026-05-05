@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Academy, Student, Belt, CalendarEvent, User, Instructor, Staff, ClassTemplate, SystemPlan, SystemConfig } from '../types';
 import { StorageService } from '../services/storage';
@@ -51,11 +51,14 @@ import {
   YAxis,
   CartesianGrid
 } from 'recharts';
-import { BeltBadge } from '../components/BeltBadge';
+import { BeltBadge } from '../components/common/BeltBadge';
 import { BELT_COLORS } from '../constants';
+import { StatCard, DetailItem } from '../components/dashboard/DashboardComponents';
+import { PendingUserModal } from '../components/dashboard/PendingUserModal';
 
 
 const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAcademy?: (a: Academy) => void }> = ({ academy, user, onSwitchAcademy }) => {
+  const navigate = useNavigate();
   const [students, setStudents] = React.useState<Student[]>(academy ? StorageService.getStudents(academy.id) : []);
   const [instructors, setInstructors] = React.useState<Instructor[]>(academy ? StorageService.getInstructors(academy.id) : []);
   const [staff, setStaff] = React.useState<Staff[]>(academy ? StorageService.getStaff(academy.id) : []);
@@ -614,7 +617,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
               />
               <motion.button 
                 whileHover={{ scale: 1.05 }}
-                onClick={() => window.location.hash = '#/schedules'}
+                onClick={() => navigate('/schedules')}
                 className="bg-white dark:bg-slate-900 p-5 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm transition-all text-left flex flex-col justify-between group h-full cursor-pointer"
               >
                 <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 group-hover:rotate-12 transition-transform">
@@ -1816,79 +1819,15 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
 
       {/* Modal de Detalhes do Cadastro Pendente */}
       {selectedPending && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto custom-scrollbar relative">
-            <button onClick={() => setSelectedPending(null)} className="absolute top-6 right-6 p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-red-500 transition-colors">
-              <XIcon size={24} />
-            </button>
-            
-            <div className="flex items-center gap-4 mb-8">
-              <div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-lg">
-                <UserCheck size={24} />
-              </div>
-              <div>
-                <h2 className="text-xl font-black text-slate-800 dark:text-white tracking-tight uppercase italic leading-none">Análise de Cadastro</h2>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Valide antes de liberar o acesso</p>
-              </div>
-            </div>
-
-            {selectedPending.details ? (
-              <div className="space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DetailItem label="Nome" value={selectedPending.details.name} />
-                  <DetailItem label="WhatsApp" value={selectedPending.details.phone} />
-                  <DetailItem label="Graduação" value={`${selectedPending.details.belt} ${selectedPending.details.stripes}º G`} />
-                  <DetailItem label="Nascimento" value={new Date(selectedPending.details.birthDate).toLocaleDateString()} />
-                </div>
-                
-                <div className="flex gap-4">
-                  <button 
-                    onClick={() => { handleApprove(selectedPending.user); setSelectedPending(null); }}
-                    className="flex-1 bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-600/20 active:scale-95 transition-all text-xs uppercase tracking-widest"
-                  >
-                    Confirmar Aluno
-                  </button>
-                  <button 
-                    onClick={() => { handleReject(selectedPending.user); setSelectedPending(null); }}
-                    className="flex-1 bg-red-50 text-red-600 font-black py-4 rounded-2xl hover:bg-red-100 active:scale-95 transition-all text-xs uppercase tracking-widest"
-                  >
-                    Rejeitar
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-10 text-slate-400">Processando dados...</div>
-            )}
-          </div>
-        </div>
+        <PendingUserModal 
+          selectedPending={selectedPending}
+          onClose={() => setSelectedPending(null)}
+          onApprove={handleApprove}
+          onReject={handleReject}
+        />
       )}
     </motion.div>
   );
 };
-
-const StatCard: React.FC<{ icon: React.ReactNode; label: string; value: string | number; trend?: string; highlight?: boolean; }> = ({ icon, label, value, trend, highlight }) => (
-  <motion.div 
-    whileHover={{ y: -5, scale: 1.02 }}
-    className={`bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-[32px] border shadow-sm transition-all hover:shadow-xl ${highlight ? 'border-red-200 dark:border-red-900 ring-2 ring-red-100 dark:ring-red-900/20' : 'border-slate-100 dark:border-slate-800'}`}
-  >
-    <div className="bg-slate-50 dark:bg-slate-800 w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center mb-4 sm:mb-6 transition-colors shadow-inner">{icon}</div>
-    <p className="text-[9px] sm:text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.15em] sm:tracking-[0.2em] leading-none mb-2">{label}</p>
-    <div className="flex items-end justify-between gap-1.5 overflow-hidden">
-      <h3 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white transition-colors italic tracking-tighter leading-tight shrink-0">{value}</h3>
-      {trend && <span className="text-[8px] sm:text-[10px] font-black text-emerald-500 dark:text-emerald-400 mb-1 uppercase tracking-widest whitespace-nowrap shrink-0">{trend}</span>}
-    </div>
-  </motion.div>
-);
-
-const DetailItem: React.FC<{ label: string; value: string; isSensitive?: boolean; maskType?: 'cpf' | 'rg' | 'generic' }> = ({ label, value, isSensitive, maskType = 'generic' }) => (
-  <div>
-    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
-    {isSensitive ? (
-      <PrivacyValue value={value} maskType={maskType} className="text-base" />
-    ) : (
-      <p className="text-base font-bold text-slate-800 dark:text-white">{value}</p>
-    )}
-  </div>
-);
 
 export default DashboardView;

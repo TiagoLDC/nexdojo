@@ -53,7 +53,7 @@ import {
   ChevronRight,
   Clipboard
 } from 'lucide-react';
-import { BeltBadge } from '../components/BeltBadge';
+import { BeltBadge } from '../components/common/BeltBadge';
 import { BELT_COLORS } from '../constants';
 
 // Funções utilitárias para máscaras removidas daqui e movidas para services/cep.ts

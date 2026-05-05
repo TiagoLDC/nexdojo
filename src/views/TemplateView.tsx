@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Student, ClassTemplate, Academy, User } from '../types';
 import { StorageService } from '../services/storage';
-import { BeltBadge } from '../components/BeltBadge';
+import { BeltBadge } from '../components/common/BeltBadge';
 import { 
   Plus, 
   Users, 

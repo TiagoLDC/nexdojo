@@ -24,7 +24,7 @@ import {
   User as UserIcon,
   History
 } from 'lucide-react';
-import { BeltBadge } from '../components/BeltBadge';
+import { BeltBadge } from '../components/common/BeltBadge';
 import { BELT_COLORS } from '../constants';
 
 declare const Html5Qrcode: any;
