@@ -9,6 +9,10 @@ RUN npx prisma generate
 # Production stage  
 FROM node:20-alpine
 WORKDIR /app
+
+# Install dependencies for Prisma
+RUN apk add --no-cache openssl libc6-compat
+
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app .
 
