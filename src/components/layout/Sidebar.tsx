@@ -225,7 +225,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         {!isCollapsed && (
           <div className="mt-4 px-4 pb-2">
             <div className="bg-amber-500/90 text-black text-[8px] font-black px-2 py-1 rounded text-center uppercase tracking-tighter">
-              VERSÃO QAS 06/05/2026 16:15:00
+              VERSÃO QAS 06/05/2026 13:42:00
             </div>
           </div>
         )}

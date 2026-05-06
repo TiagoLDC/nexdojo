@@ -36,7 +36,7 @@ router.put('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const instructor = await prisma.instructor.update({
-      where: { id },
+      where: { id: String(id) },
       data: req.body
     });
     res.json(instructor);
@@ -50,7 +50,7 @@ router.delete('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     await prisma.instructor.delete({
-      where: { id }
+      where: { id: String(id) }
     });
     res.json({ success: true });
   } catch (error) {

@@ -42,7 +42,7 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
     const { name, durationMinutes, schedules } = req.body;
     const template = await prisma.classTemplate.update({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       data: {
         name,
         durationMinutes,
@@ -58,7 +58,7 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
 // DELETE /api/templates/:id
 router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
-    await prisma.classTemplate.delete({ where: { id: req.params.id } });
+    await prisma.classTemplate.delete({ where: { id: String(req.params.id) } });
     return res.json({ message: 'Template removido.' });
   } catch (error) {
     return res.status(500).json({ error: 'Erro interno.' });

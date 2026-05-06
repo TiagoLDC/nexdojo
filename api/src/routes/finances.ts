@@ -50,7 +50,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 // DELETE /api/finances/:id
 router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
-    await prisma.financeTransaction.delete({ where: { id: req.params.id } });
+    await prisma.financeTransaction.delete({ where: { id: String(req.params.id) } });
     return res.json({ message: 'Transação removida.' });
   } catch (error) {
     return res.status(500).json({ error: 'Erro interno.' });
