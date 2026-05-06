@@ -1,0 +1,63 @@
+import { Router, Request, Response } from 'express';
+import prisma from '../lib/prisma';
+import { authMiddleware } from '../middleware/auth';
+
+const router = Router();
+
+// GET /api/attendance
+router.get('/', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { academyId, role } = (req as any).user;
+    if (!academyId && role !== 'superuser') return res.status(403).json({ error: 'Acesso negado.' });
+
+    const where = role === 'superuser' ? {} : { academyId };
+    const attendance = await prisma.attendanceRecord.findMany({ 
+      where, 
+      orderBy: { date: 'desc' },
+      include: { 
+        student: { select: { name: true, belt: true, stripes: true } },
+        class: { select: { name: true } }
+      }
+    });
+    return res.json(attendance);
+  } catch (error) {
+    return res.status(500).json({ error: 'Erro interno.' });
+  }
+});
+
+// POST /api/attendance/bulk
+router.post('/bulk', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { academyId } = (req as any).user;
+    const { records, classId } = req.body; // records: { studentId, durationMinutes, kimonoTaken }[]
+
+    const data = records.map((r: any) => ({
+      academyId,
+      classId,
+      studentId: r.studentId,
+      durationMinutes: r.durationMinutes,
+      kimonoTaken: r.kimonoTaken || false,
+      date: new Date()
+    }));
+
+    await prisma.attendanceRecord.createMany({ data });
+    
+    // Update total classes for students
+    for (const r of records) {
+      await prisma.student.update({
+        where: { id: r.studentId },
+        data: { 
+          totalClasses: { increment: 1 },
+          totalHours: { increment: Math.floor(r.durationMinutes / 60) }
+        }
+      });
+    }
+
+    return res.status(201).json({ message: 'Chamada registrada com sucesso.' });
+  } catch (error) {
+    console.error('[POST /attendance/bulk]', error);
+    return res.status(500).json({ error: 'Erro interno.' });
+  }
+});
+
+export default router;

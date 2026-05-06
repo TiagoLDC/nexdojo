@@ -2,6 +2,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Student, AttendanceRecord, ClassSession, User, ClassTemplate, Belt, Academy } from '../types';
 import { StorageService } from '../services/storage';
+import ApiService from '../services/api';
+
 import { 
   Search, 
   UserCheck, 
@@ -88,16 +90,23 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
   const [historySearch, setHistorySearch] = useState('');
   const [historyDateFilter, setHistoryDateFilter] = useState('');
 
-  const loadData = () => {
+  const loadData = async () => {
     if (!academy) return;
-    const loadedStudents = StorageService.getStudents(academy.id).filter(s => s.status === 'Active');
-    const loadedTemplates = StorageService.getTemplates(academy.id);
-    const loadedClasses = StorageService.getClasses(academy.id);
+    try {
+      const [loadedStudents, loadedTemplates, loadedClasses] = await Promise.all([
+        ApiService.getStudents().then(list => list.filter((s: any) => s.status === 'Active')),
+        ApiService.getTemplates(),
+        ApiService.getClasses()
+      ]);
 
-    setStudents(loadedStudents);
-    setTemplates(loadedTemplates);
-    setAllClasses(loadedClasses);
+      setStudents(loadedStudents);
+      setTemplates(loadedTemplates);
+      setAllClasses(loadedClasses);
+    } catch (error) {
+      console.error('Erro ao carregar dados de presença:', error);
+    }
   };
+
 
   useEffect(() => {
     loadData();
@@ -248,43 +257,47 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [currentClass, students, search, currentTemplate, showAllStudents]);
 
-  const startClass = (name: string, templateId?: string, duration = 60) => {
-    // Verificar duplicidade para hoje
-    const todayStr = new Date().toISOString().split('T')[0];
-    const existing = allClasses.find(c => {
-      const classDate = c.date.split('T')[0];
-      return classDate === todayStr && (templateId ? c.templateId === templateId : c.name === name);
-    });
+  const startClass = async (name: string, templateId?: string, duration = 60) => {
+    try {
+      // Verificar duplicidade para hoje
+      const todayStr = new Date().toISOString().split('T')[0];
+      const existing = allClasses.find(c => {
+        const classDate = c.date.split('T')[0];
+        return classDate === todayStr && (templateId ? c.templateId === templateId : c.name === name);
+      });
 
-    if (existing) {
-      if (confirm(`Já existe uma chamada de "${name}" aberta ou finalizada hoje. Deseja continuar ou editar a anterior?`)) {
-        setCurrentClass(existing);
-        setCheckedIds(new Set(existing.attendanceIds));
-        setEditingClassInitialIds(new Set(existing.attendanceIds));
-        setShowAllStudents(!templateId);
-        return;
+      if (existing) {
+        if (confirm(`Já existe uma chamada de "${name}" aberta ou finalizada hoje. Deseja continuar ou editar a anterior?`)) {
+          setCurrentClass(existing);
+          // O backend retornará a lista de IDs de presença se for implementado, por enquanto mantemos local
+          setCheckedIds(new Set(existing.attendanceIds || []));
+          setEditingClassInitialIds(new Set(existing.attendanceIds || []));
+          setShowAllStudents(!templateId);
+          return;
+        }
       }
-    }
 
-    const newClass: ClassSession = {
-      id: `class_${Date.now()}`,
-      academyId: academy.id, // Garantindo vínculo com a academia atual
-      name,
-      templateId,
-      date: new Date().toISOString(),
-      durationMinutes: duration,
-      instructorId: user.id,
-      attendanceIds: [],
-      status: 'In Progress'
-    };
-    const updated = [newClass, ...allClasses];
-    StorageService.saveClasses(updated);
-    setAllClasses(updated);
-    setCurrentClass(newClass);
-    setCheckedIds(new Set());
-    setEditingClassInitialIds(new Set());
-    setShowAllStudents(!templateId);
+      const newClassPayload = {
+        academyId: academy.id,
+        name,
+        templateId,
+        date: new Date().toISOString(),
+        durationMinutes: duration,
+        instructorId: user.id
+      };
+      
+      const session = await ApiService.createClass(newClassPayload);
+      await loadData();
+      
+      setCurrentClass(session);
+      setCheckedIds(new Set());
+      setEditingClassInitialIds(new Set());
+      setShowAllStudents(!templateId);
+    } catch (error) {
+      console.error('Erro ao iniciar aula:', error);
+    }
   };
+
 
   const handleEditClass = (session: ClassSession) => {
     setCurrentClass(session);
@@ -322,88 +335,14 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
 
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      const isUpdate = currentClass.status === 'Finalized';
-      const academyRecords = StorageService.getAttendance(academy.id);
-      const date = currentClass.date; // Manter a data original se for edição
-      
-      const studentsToIncrement = Array.from(checkedIds).filter(id => !editingClassInitialIds.has(id));
-      const studentsToDecrement = Array.from(editingClassInitialIds).filter(id => !checkedIds.has(id));
+      const records = Array.from(checkedIds).map(studentId => ({
+        studentId,
+        durationMinutes: currentClass.durationMinutes,
+        kimonoTaken: false
+      }));
 
-      if (isUpdate) {
-        // Remover registros antigos desta aula e adicionar os novos
-        const otherRecords = academyRecords.filter(r => r.classId !== currentClass.id);
-        const newRecords: AttendanceRecord[] = Array.from(checkedIds).map((studentId: string) => ({
-          id: Math.random().toString(36).substr(2, 9),
-          academyId: academy.id,
-          studentId,
-          classId: currentClass.id,
-          date,
-          durationMinutes: currentClass.durationMinutes,
-          kimonoTaken: false
-        }));
-        StorageService.saveAttendance([...otherRecords, ...newRecords]);
-      } else {
-        const newRecords: AttendanceRecord[] = Array.from(checkedIds).map((studentId: string) => ({
-          id: Math.random().toString(36).substr(2, 9),
-          academyId: academy.id,
-          studentId,
-          classId: currentClass.id,
-          date,
-          durationMinutes: currentClass.durationMinutes,
-          kimonoTaken: false
-        }));
-        StorageService.saveAttendance([...academyRecords, ...newRecords]);
-      }
-
-      const academyClasses: ClassSession[] = StorageService.getClasses(academy.id).map(c => 
-        c.id === currentClass.id ? { ...c, attendanceIds: Array.from(checkedIds) as string[], status: 'Finalized' } : c
-      );
-      StorageService.saveClasses(academyClasses);
-      setAllClasses(academyClasses);
-
-      const academyStudents = StorageService.getStudents(academy.id);
-      const academyTemplates = StorageService.getTemplates(academy.id);
-      const currentTemplate = academyTemplates.find(t => t.id === currentClass.templateId);
-      const defaultLimit = academy?.absenceLimit || 3;
-      const studentsWithAlert: string[] = [];
-
-      const updatedStudents = academyStudents.map(s => {
-        // Lógica de atualização de contadores
-        if (studentsToIncrement.includes(s.id)) {
-          return {
-            ...s,
-            totalClasses: s.totalClasses + 1,
-            totalHours: s.totalHours + (currentClass.durationMinutes / 60),
-            lastAttendance: date,
-            absentCount: 0
-          };
-        } else if (studentsToDecrement.includes(s.id)) {
-          return {
-            ...s,
-            totalClasses: Math.max(0, s.totalClasses - 1),
-            totalHours: Math.max(0, s.totalHours - (currentClass.durationMinutes / 60)),
-            absentCount: 1 // Aproximação: voltou a ser falta
-          };
-        } else if (!isUpdate && !checkedIds.has(s.id) && s.status === 'Active') {
-          // Só incrementa faltas em chamadas NOVAS (não em edições para não acumular erros)
-          const newAbsentCount = (s.absentCount || 0) + 1;
-          const effectiveLimit = s.absenceLimit || currentTemplate?.absenceLimit || defaultLimit;
-          
-          if (newAbsentCount >= effectiveLimit) {
-            studentsWithAlert.push(`${s.name} (${newAbsentCount}/${effectiveLimit} faltas)`);
-          }
-          return {
-            ...s,
-            absentCount: newAbsentCount
-          };
-        }
-        return s;
-      });
-      StorageService.saveStudents(updatedStudents);
-
-      if (studentsWithAlert.length > 0) {
-        alert(`ALERTA DE EVASÃO:\n\nOs seguintes alunos atingiram seus limites de faltas:\n\n- ${studentsWithAlert.join('\n- ')}\n\nConsidere entrar em contato.`);
-      }
+      await ApiService.saveAttendanceBulk(records, currentClass.id);
+      await loadData();
 
       setShowSuccess(true);
       setCheckedIds(new Set());
@@ -417,6 +356,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
       setIsProcessing(false);
     }
   };
+
 
   const handleQuickFinalize = (session: ClassSession) => {
     if (!confirm(`Deseja finalizar o treino "${session.name}" agora? As presenças de ${session.attendanceIds.length} alunos serão computadas.`)) return;

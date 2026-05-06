@@ -100,7 +100,12 @@ export const ApiService = {
   },
 
   // ── ACADEMIES ──────────────────────────────────────────────────────────────
+  getAcademies: async () => {
+    return ApiService.request<any[]>('/api/academies');
+  },
+
   getAcademy: async (id: string) => {
+
     return ApiService.request<any>(`/api/academies/${id}`);
   },
 
@@ -121,6 +126,41 @@ export const ApiService = {
       body: JSON.stringify({ status }),
     });
   },
+
+  // ── TEMPLATES ──────────────────────────────────────────────────────────────
+  getTemplates: async () => ApiService.request<any[]>('/api/templates'),
+  createTemplate: async (data: any) => ApiService.request<any>('/api/templates', { method: 'POST', body: JSON.stringify(data) }),
+  updateTemplate: async (id: string, data: any) => ApiService.request<any>(`/api/templates/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteTemplate: async (id: string) => ApiService.request<any>(`/api/templates/${id}`, { method: 'DELETE' }),
+
+  // ── FINANCES ───────────────────────────────────────────────────────────────
+  getFinances: async () => ApiService.request<any[]>('/api/finances'),
+  createTransaction: async (data: any) => ApiService.request<any>('/api/finances', { method: 'POST', body: JSON.stringify(data) }),
+  deleteTransaction: async (id: string) => ApiService.request<any>(`/api/finances/${id}`, { method: 'DELETE' }),
+
+  // ── ATTENDANCE ─────────────────────────────────────────────────────────────
+  getAttendance: async () => ApiService.request<any[]>('/api/attendance'),
+  saveAttendanceBulk: async (records: any[], classId: string) => ApiService.request<any>('/api/attendance/bulk', { 
+    method: 'POST', 
+    body: JSON.stringify({ records, classId }) 
+  }),
+
+  // ── CLASSES ────────────────────────────────────────────────────────────────
+  getClasses: async () => ApiService.request<any[]>('/api/classes'),
+  createClass: async (data: any) => ApiService.request<any>('/api/classes', { method: 'POST', body: JSON.stringify(data) }),
+  
+  // ── INSTRUCTORS ───────────────────────────────────────────────────────────
+  getInstructors: async () => ApiService.request<any[]>('/api/instructors'),
+  createInstructor: async (data: any) => ApiService.request<any>('/api/instructors', { method: 'POST', body: JSON.stringify(data) }),
+  updateInstructor: async (id: string, data: any) => ApiService.request<any>(`/api/instructors/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteInstructor: async (id: string) => ApiService.request<any>(`/api/instructors/${id}`, { method: 'DELETE' }),
+
+  // ── STAFF ─────────────────────────────────────────────────────────────────
+  getStaff: async () => ApiService.request<any[]>('/api/staff'),
+  createStaff: async (data: any) => ApiService.request<any>('/api/staff', { method: 'POST', body: JSON.stringify(data) }),
+  updateStaff: async (id: string, data: any) => ApiService.request<any>(`/api/staff/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteStaff: async (id: string) => ApiService.request<any>(`/api/staff/${id}`, { method: 'DELETE' }),
 };
+
 
 export default ApiService;

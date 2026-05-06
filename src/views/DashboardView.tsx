@@ -4,6 +4,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Academy, Student, Belt, CalendarEvent, User, Instructor, Staff, ClassTemplate, SystemPlan, SystemConfig } from '../types';
 import { StorageService } from '../services/storage';
+import ApiService from '../services/api';
+
 import { PrivacyValue } from '../components/PrivacyValue';
 import { calculateAge, isReadyForGraduation } from '../services/graduation';
 import { 
@@ -72,23 +74,40 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   const [lastReadChat, setLastReadChat] = React.useState<string>(academy ? localStorage.getItem(`oss_chat_last_read_${academy.id}`) || '' : '');
 
   React.useEffect(() => {
-    if (academy) {
-      setStudents(StorageService.getStudents(academy.id));
-      setInstructors(StorageService.getInstructors(academy.id));
-      setStaff(StorageService.getStaff(academy.id));
-      
-      const allAcademyUsers = StorageService.getUsers(academy.id);
-      if (user.role === 'superuser') {
-        const allUsers = StorageService.getUsers();
-        setUsers(allUsers);
-      } else {
-        setUsers(allAcademyUsers);
+    const fetchData = async () => {
+      if (!academy) return;
+      try {
+        const [loadedStudents, loadedInstructors, loadedStaff, loadedTemplates] = await Promise.all([
+          ApiService.getStudents(),
+          ApiService.getInstructors(),
+          ApiService.getStaff(),
+          ApiService.getTemplates()
+        ]);
+        setStudents(loadedStudents);
+        setInstructors(loadedInstructors);
+        setStaff(loadedStaff);
+        setTemplates(loadedTemplates);
+        
+        if (user.role === 'superuser') {
+          const allUsers = await ApiService.getAcademies().then(list => {
+             // Just a placeholder or fetch all users if endpoint exists
+             return StorageService.getUsers(); 
+          });
+          setUsers(allUsers);
+        } else {
+          const academyUsers = await ApiService.getAcademyUsers(academy.id);
+          setUsers(academyUsers);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar dados do dashboard:', error);
       }
-      
-      setTemplates(StorageService.getTemplates(academy.id));
+    };
+    fetchData();
+    if (academy) {
       setLastReadChat(localStorage.getItem(`oss_chat_last_read_${academy.id}`) || '');
     }
   }, [academy?.id, user.role]);
+
 
   const chatMessages = useMemo(() => academy ? StorageService.getChatMessages(academy.id) : [], [academy?.id]);
   
@@ -274,22 +293,31 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   const [refreshKey, setRefreshKey] = useState(0);
   const triggerRefresh = () => setRefreshKey(prev => prev + 1);
 
+  const [globalAcademies, setGlobalAcademies] = useState<Academy[]>([]);
+  
+  React.useEffect(() => {
+    if (user.role === 'superuser') {
+      ApiService.getAcademies().then(setGlobalAcademies);
+    }
+  }, [user.role, refreshKey]);
+
   const globalStats = useMemo(() => {
-    if (user.role !== 'superuser') return null;
-    const allAcademies = StorageService.getAcademies();
+    if (user.role !== 'superuser' || globalAcademies.length === 0) return null;
+    
+    // Simplificando stats globais para usar dados locais por enquanto ou via API se houvesse endpoint /stats
     const allStudents = StorageService.getStudents();
     const allAttendance = StorageService.getAttendance();
     const allTransactions = StorageService.getFinances();
     
     // Contagem por plano
-    const plansCount = allAcademies.reduce((acc, a) => {
+    const plansCount = globalAcademies.reduce((acc, a) => {
       const plan = a.currentPlan || 'Free';
       acc[plan] = (acc[plan] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
     return {
-      academiesCount: allAcademies.length,
+      academiesCount: globalAcademies.length,
       studentsCount: allStudents.length,
       activeStudentsCount: allStudents.filter(s => s.status === 'Active').length,
       todayAttendanceCount: allAttendance.filter(a => a.date.startsWith(todayStr)).length,
@@ -297,9 +325,10 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       totalMensalidades: allTransactions.filter(t => t.type === 'income' && (t.category === 'Mensalidade' || t.description.toLowerCase().includes('mensalidade'))).reduce((acc, t) => acc + t.amount, 0),
       totalExpense: allTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0),
       plansCount,
-      allAcademies
+      allAcademies: globalAcademies
     };
-  }, [user.role, todayStr, refreshKey]);
+  }, [user.role, todayStr, refreshKey, globalAcademies]);
+
 
   const [selectedAcademy, setSelectedAcademy] = React.useState<Academy | null>(null);
   const [isManageModalOpen, setIsManageModalOpen] = React.useState(false);
@@ -322,8 +351,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   };
 
   if (!academy && user.role === 'superuser') {
-    const allAcademies = StorageService.getAcademies();
-    const sortedAcademies = [...allAcademies].sort((a, b) => a.name.localeCompare(b.name));
+    const sortedAcademies = [...globalAcademies].sort((a, b) => a.name.localeCompare(b.name));
     
     return (
       <motion.div 

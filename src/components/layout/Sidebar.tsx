@@ -31,6 +31,7 @@ interface SidebarProps {
   translatedMainMenu: any[];
   translatedManagementMenu: any[];
   pendingCount?: number;
+  academies: Academy[];
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -46,10 +47,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   onSwitchAcademy, 
   translatedMainMenu, 
   translatedManagementMenu, 
-  pendingCount 
+  pendingCount,
+  academies
 }) => {
+
   const location = useLocation();
-  const allAcademies = StorageService.getAcademies();
   const t = getTranslation(language);
   
   const languages = [
@@ -102,13 +104,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <select 
                     value={academy?.id || ''}
                     onChange={(e) => {
-                      const selected = allAcademies.find(a => a.id === e.target.value);
+                      const selected = academies.find(a => a.id === e.target.value);
                       if (selected && onSwitchAcademy) onSwitchAcademy(selected);
                     }}
                     className="w-full bg-slate-800 border-none rounded-lg text-[10px] font-bold text-slate-300 py-1.5 px-2 outline-none focus:ring-1 focus:ring-indigo-500 appearance-none cursor-pointer"
                   >
                     <option value="" disabled>Select a Unit</option>
-                    {allAcademies.map(a => (
+                    {academies.map(a => (
                       <option key={a.id} value={a.id}>{a.name}</option>
                     ))}
                   </select>
@@ -220,6 +222,13 @@ const Sidebar: React.FC<SidebarProps> = ({
             />
           </button>
         </div>
+        {!isCollapsed && (
+          <div className="mt-4 px-4 pb-2">
+            <div className="bg-amber-500/90 text-black text-[8px] font-black px-2 py-1 rounded text-center uppercase tracking-tighter">
+              VERSÃO QAS 06/05/2026 16:15:00
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );

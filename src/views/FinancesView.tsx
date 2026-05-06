@@ -1,6 +1,8 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { StorageService } from '../services/storage';
+import ApiService from '../services/api';
+
 import { FinanceTransaction, TransactionType, Student, Academy, User } from '../types';
 import { 
   Plus, 
@@ -94,12 +96,24 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
 
   const [toast, setToast] = useState<{message: string, type: 'success' | 'delete'} | null>(null);
 
-  useEffect(() => {
-    if (academy) {
-      setTransactions(StorageService.getFinances(academy.id));
-      setStudents(StorageService.getStudents(academy.id));
+  const fetchData = async () => {
+    if (!academy) return;
+    try {
+      const [financesData, studentsData] = await Promise.all([
+        ApiService.getFinances(),
+        ApiService.getStudents()
+      ]);
+      setTransactions(financesData);
+      setStudents(studentsData);
+    } catch (error) {
+      console.error('Erro ao buscar dados financeiros:', error);
     }
+  };
+
+  useEffect(() => {
+    fetchData();
   }, [academy]);
+
 
   const showNotification = (message: string, type: 'success' | 'delete' = 'success') => {
     setToast({ message, type });
@@ -135,55 +149,39 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, search, typeFilter]);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.amount || !formData.description) return;
 
-    const newTransaction: FinanceTransaction = {
-      id: Math.random().toString(36).substr(2, 9),
-      academyId: academy.id,
-      ...formData as FinanceTransaction
-    };
+    try {
+      const payload = {
+        ...formData,
+        academyId: academy.id
+      };
+      await ApiService.createTransaction(payload);
+      
+      // Se for mensalidade, o backend pode cuidar disso ou podemos fazer um update extra no student
+      // Por enquanto, vamos apenas recarregar os dados
+      await fetchData();
 
-    setTransactions(prev => {
-      const updated = [newTransaction, ...prev];
-      StorageService.saveFinances(updated);
-      return updated;
-    });
-
-    // Atualizar próxima mensalidade do aluno se for o caso
-    if (newTransaction.type === 'income' && (newTransaction.category === 'Mensalidade' || newTransaction.description.toLowerCase().includes('mensalidade')) && newTransaction.studentId) {
-      const allStudents = StorageService.getStudents();
-      const student = allStudents.find(s => s.id === newTransaction.studentId);
-      if (student) {
-        // Pula 30 dias a partir da data do pagamento ou do vencimento atual (o que for maior ou apenas da data atual)
-        const baseDate = student.nextPaymentDate ? new Date(student.nextPaymentDate + 'T12:00:00') : new Date();
-        const today = new Date();
-        const referenceValue = baseDate.getTime() > today.getTime() ? baseDate : today;
-        
-        referenceValue.setDate(referenceValue.getDate() + 30);
-        const nextDate = referenceValue.toISOString().split('T')[0];
-        
-        const updatedStudents = allStudents.map(s => s.id === student.id ? { ...s, nextPaymentDate: nextDate } : s);
-        StorageService.saveStudents(updatedStudents);
-        setStudents(updatedStudents.filter(s => s.academyId === academy.id));
-      }
+      setIsModalOpen(false);
+      showNotification(formData.type === 'income' ? "Entrada registrada!" : "Saída registrada!");
+      
+      setFormData({
+        type: 'income',
+        amount: 0,
+        description: '',
+        category: 'Mensalidade',
+        date: new Date().toISOString().split('T')[0],
+        paymentMethod: 'Pix',
+        status: 'paid',
+        studentId: undefined
+      });
+    } catch (error) {
+      console.error('Erro ao salvar transação:', error);
     }
-
-    setIsModalOpen(false);
-    showNotification(newTransaction.type === 'income' ? "Entrada registrada!" : "Saída registrada!");
-    
-    setFormData({
-      type: 'income',
-      amount: 0,
-      description: '',
-      category: 'Mensalidade',
-      date: new Date().toISOString().split('T')[0],
-      paymentMethod: 'Pix',
-      status: 'paid',
-      studentId: undefined
-    });
   };
+
 
   const handleCopyPix = () => {
     if (!academy.pixKey) return;
@@ -202,19 +200,20 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
     setIsDeleteModalOpen(true);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!transactionToDelete) return;
 
-    setTransactions(prev => {
-      const updated = prev.filter(t => t.id !== transactionToDelete.id);
-      StorageService.saveFinances(updated);
-      return updated;
-    });
-
-    setIsDeleteModalOpen(false);
-    setTransactionToDelete(null);
-    showNotification("Lançamento removido.", 'delete');
+    try {
+      await ApiService.deleteTransaction(transactionToDelete.id);
+      await fetchData();
+      setIsDeleteModalOpen(false);
+      setTransactionToDelete(null);
+      showNotification("Lançamento removido.", 'delete');
+    } catch (error) {
+      console.error('Erro ao deletar transação:', error);
+    }
   };
+
 
   const handleExportPDF = async () => {
     if (!financeRef.current) return;

@@ -7,39 +7,34 @@ dotenv.config();
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Iniciando seed do banco de dados NexDojo...\n');
+  console.log('🌱 Iniciando seed COMPLETO do banco de dados NexDojo...\n');
 
-  // ── 1. ACADEMY ──────────────────────────────────────────────────────────────
-  const academy = await prisma.academy.upsert({
-    where: { id: 'mock_acad_1' },
-    update: {},
-    create: {
-      id: 'mock_acad_1',
-      name: 'NexDojo',
-      ownerName: 'Prof. Carlos Gracie Jr.',
-      email: 'admin@oss.com',
-      logo: 'https://images.unsplash.com/photo-1552072092-7f9b8d63efcb?q=80&w=400&h=400&auto=format&fit=crop',
-      phone: '',
-      cep: '',
-      address: '',
-      addressNumber: '',
-    }
-  });
-  console.log(`✅ Academia: ${academy.name}`);
+  // ── 1. ACADEMIAS ────────────────────────────────────────────────────────────
+  const academyIds = ['mock_acad_1', 'mock_acad_2', 'mock_acad_3'];
+  const academies = [
+    { id: academyIds[0], name: 'NexDojo HQ', ownerName: 'Mestre Carlos Gracie', email: 'hq@nexdojo.com', logo: 'https://images.unsplash.com/photo-1552072092-7f9b8d63efcb?q=80&w=400&h=400&auto=format&fit=crop' },
+    { id: academyIds[1], name: 'Alliance São Paulo', ownerName: 'Fabio Gurgel', email: 'sp@alliance.com', logo: 'https://images.unsplash.com/photo-1599058917232-d750c1859d7c?q=80&w=400&h=400&auto=format&fit=crop' },
+    { id: academyIds[2], name: 'Gracie Barra Rio', ownerName: 'Jefferson Moura', email: 'rio@graciebarra.com', logo: 'https://images.unsplash.com/photo-1549476464-37392f717551?q=80&w=400&h=400&auto=format&fit=crop' }
+  ];
 
-  // ── 2. USERS (com senhas criptografadas) ────────────────────────────────────
-  const senhaAdmin     = await bcrypt.hash('oss123', 10);
-  const senhaInstrutor = await bcrypt.hash('oss123', 10);
-  const senhaStaff     = await bcrypt.hash('oss123', 10);
-  const senhaAluno     = await bcrypt.hash('oss123', 10);
-  const senhaSuper     = await bcrypt.hash('super', 10);
+  for (const a of academies) {
+    await prisma.academy.upsert({
+      where: { id: a.id },
+      update: {},
+      create: { ...a, phone: '11999998888', cep: '01001-000', address: 'Av. Paulista', addressNumber: '1000' }
+    });
+    console.log(`✅ Academia: ${a.name}`);
+  }
+
+  // ── 2. USUÁRIOS ─────────────────────────────────────────────────────────────
+  const commonPassword = await bcrypt.hash('oss123', 10);
+  const superPassword = await bcrypt.hash('super', 10);
 
   const users = [
-    { id: 'mock_user_1',         academyId: 'mock_acad_1', role: 'admin',     name: 'Admin Teste',        email: 'admin@oss.com',  password: senhaAdmin,     status: 'Active' },
-    { id: 'mock_instr_1',        academyId: 'mock_acad_1', role: 'instructor', name: 'Prof. Renato Silva', email: 'instru@oss.com', password: senhaInstrutor, status: 'Active' },
-    { id: 'mock_staff_1',        academyId: 'mock_acad_1', role: 'staff',      name: 'Ana Secretaria',     email: 'colab@oss.com',  password: senhaStaff,     status: 'Active' },
-    { id: 'mock_student_user_1', academyId: 'mock_acad_1', role: 'student',    name: 'Carlos Oliveira',    email: 'aluno@oss.com',  password: senhaAluno,     status: 'Active' },
-    { id: 'mock_superuser_1',    academyId: null,           role: 'superuser',  name: 'Super User OSS',     email: 'super@oss.com',  password: senhaSuper,     status: 'Active' },
+    { id: 'u_super', academyId: null, role: 'superuser', name: 'Super Admin OSS', email: 'super@oss.com', password: superPassword, status: 'Active' },
+    { id: 'u_admin_1', academyId: academyIds[0], role: 'admin', name: 'Tiago Admin', email: 'admin@nexdojo.com', password: commonPassword, status: 'Active' },
+    { id: 'u_inst_1', academyId: academyIds[0], role: 'instructor', name: 'Prof. Renato', email: 'renato@nexdojo.com', password: commonPassword, status: 'Active' },
+    { id: 'u_staff_1', academyId: academyIds[0], role: 'staff', name: 'Ana Secretaria', email: 'ana@nexdojo.com', password: commonPassword, status: 'Active' },
   ];
 
   for (const u of users) {
@@ -48,41 +43,130 @@ async function main() {
       update: { password: u.password },
       create: u,
     });
-    console.log(`✅ Usuário: ${u.name} (${u.role}) — senha criptografada`);
+    console.log(`✅ Usuário: ${u.name} (${u.role})`);
   }
 
-  // ── 3. STUDENTS ─────────────────────────────────────────────────────────────
-  const students = [
-    { id: 's1',  academyId: 'mock_acad_1', name: 'Carlos Oliveira', email: 'aluno@oss.com',   belt: 'WHITE',  stripes: 2, lastGraduationDate: '2024-01-10', birthDate: '1995-04-12', totalClasses: 45,   totalHours: 67,  absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: new Date('2023-10-01'), phone: '11988887777', photo: 'https://picsum.photos/seed/s1/400/400' },
-    { id: 's2',  academyId: 'mock_acad_1', name: 'Juliana Santos',  belt: 'BLUE',   stripes: 1, lastGraduationDate: '2023-11-20', birthDate: '1998-08-22', totalClasses: 120,  totalHours: 180, absentCount: 4, status: 'Active', hasLoanedKimono: true,  joinDate: new Date('2022-05-15'), phone: '11977776666', photo: 'https://picsum.photos/seed/s2/400/400' },
-    { id: 's3',  academyId: 'mock_acad_1', name: 'Marcos Pereira',  belt: 'PURPLE', stripes: 3, lastGraduationDate: '2023-06-15', birthDate: '1990-01-30', totalClasses: 350,  totalHours: 525, absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: new Date('2020-02-10'), phone: '11966665555', photo: 'https://picsum.photos/seed/s3/400/400' },
-    { id: 's4',  academyId: 'mock_acad_1', name: 'Arthur Silva',    belt: 'GREY',   stripes: 3, lastGraduationDate: '2024-03-05', birthDate: '2016-05-10', totalClasses: 30,   totalHours: 30,  absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: new Date('2023-12-01'), emergencyPhone: '11955554444', photo: 'https://picsum.photos/seed/s4/400/400' },
-    { id: 's5',  academyId: 'mock_acad_1', name: 'Mariana Costa',   belt: 'YELLOW', stripes: 1, lastGraduationDate: '2024-02-12', birthDate: '2014-02-20', totalClasses: 80,   totalHours: 80,  absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: new Date('2023-01-15'), emergencyPhone: '11944443333', photo: 'https://picsum.photos/seed/s5/400/400' },
-    { id: 's6',  academyId: 'mock_acad_1', name: 'Ricardo Mendes',  belt: 'BROWN',  stripes: 0, lastGraduationDate: '2022-08-25', birthDate: '1988-11-05', totalClasses: 500,  totalHours: 750, absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: new Date('2018-03-20'), phone: '11933332222', photo: 'https://picsum.photos/seed/s6/400/400' },
-    { id: 's7',  academyId: 'mock_acad_1', name: 'Beatriz Lima',    belt: 'BLACK',  stripes: 1, lastGraduationDate: '2021-12-01', birthDate: '1985-07-14', totalClasses: 1200, totalHours: 1800,absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: new Date('2010-01-10'), phone: '11922221111', photo: 'https://picsum.photos/seed/s7/400/400' },
-    { id: 's8',  academyId: 'mock_acad_1', name: 'Pedro Rocha',     belt: 'ORANGE', stripes: 4, lastGraduationDate: '2023-10-15', birthDate: '2011-03-25', totalClasses: 150,  totalHours: 150, absentCount: 5, status: 'Active', hasLoanedKimono: false, joinDate: new Date('2021-06-12'), emergencyPhone: '11911110000', photo: 'https://picsum.photos/seed/s8/400/400' },
-    { id: 's9',  academyId: 'mock_acad_1', name: 'Sofia Amaral',    belt: 'GREEN',  stripes: 2, lastGraduationDate: '2023-12-20', birthDate: '2009-09-02', totalClasses: 210,  totalHours: 210, absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: new Date('2020-11-05'), emergencyPhone: '11900009999', photo: 'https://picsum.photos/seed/s9/400/400' },
-    { id: 's10', academyId: 'mock_acad_1', name: 'Lucas Ferreira',  belt: 'WHITE',  stripes: 0, birthDate: '2000-01-15',         totalClasses: 5,    totalHours: 7,   absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: new Date('2024-02-01'), phone: '11987654321', photo: 'https://picsum.photos/seed/s10/400/400' },
-  ];
+  // ── 3. ALUNOS ───────────────────────────────────────────────────────────────
+  const belts = ['WHITE', 'BLUE', 'PURPLE', 'BROWN', 'BLACK'];
+  const studentIds: string[] = [];
 
-  for (const s of students) {
-    await prisma.student.upsert({
-      where: { id: s.id },
-      update: {},
-      create: s as any,
+  for (const academyId of academyIds) {
+    for (let i = 1; i <= 10; i++) {
+      const studentId = `s_${academyId}_${i}`;
+      studentIds.push(studentId);
+      await prisma.student.upsert({
+        where: { id: studentId },
+        update: {},
+        create: {
+          id: studentId,
+          academyId: academyId,
+          name: `Aluno ${i} - ${academyId}`,
+          email: `aluno${i}@${academyId}.com`,
+          belt: belts[Math.floor(Math.random() * belts.length)],
+          stripes: Math.floor(Math.random() * 5),
+          status: 'Active',
+          joinDate: new Date(),
+          totalClasses: Math.floor(Math.random() * 100),
+          photo: `https://picsum.photos/seed/${studentId}/400/400`,
+        }
+      });
+    }
+  }
+  console.log(`✅ ${studentIds.length} Alunos criados.`);
+
+  // ── 4. CLASS TEMPLATES & SESSIONS ──────────────────────────────────────────
+  for (const academyId of academyIds) {
+    const template = await prisma.classTemplate.create({
+      data: {
+        academyId: academyId,
+        name: 'Turma Geral',
+        durationMinutes: 90,
+        schedules: JSON.stringify([{ dayOfWeek: 1, startTime: '19:00', endTime: '20:30' }])
+      }
     });
-    console.log(`✅ Aluno: ${s.name} (${s.belt}${s.stripes > 0 ? ' / ' + s.stripes + ' graus' : ''})`);
-  }
 
-  console.log('\n🥋 Seed concluído com sucesso! OSS!');
-  console.log('\n📋 Credenciais de acesso criadas:');
-  console.log('   admin@oss.com   / oss123  → Admin');
-  console.log('   instru@oss.com  / oss123  → Instrutor');
-  console.log('   colab@oss.com   / oss123  → Staff');
-  console.log('   aluno@oss.com   / oss123  → Aluno');
-  console.log('   super@oss.com   / super   → Superuser');
+    const session = await prisma.classSession.create({
+      data: {
+        academyId: academyId,
+        templateId: template.id,
+        name: 'Aula de Segunda',
+        date: new Date(),
+        durationMinutes: 90,
+        instructorId: 'u_inst_1',
+        status: 'Finalized'
+      }
+    });
+
+    // Attendance
+    await prisma.attendanceRecord.create({
+      data: {
+        academyId: academyId,
+        studentId: `s_${academyId}_1`,
+        classId: session.id,
+        durationMinutes: 90,
+        kimonoTaken: false
+      }
+    });
+  }
+  console.log('✅ Turmas, Aulas e Chamadas criadas.');
+
+  // ── 5. MURAL (CHAT) ────────────────────────────────────────────────────────
+  for (const academyId of academyIds) {
+    await prisma.chatMessage.create({
+      data: {
+        academyId: academyId,
+        senderId: 'u_admin_1',
+        senderName: 'Admin',
+        senderRole: 'admin',
+        content: 'Bem-vindos à nova plataforma NexDojo!',
+      }
+    });
+  }
+  console.log('✅ Mensagens no Mural criadas.');
+
+  // ── 6. FINANCEIRO ──────────────────────────────────────────────────────────
+  for (const academyId of academyIds) {
+    await prisma.financeTransaction.create({
+      data: {
+        academyId: academyId,
+        description: 'Mensalidade Janeiro',
+        amount: 150.00,
+        type: 'income',
+        category: 'Mensalidade',
+        paymentMethod: 'Pix',
+        status: 'paid',
+        studentId: `s_${academyId}_1`
+      }
+    });
+    await prisma.financeTransaction.create({
+      data: {
+        academyId: academyId,
+        description: 'Aluguel do Tatame',
+        amount: 1200.00,
+        type: 'expense',
+        category: 'Infraestrutura',
+        paymentMethod: 'Boleto',
+        status: 'paid'
+      }
+    });
+  }
+  console.log('✅ Transações Financeiras criadas.');
+
+  // ── 7. EMPRÉSTIMO DE KIMONOS ───────────────────────────────────────────────
+  for (const academyId of academyIds) {
+    await prisma.kimonoLoan.create({
+      data: {
+        academyId: academyId,
+        studentId: `s_${academyId}_2`,
+        status: 'Active'
+      }
+    });
+  }
+  console.log('✅ Empréstimos de Kimonos criados.');
+
+  console.log('\n🥋 Seed COMPLETO concluído com sucesso! OSS!');
 }
 
 main()
-  .catch((e) => { console.error('❌ Erro no seed:', e); process.exit(1); })
+  .catch((e) => { console.error('❌ Erro:', e); process.exit(1); })
   .finally(async () => { await prisma.$disconnect(); });

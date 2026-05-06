@@ -42,7 +42,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     setTheme, 
     setLanguage, 
     logout, 
-    switchAcademy 
+    switchAcademy,
+    academies 
   } = useAuth();
   
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -108,7 +109,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* TAG DE VERSÃO QAS */}
       <div className="fixed top-0 left-0 right-0 z-[9999] pointer-events-none flex justify-center">
         <div className="bg-amber-500/90 text-white text-[10px] font-black px-4 py-1 rounded-b-xl shadow-lg backdrop-blur-sm border-x border-b border-amber-400/50 uppercase tracking-widest animate-in slide-in-from-top duration-500">
-          VERSÃO QAS 06/05/2026 11:23:00
+          VERSÃO QAS 06/05/2026 16:15:00
         </div>
       </div>
 
@@ -127,6 +128,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           translatedMainMenu={translatedMainMenu}
           translatedManagementMenu={translatedManagementMenu}
           pendingCount={pendingCount}
+          academies={academies}
         />
       </div>
 
@@ -171,7 +173,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <select 
                     value={academy?.id || ''}
                     onChange={(e) => {
-                      const selected = StorageService.getAcademies().find(a => a.id === e.target.value);
+                      const selected = academies.find(a => a.id === e.target.value);
                       if (selected) {
                         switchAcademy(selected);
                         setIsMobileMenuOpen(false);
@@ -179,9 +181,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     }}
                     className="w-full bg-white/20 border-none rounded-2xl p-4 text-xs font-black uppercase tracking-widest text-white appearance-none outline-none focus:ring-2 focus:ring-white/40"
                   >
-                    <option value="" disabled className="text-slate-900">Selecione uma Unidade</option>
-                    {StorageService.getAcademies().map(a => (
-                      <option key={a.id} value={a.id} className="text-slate-900">{a.name}</option>
+                    <option value="" disabled>Selecione uma Unidade</option>
+                    {academies.map(a => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
                     ))}
                   </select>
                 </div>

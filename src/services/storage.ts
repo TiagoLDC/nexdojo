@@ -70,43 +70,9 @@ export const StorageService = {
   getAcademies: (): Academy[] => {
     const data = localStorage.getItem(KEYS.ACADEMIES);
     let academies = data ? JSON.parse(data) : MOCK_ACADEMIES;
-    
-    // Migration: Keep only NexDojo (mock_acad_1) and filter out old mocks
-    let changed = false;
-    const initialCount = academies.length;
-    
-    // Filter out mock_acad_2 and mock_acad_3
-    academies = academies.filter((a: Academy) => a.id !== 'mock_acad_2' && a.id !== 'mock_acad_3');
-    
-    // Rename mock_acad_1 to NexDojo
-    academies = academies.map((a: Academy) => {
-      if (a.id === 'mock_acad_1') {
-        const targetLogo = 'https://images.unsplash.com/photo-1552072092-7f9b8d63efcb?q=80&w=400&h=400&auto=format&fit=crop';
-        if (a.name !== 'NexDojo' || a.logo !== targetLogo) {
-          changed = true;
-          return { ...a, name: 'NexDojo', logo: targetLogo };
-        }
-      }
-      return a;
-    });
-
-    if (academies.length !== initialCount) changed = true;
-
-    if (changed) {
-      StorageService.saveAcademies(academies);
-      // Also update current active academy if needed
-      const currentData = localStorage.getItem(KEYS.ACADEMY);
-      if (currentData) {
-        const current = JSON.parse(currentData);
-        if (current.id === 'mock_acad_1' || current.id === 'mock_acad_2' || current.id === 'mock_acad_3') {
-          // Force active to be NexDojo if it was a mock
-          StorageService.saveAcademy(academies.find((a: Academy) => a.id === 'mock_acad_1') || academies[0]);
-        }
-      }
-    }
-
     return [...academies].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
   },
+
   saveAcademies: (academies: Academy[]) => {
     localStorage.setItem(KEYS.ACADEMIES, JSON.stringify(academies));
   },

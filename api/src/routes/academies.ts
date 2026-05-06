@@ -4,6 +4,24 @@ import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
 
+// GET /api/academies - list all academies (for superusers)
+router.get('/', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { role } = (req as any).user;
+    if (role !== 'superuser') {
+      return res.status(403).json({ error: 'Acesso negado.' });
+    }
+    const academies = await prisma.academy.findMany({
+      orderBy: { name: 'asc' }
+    });
+    return res.json(academies);
+  } catch (error) {
+    console.error('[GET /academies]', error);
+    return res.status(500).json({ error: 'Erro interno.' });
+  }
+});
+
+
 // GET /api/academies/:id
 router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
   try {

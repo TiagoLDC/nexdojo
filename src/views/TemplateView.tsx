@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Student, ClassTemplate, Academy, User } from '../types';
 import { StorageService } from '../services/storage';
+import ApiService from '../services/api';
+
 import { BeltBadge } from '../components/common/BeltBadge';
 import { 
   Plus, 
@@ -52,12 +54,24 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
 
   const DAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
-  useEffect(() => {
-    if (academy) {
-      setTemplates(StorageService.getTemplates(academy.id));
-      setStudents(StorageService.getStudents(academy.id));
+  const fetchData = async () => {
+    if (!academy) return;
+    try {
+      const [templatesData, studentsData] = await Promise.all([
+        ApiService.getTemplates(),
+        ApiService.getStudents()
+      ]);
+      setTemplates(templatesData);
+      setStudents(studentsData);
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
     }
+  };
+
+  useEffect(() => {
+    fetchData();
   }, [academy]);
+
 
   const showNotification = (message: string, type: 'success' | 'delete' = 'success') => {
     setToast({ message, type });
@@ -135,51 +149,54 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
     setSchedules(next);
   };
 
-  const handleSave = () => {
-    if (editingTemplateId) {
-      const updated = templates.map(t => 
-        t.id === editingTemplateId 
-          ? { ...t, name, durationMinutes: duration, assignedStudentIds: Array.from(selectedStudents), absenceLimit, schedules }
-          : t
-      );
-      setTemplates(updated);
-      StorageService.saveTemplates(updated);
-      showNotification("Configurações da turma salvas!");
-    } else {
-      const newTemplate: ClassTemplate = {
-        id: 'temp_' + Math.random().toString(36).substr(2, 9),
-        academyId: academy.id,
-        name,
-        durationMinutes: duration,
-        assignedStudentIds: Array.from(selectedStudents),
-        absenceLimit,
-        schedules
-      };
-      const updated = [...templates, newTemplate];
-      setTemplates(updated);
-      StorageService.saveTemplates(updated);
-      showNotification("Nova turma criada com sucesso!");
+  const handleSave = async () => {
+    try {
+      if (editingTemplateId) {
+        const payload = {
+          name,
+          durationMinutes: duration,
+          assignedStudentIds: Array.from(selectedStudents),
+          absenceLimit,
+          schedules
+        };
+        await ApiService.updateTemplate(editingTemplateId, payload);
+        showNotification("Configurações da turma salvas!");
+      } else {
+        const newTemplate = {
+          academyId: academy.id,
+          name,
+          durationMinutes: duration,
+          assignedStudentIds: Array.from(selectedStudents),
+          absenceLimit,
+          schedules
+        };
+        await ApiService.createTemplate(newTemplate);
+        showNotification("Nova turma criada com sucesso!");
+      }
+      await fetchData();
+      setIsModalOpen(false);
+      resetForm();
+    } catch (error) {
+      console.error('Erro ao salvar template:', error);
     }
-    
-    setIsModalOpen(false);
-    resetForm();
   };
 
-  const handleRenameOnly = () => {
+
+  const handleRenameOnly = async () => {
     if (templateToRename && name) {
-      const updated = templates.map(t => 
-        t.id === templateToRename.id 
-          ? { ...t, name }
-          : t
-      );
-      setTemplates(updated);
-      StorageService.saveTemplates(updated);
-      setIsRenameModalOpen(false);
-      setTemplateToRename(null);
-      setName('');
-      showNotification("Nome da turma alterado.");
+      try {
+        await ApiService.updateTemplate(templateToRename.id, { name });
+        await fetchData();
+        setIsRenameModalOpen(false);
+        setTemplateToRename(null);
+        setName('');
+        showNotification("Nome da turma alterado.");
+      } catch (error) {
+        console.error('Erro ao renomear:', error);
+      }
     }
   };
+
 
   const resetForm = () => {
     setEditingTemplateId(null);
@@ -195,16 +212,20 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
     setIsDeleteModalOpen(true);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (templateToDelete) {
-      const updated = templates.filter(t => t.id !== templateToDelete.id);
-      setTemplates(updated);
-      StorageService.saveTemplates(updated);
-      setIsDeleteModalOpen(false);
-      setTemplateToDelete(null);
-      showNotification("Turma removida do sistema.", 'delete');
+      try {
+        await ApiService.deleteTemplate(templateToDelete.id);
+        await fetchData();
+        setIsDeleteModalOpen(false);
+        setTemplateToDelete(null);
+        showNotification("Turma removida do sistema.", 'delete');
+      } catch (error) {
+        console.error('Erro ao deletar:', error);
+      }
     }
   };
+
 
   const openNotifyModal = (template: ClassTemplate) => {
     setNotifyingTemplate(template);

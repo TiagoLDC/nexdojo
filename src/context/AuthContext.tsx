@@ -18,6 +18,7 @@ interface AuthContextType {
   setAccentColor: (color: string) => void;
   switchAcademy: (academy: Academy) => void;
   updateAcademy: (academy: Academy) => void;
+  academies: Academy[];
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,6 +26,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [academy, setAcademy] = useState<Academy | null>(null);
+  const [academies, setAcademies] = useState<Academy[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [language, setLanguageState] = useState<Language>(StorageService.getLanguage());
@@ -33,16 +35,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ── Restaura sessão ao iniciar ──────────────────────────────────────────────
   useEffect(() => {
-    const token = ApiService.getToken();
-    const savedUser = StorageService.getCurrentUser();
-    const savedAcademy = StorageService.getAcademy();
+    const init = async () => {
+      const token = ApiService.getToken();
+      const savedUser = StorageService.getCurrentUser();
+      const savedAcademy = StorageService.getAcademy();
 
-    if (token && savedUser) {
-      setUser(savedUser);
-      setAcademy(savedAcademy);
-    }
+      if (token && savedUser) {
+        setUser(savedUser);
+        setAcademy(savedAcademy);
 
-    setIsLoading(false);
+        // Fetch all academies if superuser
+        if (savedUser.role === 'superuser') {
+          try {
+            const list = await ApiService.getAcademies();
+            setAcademies(list);
+            StorageService.saveAcademies(list);
+          } catch (e) {
+            console.error('Error fetching academies', e);
+            // Fallback to storage
+            setAcademies(StorageService.getAcademies());
+          }
+        }
+
+        // Refresh active academy from DB to catch updates
+        if (savedAcademy) {
+          try {
+            const freshAcademy = await ApiService.getAcademy(savedAcademy.id);
+            setAcademy(freshAcademy);
+            StorageService.saveAcademy(freshAcademy);
+          } catch (e) {
+            console.error('Error refreshing academy', e);
+          }
+        }
+      } else {
+        // Not logged in, but might have mock academies in storage
+        setAcademies(StorageService.getAcademies());
+      }
+
+      setIsLoading(false);
+    };
+    init();
   }, []);
 
   // ── Login via API (novo fluxo) ─────────────────────────────────────────────
@@ -102,7 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider value={{
-      user, academy, language, theme, accentColor, isLoading,
+      user, academy, academies, language, theme, accentColor, isLoading,
       login, loginDirect, logout,
       setLanguage, setTheme, setAccentColor, switchAcademy, updateAcademy
     }}>

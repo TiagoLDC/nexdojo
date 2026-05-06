@@ -106,6 +106,7 @@ GEMINI_API_KEY=<!-- PREENCHER -->
 5. **Commits**: Seguir o padrão definido na seção 3.
 6. **Frequência de Commit**: SÓ realizar commits quando o usuário solicitar explicitamente.
 7. **Tag de Versão QAS**: Antes de cada conclusão de tarefa ou deploy, você DEVE atualizar a tag de versão no arquivo `src/components/layout/Layout.tsx` (linha ~111) com a data e hora atual do sistema no formato: `VERSÃO QAS DD/MM/AAAA HH:MM:SS`. Certifique-se de manter apenas UMA tag de versão ativa no sistema (atualmente centralizada no topo).
+8. **Testes no Navegador**: NÃO abrir o navegador para testes, a menos que solicitado explicitamente pelo usuário. O usuário realizará os testes manualmente para agilizar as entregas.
 
 ---
 
@@ -117,4 +118,4 @@ GEMINI_API_KEY=<!-- PREENCHER -->
 
 ---
 
-*Última atualização: 30/04/2026*
+*Última atualização: 06/05/2026*

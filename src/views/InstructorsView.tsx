@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Instructor, Belt, StudentDocument, Academy, User } from '../types';
 import { StorageService } from '../services/storage';
+import ApiService from '../services/api';
+
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
 import { 
   UserPlus, 
@@ -80,11 +82,20 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
     setShowSensitive(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
-  useEffect(() => {
-    if (academy) {
-      setInstructors(StorageService.getInstructors(academy.id));
+  const loadInstructors = async () => {
+    if (!academy) return;
+    try {
+      const data = await ApiService.getInstructors();
+      setInstructors(data);
+    } catch (error) {
+      console.error('Erro ao buscar instrutores:', error);
     }
+  };
+
+  useEffect(() => {
+    loadInstructors();
   }, [academy]);
+
 
   const showNotification = (message: string, type: 'success' | 'error' | 'delete' = 'success') => {
     setToast({ message, type });
@@ -133,46 +144,49 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
     }
   };
 
-  const handleSaveInstructor = () => {
+  const handleSaveInstructor = async () => {
     if (!editingInstructor || !editingInstructor.name || !editingInstructor.birthDate) {
       alert("Nome e Data de Nascimento são obrigatórios.");
       return;
     }
 
     try {
-      const currentInstructors = StorageService.getInstructors();
-      const exists = currentInstructors.find(i => i.id === editingInstructor.id);
+      const isUpdate = !editingInstructor.id.startsWith('inst_');
       
-      let updated;
-      if (exists) {
-        updated = currentInstructors.map(i => i.id === editingInstructor.id ? editingInstructor : i);
+      if (isUpdate) {
+        await ApiService.updateInstructor(editingInstructor.id, editingInstructor);
       } else {
-        updated = [...currentInstructors, editingInstructor];
+        const { id, ...payload } = editingInstructor;
+        await ApiService.createInstructor({ ...payload, academyId: academy.id });
       }
 
-      StorageService.saveInstructors(updated);
-      setInstructors(updated);
+      await loadInstructors();
       setIsEditModalOpen(false);
       setEditingInstructor(null);
-      showNotification(exists ? "Ficha atualizada!" : "Professor cadastrado com sucesso!");
+      showNotification(isUpdate ? "Ficha atualizada!" : "Professor cadastrado com sucesso!");
     } catch (e) {
+      console.error('Erro ao salvar instrutor:', e);
       showNotification("Erro ao salvar. Tente remover arquivos pesados.", 'error');
     }
   };
 
-  const handleDeleteInstructor = () => {
+
+  const handleDeleteInstructor = async () => {
     if (!editingInstructor) return;
     
-    const id = editingInstructor.id;
-    const updated = instructors.filter(i => i.id !== id);
-    StorageService.saveInstructors(updated);
-    setInstructors(updated);
-    
-    setIsDeleteModalOpen(false);
-    setIsEditModalOpen(false);
-    setEditingInstructor(null);
-    showNotification("Professor removido.", 'delete');
+    try {
+      await ApiService.deleteInstructor(editingInstructor.id);
+      await loadInstructors();
+      
+      setIsDeleteModalOpen(false);
+      setIsEditModalOpen(false);
+      setEditingInstructor(null);
+      showNotification("Professor removido.", 'delete');
+    } catch (error) {
+      console.error('Erro ao deletar instrutor:', error);
+    }
   };
+
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

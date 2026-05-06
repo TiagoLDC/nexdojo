@@ -1,16 +1,16 @@
 
-import { Student, Belt, Academy, User, ClassSession, ClassTemplate, AttendanceRecord } from '../types';
+import { Student, Belt, Academy, User, ClassSession, ClassTemplate, AttendanceRecord, KimonoLoan, ChatMessage, FinanceTransaction, CalendarEvent } from '../types';
 
 export const MOCK_ACADEMY: Academy = {
   id: 'mock_acad_1',
-  name: 'NexDojo',
+  name: 'NexDojo HQ',
   logo: 'https://images.unsplash.com/photo-1552072092-7f9b8d63efcb?q=80&w=400&h=400&auto=format&fit=crop',
-  ownerName: 'Prof. Carlos Gracie Jr.',
-  email: 'admin@oss.com',
-  cep: '',
-  address: '',
-  addressNumber: '',
-  phone: '',
+  ownerName: 'Mestre Carlos Gracie',
+  email: 'hq@nexdojo.com',
+  cep: '01001-000',
+  address: 'Av. Paulista',
+  addressNumber: '1000',
+  phone: '11999998888',
   plans: [
     { id: 'ap1', name: 'Mensal Adulto', durationMonths: 1, classesPerWeek: 3, price: 150, category: 'Adultos' },
     { id: 'ap2', name: 'Semestral Elite', durationMonths: 6, classesPerWeek: 5, price: 800, category: 'Adultos' },
@@ -19,77 +19,102 @@ export const MOCK_ACADEMY: Academy = {
 };
 
 export const MOCK_ACADEMIES: Academy[] = [
-  MOCK_ACADEMY
+  MOCK_ACADEMY,
+  {
+    id: 'mock_acad_2',
+    name: 'Alliance São Paulo',
+    ownerName: 'Fabio Gurgel',
+    email: 'sp@alliance.com',
+    logo: 'https://images.unsplash.com/photo-1599058917232-d750c1859d7c?q=80&w=400&h=400&auto=format&fit=crop',
+    phone: '11988887777',
+    plans: []
+  },
+  {
+    id: 'mock_acad_3',
+    name: 'Gracie Barra Rio',
+    ownerName: 'Jefferson Moura',
+    email: 'rio@graciebarra.com',
+    logo: 'https://images.unsplash.com/photo-1549476464-37392f717551?q=80&w=400&h=400&auto=format&fit=crop',
+    phone: '21977776666',
+    plans: []
+  }
 ];
 
 export const MOCK_USER: User = {
-  id: 'mock_user_1',
+  id: 'u_admin_1',
   academyId: 'mock_acad_1',
   role: 'admin',
-  name: 'Admin Teste',
-  email: 'admin@oss.com',
+  name: 'Tiago Admin',
+  email: 'admin@nexdojo.com',
   password: 'oss123',
   status: 'Active'
 };
 
 export const MOCK_INSTRUCTOR_USER: User = {
-  id: 'mock_instr_1',
+  id: 'u_inst_1',
   academyId: 'mock_acad_1',
   role: 'instructor',
-  name: 'Prof. Renato Silva',
-  email: 'instru@oss.com',
+  name: 'Prof. Renato',
+  email: 'renato@nexdojo.com',
   password: 'oss123',
   status: 'Active'
 };
 
 export const MOCK_STAFF_USER: User = {
-  id: 'mock_staff_1',
+  id: 'u_staff_1',
   academyId: 'mock_acad_1',
   role: 'staff',
   name: 'Ana Secretaria',
-  email: 'colab@oss.com',
+  email: 'ana@nexdojo.com',
   password: 'oss123',
   status: 'Active'
 };
 
 export const MOCK_STUDENT_USER: User = {
-  id: 'mock_student_user_1',
+  id: 'u_stud_1',
   academyId: 'mock_acad_1',
   role: 'student',
-  name: 'Carlos Oliveira',
-  email: 'aluno@oss.com',
+  name: 'Carlos Aluno',
+  email: 'carlos@student.com',
   password: 'oss123',
   status: 'Active'
 };
 
 export const MOCK_SUPERUSER: User = {
-  id: 'mock_superuser_1',
+  id: 'u_super',
   academyId: 'global',
   role: 'superuser',
-  name: 'Super User OSS',
+  name: 'Super Admin OSS',
   email: 'super@oss.com',
   password: 'super',
   status: 'Active'
 };
 
-export const MOCK_STUDENTS: Student[] = [
-  { id: 's1', academyId: 'mock_acad_1', name: 'Carlos Oliveira', email: 'aluno@oss.com', belt: Belt.WHITE, stripes: 2, lastGraduationDate: '2024-01-10', birthDate: '1995-04-12', totalClasses: 45, totalHours: 67.5, absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: '2023-10-01', phone: '11988887777', photo: 'https://picsum.photos/seed/s1/400/400', planId: 'ap1' },
-  { id: 's2', academyId: 'mock_acad_1', name: 'Juliana Santos', belt: Belt.BLUE, stripes: 1, lastGraduationDate: '2023-11-20', birthDate: '1998-08-22', totalClasses: 120, totalHours: 180, absentCount: 4, status: 'Active', hasLoanedKimono: true, joinDate: '2022-05-15', phone: '11977776666', photo: 'https://picsum.photos/seed/s2/400/400', planId: 'ap2' },
-  { id: 's3', academyId: 'mock_acad_1', name: 'Marcos Pereira', belt: Belt.PURPLE, stripes: 3, lastGraduationDate: '2023-06-15', birthDate: '1990-01-30', totalClasses: 350, totalHours: 525, absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: '2020-02-10', phone: '11966665555', photo: 'https://picsum.photos/seed/s3/400/400', planId: 'ap2' },
-  { id: 's4', academyId: 'mock_acad_1', name: 'Arthur Silva', belt: Belt.GREY, stripes: 3, lastGraduationDate: '2024-03-05', birthDate: '2016-05-10', totalClasses: 30, totalHours: 30, absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: '2023-12-01', guardianPhone: '11955554444', photo: 'https://picsum.photos/seed/s4/400/400', planId: 'ap3' },
-  { id: 's5', academyId: 'mock_acad_1', name: 'Mariana Costa', belt: Belt.YELLOW, stripes: 1, lastGraduationDate: '2024-02-12', birthDate: '2014-02-20', totalClasses: 80, totalHours: 80, absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: '2023-01-15', guardianPhone: '11944443333', photo: 'https://picsum.photos/seed/s5/400/400' },
-  { id: 's6', academyId: 'mock_acad_1', name: 'Ricardo Mendes', belt: Belt.BROWN, stripes: 0, lastGraduationDate: '2022-08-25', birthDate: '1988-11-05', totalClasses: 500, totalHours: 750, absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: '2018-03-20', phone: '11933332222', photo: 'https://picsum.photos/seed/s6/400/400' },
-  { id: 's7', academyId: 'mock_acad_1', name: 'Beatriz Lima', belt: Belt.BLACK, stripes: 1, lastGraduationDate: '2021-12-01', birthDate: '1985-07-14', totalClasses: 1200, totalHours: 1800, absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: '2010-01-10', phone: '11922221111', photo: 'https://picsum.photos/seed/s7/400/400' },
-  { id: 's8', academyId: 'mock_acad_1', name: 'Pedro Rocha', belt: Belt.ORANGE, stripes: 4, lastGraduationDate: '2023-10-15', birthDate: '2011-03-25', totalClasses: 150, totalHours: 150, absentCount: 5, status: 'Active', hasLoanedKimono: false, joinDate: '2021-06-12', guardianPhone: '11911110000', photo: 'https://picsum.photos/seed/s8/400/400' },
-  { id: 's9', academyId: 'mock_acad_1', name: 'Sofia Amaral', belt: Belt.GREEN, stripes: 2, lastGraduationDate: '2023-12-20', birthDate: '2009-09-02', totalClasses: 210, totalHours: 210, absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: '2020-11-05', guardianPhone: '11900009999', photo: 'https://picsum.photos/seed/s9/400/400' },
-  { id: 's10', academyId: 'mock_acad_1', name: 'Lucas Ferreira', belt: Belt.WHITE, stripes: 0, birthDate: '2000-01-15', totalClasses: 5, totalHours: 7.5, absentCount: 0, status: 'Active', hasLoanedKimono: false, joinDate: '2024-02-01', phone: '11987654321', photo: 'https://picsum.photos/seed/s10/400/400' }
-];
+export const MOCK_STUDENTS: Student[] = Array.from({ length: 25 }, (_, i) => ({
+  id: `s_mock_${i + 1}`,
+  academyId: 'mock_acad_1',
+  name: `Aluno Exemplo ${i + 1}`,
+  email: `aluno${i + 1}@exemplo.com`,
+  belt: [Belt.WHITE, Belt.BLUE, Belt.PURPLE, Belt.BROWN, Belt.BLACK][Math.floor(Math.random() * 5)],
+  stripes: Math.floor(Math.random() * 5),
+  lastGraduationDate: '2024-01-10',
+  birthDate: '1995-04-12',
+  totalClasses: Math.floor(Math.random() * 200),
+  totalHours: Math.floor(Math.random() * 300),
+  absentCount: Math.floor(Math.random() * 5),
+  status: 'Active',
+  hasLoanedKimono: Math.random() > 0.8,
+  joinDate: '2023-10-01',
+  phone: '11988887777',
+  photo: `https://picsum.photos/seed/s_mock_${i+1}/400/400`,
+  planId: i % 3 === 0 ? 'ap1' : 'ap2'
+}));
 
 export const MOCK_TEMPLATES: ClassTemplate[] = [
-  { id: 't1', academyId: 'mock_acad_1', name: 'Kids 5-9 anos', durationMinutes: 60, assignedStudentIds: ['s4', 's5'], schedules: [{ dayOfWeek: 1, startTime: '18:00', endTime: '19:00' }, { dayOfWeek: 3, startTime: '18:00', endTime: '19:00' }] },
-  { id: 't2', academyId: 'mock_acad_1', name: 'Kids 10-15 anos', durationMinutes: 60, assignedStudentIds: ['s8', 's9'], schedules: [{ dayOfWeek: 2, startTime: '18:00', endTime: '19:00' }, { dayOfWeek: 4, startTime: '18:00', endTime: '19:00' }] },
-  { id: 't3', academyId: 'mock_acad_1', name: 'Adulto Iniciante', durationMinutes: 90, assignedStudentIds: ['s1', 's10', 's2'], schedules: [{ dayOfWeek: 1, startTime: '19:30', endTime: '21:00' }, { dayOfWeek: 3, startTime: '19:30', endTime: '21:00' }, { dayOfWeek: 5, startTime: '19:00', endTime: '20:30' }] },
-  { id: 't4', academyId: 'mock_acad_1', name: 'Adulto Avançado', durationMinutes: 120, assignedStudentIds: ['s3', 's6', 's7'], schedules: [{ dayOfWeek: 2, startTime: '19:30', endTime: '21:30' }, { dayOfWeek: 4, startTime: '19:30', endTime: '21:30' }, { dayOfWeek: 6, startTime: '10:00', endTime: '12:00' }] }
+  { id: 't1', academyId: 'mock_acad_1', name: 'Kids 5-9 anos', durationMinutes: 60, assignedStudentIds: ['s_mock_1', 's_mock_2'], schedules: [{ dayOfWeek: 1, startTime: '18:00', endTime: '19:00' }, { dayOfWeek: 3, startTime: '18:00', endTime: '19:00' }] },
+  { id: 't2', academyId: 'mock_acad_1', name: 'Kids 10-15 anos', durationMinutes: 60, assignedStudentIds: ['s_mock_3', 's_mock_4'], schedules: [{ dayOfWeek: 2, startTime: '18:00', endTime: '19:00' }, { dayOfWeek: 4, startTime: '18:00', endTime: '19:00' }] },
+  { id: 't3', academyId: 'mock_acad_1', name: 'Adulto Iniciante', durationMinutes: 90, assignedStudentIds: ['s_mock_5', 's_mock_6', 's_mock_7'], schedules: [{ dayOfWeek: 1, startTime: '19:30', endTime: '21:00' }, { dayOfWeek: 3, startTime: '19:30', endTime: '21:00' }, { dayOfWeek: 5, startTime: '19:00', endTime: '20:30' }] },
+  { id: 't4', academyId: 'mock_acad_1', name: 'Adulto Avançado', durationMinutes: 120, assignedStudentIds: ['s_mock_8', 's_mock_9', 's_mock_10'], schedules: [{ dayOfWeek: 2, startTime: '19:30', endTime: '21:30' }, { dayOfWeek: 4, startTime: '19:30', endTime: '21:30' }, { dayOfWeek: 6, startTime: '10:00', endTime: '12:00' }] }
 ];
 
 const today = new Date().toISOString().split('T')[0];
@@ -103,8 +128,8 @@ export const MOCK_CLASSES: ClassSession[] = [
     templateId: 't3',
     date: new Date().toISOString(),
     durationMinutes: 90,
-    instructorId: 'mock_user_1',
-    attendanceIds: ['s1'],
+    instructorId: 'u_inst_1',
+    attendanceIds: ['s_mock_5'],
     status: 'In Progress'
   },
   {
@@ -114,13 +139,36 @@ export const MOCK_CLASSES: ClassSession[] = [
     templateId: 't1',
     date: yesterday + 'T18:00:00Z',
     durationMinutes: 60,
-    instructorId: 'mock_user_1',
-    attendanceIds: ['s4', 's5'],
+    instructorId: 'u_inst_1',
+    attendanceIds: ['s_mock_1', 's_mock_2'],
     status: 'Finalized'
   }
 ];
 
 export const MOCK_ATTENDANCE: AttendanceRecord[] = [
-  { id: 'att_1', academyId: 'mock_acad_1', studentId: 's4', classId: 'class_past_1', date: yesterday + 'T18:00:00Z', durationMinutes: 60, kimonoTaken: false },
-  { id: 'att_2', academyId: 'mock_acad_1', studentId: 's5', classId: 'class_past_1', date: yesterday + 'T18:00:00Z', durationMinutes: 60, kimonoTaken: false }
+  { id: 'att_1', academyId: 'mock_acad_1', studentId: 's_mock_1', classId: 'class_past_1', date: yesterday + 'T18:00:00Z', durationMinutes: 60, kimonoTaken: false },
+  { id: 'att_2', academyId: 'mock_acad_1', studentId: 's_mock_2', classId: 'class_past_1', date: yesterday + 'T18:00:00Z', durationMinutes: 60, kimonoTaken: false }
 ];
+
+export const MOCK_KIMONO_LOANS: KimonoLoan[] = [
+  { id: 'loan_1', academyId: 'mock_acad_1', studentId: 's_mock_2', borrowedAt: yesterday + 'T18:05:00Z', status: 'Active' },
+  { id: 'loan_2', academyId: 'mock_acad_1', studentId: 's_mock_10', borrowedAt: today + 'T10:00:00Z', status: 'Active' }
+];
+
+export const MOCK_CHAT_MESSAGES: ChatMessage[] = [
+  { id: 'msg_1', academyId: 'mock_acad_1', senderId: 'u_admin_1', senderName: 'Tiago Admin', senderRole: 'admin', content: 'Pessoal, lembrando do seminário neste sábado!', timestamp: yesterday + 'T14:00:00Z' },
+  { id: 'msg_2', academyId: 'mock_acad_1', senderId: 'u_inst_1', senderName: 'Prof. Renato', senderRole: 'instructor', content: 'OSS! Estaremos lá.', timestamp: yesterday + 'T14:30:00Z' },
+  { id: 'msg_msg_3', academyId: 'mock_acad_1', senderId: 'u_staff_1', senderName: 'Ana Secretaria', senderRole: 'staff', content: 'As inscrições podem ser feitas na recepção.', timestamp: today + 'T09:00:00Z' }
+];
+
+export const MOCK_FINANCES: FinanceTransaction[] = [
+  { id: 'f1', academyId: 'mock_acad_1', description: 'Mensalidade - Aluno Exemplo 1', amount: 150, type: 'income', category: 'Mensalidade', date: today, paymentMethod: 'Pix', status: 'paid', studentId: 's_mock_1' },
+  { id: 'f2', academyId: 'mock_acad_1', description: 'Aluguel do Tatame', amount: 2500, type: 'expense', category: 'Infraestrutura', date: yesterday, paymentMethod: 'Boleto', status: 'paid' },
+  { id: 'f3', academyId: 'mock_acad_1', description: 'Venda de Kimono', amount: 350, type: 'income', category: 'Vendas', date: today, paymentMethod: 'Cartão', status: 'pending' }
+];
+
+export const MOCK_CALENDAR: CalendarEvent[] = [
+  { id: 'e1', academyId: 'mock_acad_1', date: today, reason: 'Treino Aberto', type: 'event' },
+  { id: 'e2', academyId: 'mock_acad_1', date: '2026-05-10', reason: 'Feriado Local', type: 'no-class' }
+];
+;
