@@ -165,10 +165,12 @@ model ClassTemplate {
   academyId       String
   name            String
   durationMinutes Int
-  schedules       String?  @db.Text // JSON string of schedules
+  schedules          String?  @db.Text // JSON string of schedules
+  assignedStudentIds String?  @db.LongText // JSON string of student IDs
+  absenceLimit       Int?
 
-  academy         Academy  @relation(fields: [academyId], references: [id])
-  classes         ClassSession[]
+  academy            Academy  @relation(fields: [academyId], references: [id])
+  classes            ClassSession[]
 }
 
 model ClassSession {

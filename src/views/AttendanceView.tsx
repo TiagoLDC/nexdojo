@@ -249,7 +249,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
     
     let baseList = students;
     if (currentTemplate && !showAllStudents) {
-      baseList = students.filter(s => currentTemplate.assignedStudentIds.includes(s.id));
+      baseList = students.filter(s => (currentTemplate.assignedStudentIds || []).includes(s.id));
     }
 
     return baseList
@@ -388,7 +388,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
     // Update student stats
     const academyStudents = StorageService.getStudents(academy.id);
     const updatedStudents = academyStudents.map(s => {
-      if (session.attendanceIds.includes(s.id)) {
+      if ((session.attendanceIds || []).includes(s.id)) {
         return {
           ...s,
           totalClasses: s.totalClasses + 1,
@@ -706,7 +706,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
       <div className="space-y-2">
         {filteredStudents.length > 0 ? filteredStudents.map(student => {
           const isChecked = checkedIds.has(student.id);
-          const isGuest = currentTemplate && !currentTemplate.assignedStudentIds.includes(student.id);
+          const isGuest = currentTemplate && !(currentTemplate.assignedStudentIds || []).includes(student.id);
           
           return (
             <div key={student.id} onClick={() => handleCheckIn(student)}

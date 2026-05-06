@@ -244,7 +244,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
 
   const getEffectiveAbsenceLimit = (student: Student) => {
     if (student.absenceLimit) return student.absenceLimit;
-    const studentTemplates = templates.filter(t => t.assignedStudentIds.includes(student.id));
+    const studentTemplates = templates.filter(t => (t.assignedStudentIds || []).includes(student.id));
     const classLimits = studentTemplates
       .map(t => t.absenceLimit)
       .filter((limit): limit is number => limit !== undefined && limit !== null);
@@ -322,7 +322,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       activeStudentsCount: allStudents.filter(s => s.status === 'Active').length,
       todayAttendanceCount: allAttendance.filter(a => a.date.startsWith(todayStr)).length,
       totalIncome: allTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0),
-      totalMensalidades: allTransactions.filter(t => t.type === 'income' && (t.category === 'Mensalidade' || t.description.toLowerCase().includes('mensalidade'))).reduce((acc, t) => acc + t.amount, 0),
+      totalMensalidades: allTransactions.filter(t => t.type === 'income' && (t.category === 'Mensalidade' || t.description?.toLowerCase().includes('mensalidade'))).reduce((acc, t) => acc + t.amount, 0),
       totalExpense: allTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0),
       plansCount,
       allAcademies: globalAcademies

@@ -106,7 +106,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
     setName(template.name);
     setDuration(template.durationMinutes);
     setAbsenceLimit(template.absenceLimit);
-    setSelectedStudents(new Set(template.assignedStudentIds));
+    setSelectedStudents(new Set(template.assignedStudentIds || []));
     setSchedules(template.schedules || []);
     setIsModalOpen(true);
   };
@@ -235,7 +235,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
 
   const handleSendNotification = () => {
     if (!notifyingTemplate) return;
-    console.log(`Enviando para ${notifyingTemplate.assignedStudentIds.length} alunos: ${notificationMsg}`);
+    console.log(`Enviando para ${(notifyingTemplate.assignedStudentIds || []).length} alunos: ${notificationMsg}`);
     setIsNotifyModalOpen(false);
     showNotification("Notificação enviada para os alunos!");
   };
@@ -287,7 +287,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                     </span>
                     <span className="w-1 h-1 bg-slate-200 rounded-full" />
                     <span className="text-xs font-bold text-slate-400">
-                      {t.assignedStudentIds.length} Atletas
+                      {(t.assignedStudentIds || []).length} Atletas
                     </span>
                     {t.schedules && t.schedules.length > 0 && (
                       <>
@@ -313,7 +313,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
             
             <div className="flex items-center justify-between pt-4 border-t border-slate-50 dark:border-slate-800">
               <div className="flex -space-x-2">
-                {t.assignedStudentIds.slice(0, 4).map(sid => {
+                {(t.assignedStudentIds || []).slice(0, 4).map(sid => {
                   const s = students.find(x => x.id === sid);
                   return (
                     <div key={sid} className="h-9 w-9 rounded-xl ring-2 ring-white dark:ring-slate-900 bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 overflow-hidden" title={s?.name}>
@@ -321,12 +321,12 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                     </div>
                   );
                 })}
-                {t.assignedStudentIds.length > 4 && (
+                {(t.assignedStudentIds || []).length > 4 && (
                   <div className="h-9 w-9 rounded-xl ring-2 ring-white dark:ring-slate-900 bg-indigo-50 dark:bg-indigo-950 flex items-center justify-center text-[10px] font-black text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900">
                     +{t.assignedStudentIds.length - 4}
                   </div>
                 )}
-                {t.assignedStudentIds.length === 0 && (
+                {(t.assignedStudentIds || []).length === 0 && (
                   <span className="text-[10px] font-bold text-slate-300 italic uppercase">Sem alunos vinculados</span>
                 )}
               </div>

@@ -12,7 +12,12 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 
     const where = role === 'superuser' ? {} : { academyId };
     const templates = await prisma.classTemplate.findMany({ where, orderBy: { name: 'asc' } });
-    return res.json(templates);
+    const formatted = templates.map(t => ({
+      ...t,
+      schedules: t.schedules ? JSON.parse(t.schedules) : [],
+      assignedStudentIds: t.assignedStudentIds ? JSON.parse(t.assignedStudentIds) : []
+    }));
+    return res.json(formatted);
   } catch (error) {
     return res.status(500).json({ error: 'Erro interno.' });
   }
@@ -22,12 +27,14 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 router.post('/', authMiddleware, async (req: Request, res: Response) => {
   try {
     const { academyId } = (req as any).user;
-    const { name, durationMinutes, schedules } = req.body;
+    const { name, durationMinutes, schedules, assignedStudentIds, absenceLimit } = req.body;
     const template = await prisma.classTemplate.create({
       data: {
         name,
         durationMinutes,
-        schedules: typeof schedules === 'string' ? schedules : JSON.stringify(schedules),
+        absenceLimit,
+        schedules: typeof schedules === 'string' ? schedules : JSON.stringify(schedules || []),
+        assignedStudentIds: typeof assignedStudentIds === 'string' ? assignedStudentIds : JSON.stringify(assignedStudentIds || []),
         academyId: req.body.academyId || academyId
       }
     });
@@ -40,13 +47,15 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 // PUT /api/templates/:id
 router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { name, durationMinutes, schedules } = req.body;
+    const { name, durationMinutes, schedules, assignedStudentIds, absenceLimit } = req.body;
     const template = await prisma.classTemplate.update({
       where: { id: String(req.params.id) },
       data: {
         name,
         durationMinutes,
-        schedules: typeof schedules === 'string' ? schedules : JSON.stringify(schedules)
+        absenceLimit,
+        schedules: typeof schedules === 'string' ? schedules : JSON.stringify(schedules || []),
+        assignedStudentIds: typeof assignedStudentIds === 'string' ? assignedStudentIds : JSON.stringify(assignedStudentIds || [])
       }
     });
     return res.json(template);

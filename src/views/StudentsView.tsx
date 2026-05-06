@@ -462,7 +462,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     if (student.absenceLimit) return student.absenceLimit;
     
     // Encontrar turmas que o aluno participa
-    const studentTemplates = templates.filter(t => t.assignedStudentIds.includes(student.id));
+    const studentTemplates = templates.filter(t => (t.assignedStudentIds || []).includes(student.id));
     const classLimits = studentTemplates
       .map(t => t.absenceLimit)
       .filter((limit): limit is number => limit !== undefined && limit !== null);

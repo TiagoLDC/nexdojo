@@ -141,8 +141,8 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
   const filteredTransactions = useMemo(() => {
     return transactions
       .filter(t => {
-        const matchesSearch = t.description.toLowerCase().includes(search.toLowerCase()) || 
-                             t.category.toLowerCase().includes(search.toLowerCase());
+        const matchesSearch = (t.description || '').toLowerCase().includes(search.toLowerCase()) || 
+                             (t.category || '').toLowerCase().includes(search.toLowerCase());
         const matchesType = typeFilter === 'All' || t.type === typeFilter;
         return matchesSearch && matchesType;
       })
