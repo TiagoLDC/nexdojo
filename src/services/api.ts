@@ -7,7 +7,7 @@
  * No QAS aponta para https://qas.nexdojo.com.br/api (via proxy nginx)
  */
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3005';
+const BASE_URL = import.meta.env.VITE_API_URL || '';
 
 // ── Token JWT ───────────────────────────────────────────────────────────────
 const TOKEN_KEY = 'nexdojo_jwt_token';
