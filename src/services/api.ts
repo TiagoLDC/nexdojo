@@ -21,11 +21,20 @@ export const ApiService = {
   // ── Request helper ─────────────────────────────────────────────────────────
   request: async <T>(path: string, options: RequestInit = {}): Promise<T> => {
     const token = ApiService.getToken();
+    const academyStr = localStorage.getItem('oss_academy');
+    let academyId = null;
+    if (academyStr) {
+      try {
+        const academy = JSON.parse(academyStr);
+        academyId = academy?.id;
+      } catch (e) {}
+    }
     const res = await fetch(`${BASE_URL}${path}`, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(academyId ? { 'x-academy-id': academyId } : {}),
         ...(options.headers || {}),
       },
     });

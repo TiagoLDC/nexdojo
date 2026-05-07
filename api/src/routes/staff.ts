@@ -1,60 +1,68 @@
-
-import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { Router, Request, Response } from 'express';
+import prisma from '../lib/prisma';
+import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Get all staff for an academy
-router.get('/', async (req, res) => {
-  const { academyId } = req.query;
+router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
+    const { academyId, role } = (req as any).user;
+    if (!academyId && role !== 'superuser') return res.status(403).json({ error: 'Acesso negado.' });
+
+    const reqAcademyId = req.headers['x-academy-id'];
+    const activeAcademyId = reqAcademyId || academyId;
+    const where = role === 'superuser' && !activeAcademyId ? {} : { academyId: activeAcademyId };
     const staff = await prisma.staff.findMany({
-      where: academyId ? { academyId: String(academyId) } : {},
+      where,
       orderBy: { name: 'asc' }
     });
-    res.json(staff);
+    return res.json(staff);
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao buscar staff' });
+    return res.status(500).json({ error: 'Erro ao buscar staff' });
   }
 });
 
 // Create staff
-router.post('/', async (req, res) => {
+router.post('/', authMiddleware, async (req: Request, res: Response) => {
   try {
+    const { academyId } = (req as any).user;
     const staff = await prisma.staff.create({
-      data: req.body
+      data: {
+        ...req.body,
+        academyId: req.body.academyId || academyId
+      }
     });
-    res.json(staff);
+    return res.json(staff);
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao criar staff' });
+    return res.status(500).json({ error: 'Erro ao criar staff' });
   }
 });
 
 // Update staff
-router.put('/:id', async (req, res) => {
+router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const staff = await prisma.staff.update({
       where: { id: String(id) },
       data: req.body
     });
-    res.json(staff);
+    return res.json(staff);
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao atualizar staff' });
+    return res.status(500).json({ error: 'Erro ao atualizar staff' });
   }
 });
 
 // Delete staff
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     await prisma.staff.delete({
       where: { id: String(id) }
     });
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao deletar staff' });
+    return res.status(500).json({ error: 'Erro ao deletar staff' });
   }
 });
 

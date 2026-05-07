@@ -1,60 +1,68 @@
-
-import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { Router, Request, Response } from 'express';
+import prisma from '../lib/prisma';
+import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Get all instructors for an academy
-router.get('/', async (req, res) => {
-  const { academyId } = req.query;
+router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
+    const { academyId, role } = (req as any).user;
+    if (!academyId && role !== 'superuser') return res.status(403).json({ error: 'Acesso negado.' });
+
+    const reqAcademyId = req.headers['x-academy-id'];
+    const activeAcademyId = reqAcademyId || academyId;
+    const where = role === 'superuser' && !activeAcademyId ? {} : { academyId: activeAcademyId };
     const instructors = await prisma.instructor.findMany({
-      where: academyId ? { academyId: String(academyId) } : {},
+      where,
       orderBy: { name: 'asc' }
     });
-    res.json(instructors);
+    return res.json(instructors);
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao buscar instrutores' });
+    return res.status(500).json({ error: 'Erro ao buscar instrutores' });
   }
 });
 
 // Create instructor
-router.post('/', async (req, res) => {
+router.post('/', authMiddleware, async (req: Request, res: Response) => {
   try {
+    const { academyId } = (req as any).user;
     const instructor = await prisma.instructor.create({
-      data: req.body
+      data: {
+        ...req.body,
+        academyId: req.body.academyId || academyId
+      }
     });
-    res.json(instructor);
+    return res.json(instructor);
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao criar instrutor' });
+    return res.status(500).json({ error: 'Erro ao criar instrutor' });
   }
 });
 
 // Update instructor
-router.put('/:id', async (req, res) => {
+router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const instructor = await prisma.instructor.update({
       where: { id: String(id) },
       data: req.body
     });
-    res.json(instructor);
+    return res.json(instructor);
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao atualizar instrutor' });
+    return res.status(500).json({ error: 'Erro ao atualizar instrutor' });
   }
 });
 
 // Delete instructor
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     await prisma.instructor.delete({
       where: { id: String(id) }
     });
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (error) {
-    res.status(500).json({ error: 'Erro ao deletar instrutor' });
+    return res.status(500).json({ error: 'Erro ao deletar instrutor' });
   }
 });
 

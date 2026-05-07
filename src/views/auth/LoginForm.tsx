@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import Input from '../../components/common/Input';
 import { Mail, Lock, ArrowRight, Eye, EyeOff, Info, Loader2 } from 'lucide-react';
 import AuthLayout from './AuthLayout';
-import { MOCK_ACADEMY } from '../../services/mockData';
+
 
 interface LoginFormProps {
   showNotification: (message: string, type: 'success' | 'error') => void;
@@ -32,7 +32,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ showNotification }) => {
   };
 
   return (
-    <AuthLayout showLogo={true} academyName={MOCK_ACADEMY.name} academyLogo={MOCK_ACADEMY.logo}>
+    <AuthLayout showLogo={true} academyName="NexDojo" academyLogo="https://images.unsplash.com/photo-1552072092-7f9b8d63efcb?q=80&w=400&h=400&auto=format&fit=crop">
       <div className="max-w-md mx-auto space-y-6 w-full pb-10">
         <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-4 flex items-start gap-3">
           <div className="bg-amber-500/20 p-2 rounded-xl"><Info className="text-amber-500" size={20} /></div>

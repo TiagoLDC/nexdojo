@@ -68,7 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
       } else {
-        // Not logged in, but might have mock academies in storage
+        // Not logged in, but might have academies cached in storage
         setAcademies(StorageService.getAcademies());
       }
 

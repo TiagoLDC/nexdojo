@@ -12,7 +12,9 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Acesso negado.' });
     }
 
-    const where = role === 'superuser' ? {} : { academyId };
+    const reqAcademyId = req.headers['x-academy-id'];
+    const activeAcademyId = reqAcademyId || academyId;
+    const where = role === 'superuser' && !activeAcademyId ? {} : { academyId: activeAcademyId };
     const students = await prisma.student.findMany({
       where,
       orderBy: { name: 'asc' }

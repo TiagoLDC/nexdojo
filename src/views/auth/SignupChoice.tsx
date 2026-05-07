@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Trophy, Users, Award, ChevronLeft } from 'lucide-react';
 import { ChoiceCard } from './AuthComponents';
 import AuthLayout from './AuthLayout';
-import { MOCK_ACADEMY } from '../../services/mockData';
+
 
 interface SignupChoiceProps {
   isFromSharedLink: boolean;
@@ -13,7 +13,7 @@ const SignupChoice: React.FC<SignupChoiceProps> = ({ isFromSharedLink }) => {
   const navigate = useNavigate();
 
   return (
-    <AuthLayout showLogo={true} academyName={MOCK_ACADEMY.name} academyLogo={MOCK_ACADEMY.logo}>
+    <AuthLayout showLogo={true} academyName="NexDojo" academyLogo="https://images.unsplash.com/photo-1552072092-7f9b8d63efcb?q=80&w=400&h=400&auto=format&fit=crop">
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <button onClick={() => navigate('/login')} className="text-white flex items-center gap-2 mb-4 hover:text-indigo-400 transition-colors font-bold text-xs uppercase tracking-[0.2em]">
           <ChevronLeft size={18} /> Voltar ao Login

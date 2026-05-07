@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Input from '../../components/common/Input';
 import { Mail, Send, ChevronLeft } from 'lucide-react';
 import AuthLayout from './AuthLayout';
-import { MOCK_ACADEMY } from '../../services/mockData';
+
 
 interface ForgotPasswordProps {
   showNotification: (message: string, type: 'success' | 'error') => void;
@@ -14,7 +14,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ showNotification }) => 
   const [forgotEmail, setForgotEmail] = useState('');
 
   return (
-    <AuthLayout showLogo={true} academyName={MOCK_ACADEMY.name} academyLogo={MOCK_ACADEMY.logo}>
+    <AuthLayout showLogo={true} academyName="NexDojo" academyLogo="https://images.unsplash.com/photo-1552072092-7f9b8d63efcb?q=80&w=400&h=400&auto=format&fit=crop">
       <div className="max-w-md mx-auto space-y-6 animate-in fade-in zoom-in duration-300">
         <button onClick={() => navigate('/login')} className="text-white flex items-center gap-2 mb-4 hover:text-indigo-400 transition-colors font-bold text-xs uppercase tracking-[0.2em]">
           <ChevronLeft size={18} /> Voltar ao Login

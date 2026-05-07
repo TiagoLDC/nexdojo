@@ -1,6 +1,6 @@
 
 import { Student, Instructor, Staff, AttendanceRecord, Academy, User, ClassSession, KimonoLoan, ClassTemplate, ChatMessage, CalendarEvent, RecycleBinItem, FinanceTransaction, SystemConfig, SystemPlan, Language } from '../types';
-import { MOCK_ACADEMY, MOCK_ACADEMIES } from './mockData';
+
 
 const KEYS = {
   ACADEMY: 'oss_academy',
@@ -47,16 +47,7 @@ export const StorageService = {
   getAcademy: (): Academy | null => {
     const data = localStorage.getItem(KEYS.ACADEMY);
     if (!data) return null;
-    let academy = JSON.parse(data);
-    
-    // Migration: Rename Guerreiros to NexDojo
-    if (academy.id === 'mock_acad_1' && academy.name === 'Guerreiros') {
-      const targetLogo = 'https://images.unsplash.com/photo-1552072092-7f9b8d63efcb?q=80&w=400&h=400&auto=format&fit=crop';
-      academy = { ...academy, name: 'NexDojo', logo: targetLogo };
-      StorageService.saveAcademy(academy);
-    }
-    
-    return academy;
+    return JSON.parse(data);
   },
   saveAcademy: (academy: Academy) => {
     localStorage.setItem(KEYS.ACADEMY, JSON.stringify(academy));
@@ -69,7 +60,7 @@ export const StorageService = {
 
   getAcademies: (): Academy[] => {
     const data = localStorage.getItem(KEYS.ACADEMIES);
-    let academies = data ? JSON.parse(data) : MOCK_ACADEMIES;
+    let academies = data ? JSON.parse(data) : [];
     return [...academies].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
   },
 
