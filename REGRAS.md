@@ -1,6 +1,9 @@
 # Regras do Projeto NexDojo
 
 > **CRÍTICO:** Este documento deve ser lido e seguido integralmente em TODOS os chats que envolvam o projeto NexDojo, localizado em `d:\DEV_WEB\nexdojo`.
+>
+> [!IMPORTANT]
+> **NÃO FAÇA TESTES DIRETO NO NAVEGADOR.** Se precisar fazer algum teste que envolva abrir o navegador ou interagir com a interface, **PEÇA AO USUÁRIO!!!!**
 
 ---
 

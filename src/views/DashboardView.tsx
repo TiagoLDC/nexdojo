@@ -83,20 +83,37 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
           ApiService.getStaff(),
           ApiService.getTemplates()
         ]);
-        setStudents(loadedStudents);
-        setInstructors(loadedInstructors);
-        setStaff(loadedStaff);
-        setTemplates(loadedTemplates);
+        
+        // Filter data by academy if superuser (API returns all for superuser)
+        const filteredStudents = user.role === 'superuser' 
+          ? (Array.isArray(loadedStudents) ? loadedStudents.filter(s => s.academyId === academy.id) : [])
+          : loadedStudents;
+          
+        const filteredInstructors = user.role === 'superuser' 
+          ? (Array.isArray(loadedInstructors) ? loadedInstructors.filter(i => i.academyId === academy.id) : [])
+          : loadedInstructors;
+          
+        const filteredStaff = user.role === 'superuser' 
+          ? (Array.isArray(loadedStaff) ? loadedStaff.filter(s => s.academyId === academy.id) : [])
+          : loadedStaff;
+          
+        const filteredTemplates = user.role === 'superuser' 
+          ? (Array.isArray(loadedTemplates) ? loadedTemplates.filter(t => t.academyId === academy.id) : [])
+          : loadedTemplates;
+
+        setStudents(Array.isArray(filteredStudents) ? filteredStudents : []);
+        setInstructors(Array.isArray(filteredInstructors) ? filteredInstructors : []);
+        setStaff(Array.isArray(filteredStaff) ? filteredStaff : []);
+        setTemplates(Array.isArray(filteredTemplates) ? filteredTemplates : []);
         
         if (user.role === 'superuser') {
-          const allUsers = await ApiService.getAcademies().then(list => {
-             // Just a placeholder or fetch all users if endpoint exists
-             return StorageService.getUsers(); 
-          });
-          setUsers(allUsers);
+          // Superuser users list is already handled via StorageService or specific endpoint if exists
+          // For now, keep it as is but ensure it's an array
+          const allUsers = StorageService.getUsers();
+          setUsers(Array.isArray(allUsers) ? allUsers : []);
         } else {
           const academyUsers = await ApiService.getAcademyUsers(academy.id);
-          setUsers(academyUsers);
+          setUsers(Array.isArray(academyUsers) ? academyUsers : []);
         }
       } catch (error) {
         console.error('Erro ao buscar dados do dashboard:', error);
@@ -155,7 +172,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   const calendarEvents = useMemo(() => academy ? StorageService.getCalendarEvents(academy.id) : [], [academy?.id]);
   const finances = useMemo(() => academy ? StorageService.getFinances(academy.id) : [], [academy?.id]);
 
-  const pendingUsers = useMemo(() => users.filter(u => u.status === 'Pending'), [users]);
+  const pendingUsers = useMemo(() => Array.isArray(users) ? users.filter(u => u.status === 'Pending') : [], [users]);
 
   const planExpiration = useMemo(() => {
     if (!academy || !academy.planExpirationDate) return null;
@@ -1478,8 +1495,8 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
           </div>
           
           <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={growthData}>
+            <ResponsiveContainer width="100%" height="100%" minHeight={250}>
+              <AreaChart data={growthData && growthData.length > 0 ? growthData : [{ name: 'Sem dados', alunos: 0 }]}>
                 <defs>
                   <linearGradient id="colorAlunos" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.1}/>
@@ -1798,7 +1815,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
             
             <div className="flex-1 flex flex-col md:flex-row items-center gap-4">
               <div className="w-full h-64 md:h-72 relative">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minHeight={250}>
                   <PieChart>
                     <Pie
                       data={[
