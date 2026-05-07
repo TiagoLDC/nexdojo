@@ -297,7 +297,18 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   
   React.useEffect(() => {
     if (user.role === 'superuser') {
-      ApiService.getAcademies().then(setGlobalAcademies);
+      ApiService.getAcademies()
+        .then(list => {
+          if (list && list.length > 0) {
+            setGlobalAcademies(list);
+          } else {
+            setGlobalAcademies(StorageService.getAcademies());
+          }
+        })
+        .catch(err => {
+          console.error('Error fetching global academies:', err);
+          setGlobalAcademies(StorageService.getAcademies());
+        });
     }
   }, [user.role, refreshKey]);
 

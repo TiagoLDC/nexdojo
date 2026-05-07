@@ -86,6 +86,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(loggedUser);
     setAcademy(loggedAcademy);
 
+    // Fetch all academies if superuser
+    if (loggedUser.role === 'superuser') {
+      try {
+        const list = await ApiService.getAcademies();
+        setAcademies(list);
+        StorageService.saveAcademies(list);
+      } catch (e) {
+        console.error('Error fetching academies on login', e);
+        setAcademies(StorageService.getAcademies());
+      }
+    }
+
     // Persiste localmente para restaurar a sessão no próximo acesso
     StorageService.saveCurrentUser(loggedUser);
     if (loggedAcademy) StorageService.saveAcademy(loggedAcademy);

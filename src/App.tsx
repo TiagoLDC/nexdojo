@@ -71,7 +71,7 @@ const AppRoutes: React.FC = () => {
           <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-slate-400 font-bold text-sm uppercase tracking-widest">Carregando...</p>
           <div className="mt-4 bg-amber-500/90 text-black text-[10px] font-black px-2 py-1 rounded">
-            VERSÃO QAS 07/05/2026 10:43:00
+            VERSÃO QAS 07/05/2026 11:05:00
           </div>
         </div>
       </div>
