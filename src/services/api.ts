@@ -108,6 +108,17 @@ export const ApiService = {
     });
   },
 
+  graduateStudent: async (id: string, newBelt: string, newStripes: number, notes?: string) => {
+    return ApiService.request<any>(`/api/students/${id}/graduate`, {
+      method: 'POST',
+      body: JSON.stringify({ newBelt, newStripes, notes }),
+    });
+  },
+
+  getGraduationHistory: async (studentId: string) => {
+    return ApiService.request<any[]>(`/api/students/${studentId}/graduation-history`);
+  },
+
   // ── ACADEMIES ──────────────────────────────────────────────────────────────
   getAcademies: async () => {
     return ApiService.request<any[]>('/api/academies');

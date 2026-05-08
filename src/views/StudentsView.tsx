@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Student, Belt, StudentDocument, ClassTemplate, Academy, User, GraduationHistoryItem } from '../types';
+import { Student, Belt, StudentDocument, ClassTemplate, Academy, User } from '../types';
 import { StorageService } from '../services/storage';
 import ApiService from '../services/api';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
@@ -419,31 +419,11 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     const promote = async () => {
       setIsLoading(true);
       try {
-        const historyItem: GraduationHistoryItem = {
-          id: Math.random().toString(36).substr(2, 9),
-          previousBelt: student.belt,
-          newBelt: newBelt,
-          previousStripes: student.stripes,
-          newStripes: newStripes,
-          date: new Date().toISOString(),
-          instructorId: currentUser.id,
-          notes: notes
-        };
-
-        const updatedStudent: Student = {
-          ...student,
-          belt: newBelt,
-          stripes: newStripes,
-          lastGraduationDate: new Date().toISOString(),
-          totalClasses: 0,
-          graduationHistory: [...(student.graduationHistory || []), historyItem]
-        };
-
-        await ApiService.updateStudent(student.id, updatedStudent);
+        const updatedStudent = await ApiService.graduateStudent(student.id, newBelt, newStripes, notes);
         await fetchStudents();
-        
+
         if (editingStudent?.id === student.id) {
-          setEditingStudent(updatedStudent);
+          setEditingStudent({ ...editingStudent, ...updatedStudent });
         }
 
         showNotification(`Promoção realizada: ${student.name} agora é ${newBelt}${newStripes > 0 ? ` (${newStripes}º grau)` : ''}!`);

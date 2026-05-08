@@ -11,22 +11,28 @@ datasource db {
 }
 
 model Academy {
-  id            String      @id @default(uuid())
-  name          String
-  ownerName     String
-  logo          String?     @db.LongText
-  email         String
-  phone         String?
-  cep           String?
-  address       String?
-  addressNumber String?
-  pixKey        String?
-  pixType       String?
-  bankName      String?
-  bankAgency    String?
-  bankAccount   String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id                  String      @id @default(uuid())
+  name                String
+  ownerName           String
+  logo                String?     @db.LongText
+  email               String
+  phone               String?
+  cep                 String?
+  address             String?
+  addressNumber       String?
+  pixKey              String?
+  pixType             String?
+  bankName            String?
+  bankAgency          String?
+  bankAccount         String?
+  absenceLimit        Int?
+  currentPlan         String?
+  planStatus          String?
+  planExpirationDate  String?
+  paymentWarningDays  Int?
+  plans               String?     @db.Text
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 
   users         User[]
   students      Student[]
@@ -78,14 +84,23 @@ model Student {
   guardianRelation   String?
   guardianEmail      String?
 
+  cpf                String?
+  rg                 String?
+  guardianRg         String?
+  guardianProfession String?
+  medicalNotes       String?  @db.Text
+  documents          String?  @db.LongText
   belt               String   @default("WHITE")
   stripes            Int      @default(0)
   status             String   @default("Pending") // Active, Inactive, Pending
   joinDate           DateTime @default(now())
   lastGraduationDate String?
+  lastAttendance     String?
   totalClasses       Int      @default(0)
   totalHours         Int      @default(0)
   absentCount        Int      @default(0)
+  absenceLimit       Int?
+  nextPaymentDate    String?
   hasLoanedKimono    Boolean  @default(false)
   photo              String?  @db.LongText
 
@@ -104,6 +119,7 @@ model Student {
 model GraduationHistory {
   id              String   @id @default(uuid())
   studentId       String
+  instructorId    String?
   previousBelt    String
   newBelt         String
   previousStripes Int
