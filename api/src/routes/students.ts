@@ -105,9 +105,19 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
 // DELETE /api/students/:id
 router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
-    await prisma.student.delete({ where: { id: String(req.params.id) } });
+    const student = await prisma.student.findUnique({ where: { id: String(req.params.id) } });
+    if (!student) return res.status(404).json({ error: 'Aluno não encontrado.' });
+
+    await prisma.$transaction(async (tx) => {
+      await tx.student.delete({ where: { id: student.id } });
+      if (student.email) {
+        await tx.user.deleteMany({ where: { email: student.email, academyId: student.academyId } });
+      }
+    });
+
     return res.json({ message: 'Aluno removido.' });
   } catch (error) {
+    console.error('[DELETE /students/:id]', error);
     return res.status(500).json({ error: 'Erro interno.' });
   }
 });

@@ -31,29 +31,42 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 router.post('/bulk', authMiddleware, async (req: Request, res: Response) => {
   try {
     const { academyId } = (req as any).user;
-    const { records, classId } = req.body; // records: { studentId, durationMinutes, kimonoTaken }[]
+    const { records, classId } = req.body;
 
-    const data = records.map((r: any) => ({
-      academyId,
-      classId,
-      studentId: r.studentId,
-      durationMinutes: r.durationMinutes,
-      kimonoTaken: r.kimonoTaken || false,
-      date: new Date()
-    }));
-
-    await prisma.attendanceRecord.createMany({ data });
-    
-    // Update total classes for students
-    for (const r of records) {
-      await prisma.student.update({
-        where: { id: r.studentId },
-        data: { 
-          totalClasses: { increment: 1 },
-          totalHours: { increment: Math.floor(r.durationMinutes / 60) }
-        }
-      });
+    if (!Array.isArray(records) || !classId) {
+      return res.status(400).json({ error: 'records e classId são obrigatórios.' });
     }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.attendanceRecord.createMany({
+        data: records.map((r: any) => ({
+          academyId,
+          classId,
+          studentId: r.studentId,
+          durationMinutes: r.durationMinutes,
+          kimonoTaken: r.kimonoTaken || false,
+          date: new Date(),
+        })),
+      });
+
+      await tx.classSession.update({
+        where: { id: classId },
+        data: { status: 'Finalized' },
+      });
+
+      await Promise.all(
+        records.map((r: any) =>
+          tx.student.update({
+            where: { id: r.studentId },
+            data: {
+              totalClasses: { increment: 1 },
+              totalHours: { increment: Math.floor(r.durationMinutes / 60) },
+              absentCount: 0,
+            },
+          })
+        )
+      );
+    });
 
     return res.status(201).json({ message: 'Chamada registrada com sucesso.' });
   } catch (error) {

@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Student, AttendanceRecord, ClassSession, User, ClassTemplate, Belt, Academy } from '../types';
+import { Student, ClassSession, User, ClassTemplate, Belt, Academy } from '../types';
 import { StorageService } from '../services/storage';
 import ApiService from '../services/api';
 
@@ -67,6 +67,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
   const [allClasses, setAllClasses] = useState<ClassSession[]>([]);
   const [currentClass, setCurrentClass] = useState<ClassSession | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const [showAllStudents, setShowAllStudents] = useState(false);
@@ -115,20 +116,10 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
   const handleCheckIn = (student: Student) => {
     setCheckedIds(prev => {
       const next = new Set(prev);
-      const studentId = student.id;
-      
-      if (next.has(studentId)) {
-        next.delete(studentId);
+      if (next.has(student.id)) {
+        next.delete(student.id);
       } else {
-        next.add(studentId);
-      }
-
-      if (currentClass) {
-        const updatedClasses: ClassSession[] = StorageService.getClasses().map(c => 
-          c.id === currentClass.id ? { ...c, attendanceIds: Array.from(next) as string[] } : c
-        );
-        StorageService.saveClasses(updatedClasses);
-        setAllClasses(updatedClasses);
+        next.add(student.id);
       }
       return next;
     });
@@ -352,58 +343,18 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {
       console.error("Erro ao encerrar aula:", error);
+      setShowError(true);
+      setTimeout(() => setShowError(false), 4000);
     } finally {
       setIsProcessing(false);
     }
   };
 
 
+  // Abre a sessão em modo de edição para o instrutor marcar presença antes de finalizar
   const handleQuickFinalize = (session: ClassSession) => {
-    if (!confirm(`Deseja finalizar o treino "${session.name}" agora? As presenças de ${session.attendanceIds.length} alunos serão computadas.`)) return;
-    
-    setIsProcessing(true);
-    const date = session.date;
-    const academyRecords = StorageService.getAttendance(academy.id);
-    
-    // Create records
-    const newRecords: AttendanceRecord[] = session.attendanceIds.map((studentId: string) => ({
-      id: Math.random().toString(36).substr(2, 9),
-      academyId: academy.id,
-      studentId,
-      classId: session.id,
-      date,
-      durationMinutes: session.durationMinutes,
-      kimonoTaken: false
-    }));
-    
-    StorageService.saveAttendance([...academyRecords, ...newRecords]);
-    
-    // Update session status
-    const academyClasses: ClassSession[] = StorageService.getClasses(academy.id).map(c => 
-      c.id === session.id ? { ...c, status: 'Finalized' } : c
-    );
-    StorageService.saveClasses(academyClasses);
-    setAllClasses(academyClasses);
-    
-    // Update student stats
-    const academyStudents = StorageService.getStudents(academy.id);
-    const updatedStudents = academyStudents.map(s => {
-      if ((session.attendanceIds || []).includes(s.id)) {
-        return {
-          ...s,
-          totalClasses: s.totalClasses + 1,
-          totalHours: s.totalHours + (session.durationMinutes / 60),
-          lastAttendance: date,
-          absentCount: 0
-        };
-      }
-      return s;
-    });
-    StorageService.saveStudents(updatedStudents);
-    
-    setIsProcessing(false);
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
+    handleEditClass(session);
+    setShowFullHistory(false);
   };
 
   if (!currentClass) {
@@ -418,6 +369,12 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
           <div className="bg-green-100 border border-green-200 text-green-700 px-5 py-4 rounded-[24px] flex items-center gap-3 animate-bounce">
             <CheckCircle size={24} />
             <span className="font-bold">Presenças computadas com sucesso! OSS.</span>
+          </div>
+        )}
+        {showError && (
+          <div className="bg-red-100 border border-red-200 text-red-700 px-5 py-4 rounded-[24px] flex items-center gap-3">
+            <AlertTriangle size={24} />
+            <span className="font-bold">Erro ao salvar a chamada. Verifique a conexão e tente novamente.</span>
           </div>
         )}
 
