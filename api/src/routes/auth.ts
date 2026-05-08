@@ -29,13 +29,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
     }
 
-    // Support plain text passwords for migration, then bcrypt
-    let passwordMatch = false;
-    if (user.password.startsWith('$2')) {
-      passwordMatch = await bcrypt.compare(password, user.password);
-    } else {
-      passwordMatch = user.password === password;
-    }
+    const passwordMatch = await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {
       return res.status(401).json({ error: 'E-mail ou senha incorretos.' });

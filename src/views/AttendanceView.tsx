@@ -286,6 +286,8 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
       setShowAllStudents(!templateId);
     } catch (error) {
       console.error('Erro ao iniciar aula:', error);
+      setShowError(true);
+      setTimeout(() => setShowError(false), 4000);
     }
   };
 

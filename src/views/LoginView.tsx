@@ -21,7 +21,7 @@ const LoginView: React.FC = () => {
       case '/login':
         return <LoginForm showNotification={showNotification} />;
       case '/esqueci-senha':
-        return <ForgotPassword showNotification={showNotification} />;
+        return <ForgotPassword />;
       case '/cadastro':
         return <SignupChoice isFromSharedLink={false} />;
       case '/cadastro/academia':
