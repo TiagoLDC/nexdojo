@@ -322,6 +322,8 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   const [academySearch, setAcademySearch] = React.useState('');
   
   const [systemConfig, setSystemConfig] = React.useState(StorageService.getSystemConfig());
+  const [isPlanEditModalOpen, setIsPlanEditModalOpen] = React.useState(false);
+  const [editingPlan, setEditingPlan] = React.useState<SystemPlan | null>(null);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -416,37 +418,6 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     );
   }
 
-  if (!academy) return null;
-  const [isPlanEditModalOpen, setIsPlanEditModalOpen] = React.useState(false);
-  const [editingPlan, setEditingPlan] = React.useState<SystemPlan | null>(null);
-
-  const handleUpdatePlan = (updates: Partial<SystemPlan>) => {
-    if (!editingPlan) return;
-    const updatedPlans = systemConfig.plans.map(p => p.id === editingPlan.id ? { ...p, ...updates } : p);
-    const newConfig = { ...systemConfig, plans: updatedPlans };
-    setSystemConfig(newConfig);
-    StorageService.saveSystemConfig(newConfig);
-    setEditingPlan(null);
-    setIsPlanEditModalOpen(false);
-  };
-
-  const handleUpdateAcademyStatus = (academyId: string, updates: Partial<Academy>) => {
-    const all = StorageService.getAcademies();
-    const updated = all.map(a => a.id === academyId ? { ...a, ...updates } : a);
-    StorageService.saveAcademies(updated);
-    setIsManageModalOpen(false);
-    setSelectedAcademy(null);
-    triggerRefresh();
-  };
-
-  const handleDeleteAcademy = (academyId: string) => {
-    StorageService.deleteAcademy(academyId);
-    setIsConfirmingDelete(false);
-    setIsManageModalOpen(false);
-    setSelectedAcademy(null);
-    triggerRefresh();
-  };
-
   const graduationAlerts = useMemo(() => {
     return students.filter(s => {
       const { readyForBelt, readyForStripe } = isReadyForGraduation(s);
@@ -488,35 +459,34 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       .slice(0, 5)
       .map(att => {
         const student = students.find(s => s.id === att.studentId);
-        return { 
-          ...att, 
-          studentName: student?.name || 'Desconhecido', 
-          studentPhoto: student?.photo, 
-          studentBelt: student?.belt || Belt.WHITE 
+        return {
+          ...att,
+          studentName: student?.name || 'Desconhecido',
+          studentPhoto: student?.photo,
+          studentBelt: student?.belt || Belt.WHITE
         };
       });
   }, [attendance, students]);
 
   const studentProfile = useMemo(() => {
-      if (user.role === 'student') {
-        return students.find(s => s.email === user.email);
-      }
-      return null;
-    }, [user, students]);
+    if (user.role === 'student') {
+      return students.find(s => s.email === user.email);
+    }
+    return null;
+  }, [user, students]);
 
-    const monthlyClasses = useMemo(() => {
-      if (!studentProfile) return 0;
-      const firstDayOfMonth = new Date();
-      firstDayOfMonth.setDate(1);
-      firstDayOfMonth.setHours(0,0,0,0);
-      
-      return attendance.filter(a => 
-        a.studentId === studentProfile.id && 
-        new Date(a.date) >= firstDayOfMonth
-      ).length;
-    }, [attendance, studentProfile]);
+  const monthlyClasses = useMemo(() => {
+    if (!studentProfile) return 0;
+    const firstDayOfMonth = new Date();
+    firstDayOfMonth.setDate(1);
+    firstDayOfMonth.setHours(0,0,0,0);
+    return attendance.filter(a =>
+      a.studentId === studentProfile.id &&
+      new Date(a.date) >= firstDayOfMonth
+    ).length;
+  }, [attendance, studentProfile]);
 
-    const instructorProfile = useMemo(() => {
+  const instructorProfile = useMemo(() => {
     if (user.role === 'instructor') {
       return instructors.find(i => i.email === user.email);
     }
@@ -529,6 +499,35 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     }
     return null;
   }, [user, staff]);
+
+  if (!academy) return null;
+
+  const handleUpdatePlan = (updates: Partial<SystemPlan>) => {
+    if (!editingPlan) return;
+    const updatedPlans = systemConfig.plans.map(p => p.id === editingPlan.id ? { ...p, ...updates } : p);
+    const newConfig = { ...systemConfig, plans: updatedPlans };
+    setSystemConfig(newConfig);
+    StorageService.saveSystemConfig(newConfig);
+    setEditingPlan(null);
+    setIsPlanEditModalOpen(false);
+  };
+
+  const handleUpdateAcademyStatus = (academyId: string, updates: Partial<Academy>) => {
+    const all = StorageService.getAcademies();
+    const updated = all.map(a => a.id === academyId ? { ...a, ...updates } : a);
+    StorageService.saveAcademies(updated);
+    setIsManageModalOpen(false);
+    setSelectedAcademy(null);
+    triggerRefresh();
+  };
+
+  const handleDeleteAcademy = (academyId: string) => {
+    StorageService.deleteAcademy(academyId);
+    setIsConfirmingDelete(false);
+    setIsManageModalOpen(false);
+    setSelectedAcademy(null);
+    triggerRefresh();
+  };
 
   if (user.role === 'student') {
     // Busca o perfil do aluno logado
@@ -1548,7 +1547,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                         {att.studentPhoto ? (
                           <img src={att.studentPhoto} className="w-12 h-12 rounded-2xl object-cover" />
                         ) : (
-                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-lg ${BELT_COLORS[att.studentBelt].split(' ')[0]}`}>
+                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-lg ${(BELT_COLORS[att.studentBelt] ?? BELT_COLORS[Belt.WHITE]).split(' ')[0]}`}>
                             {att.studentName.charAt(0)}
                           </div>
                         )}
@@ -1589,7 +1588,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                 graduationAlerts.slice(0, 4).map(student => (
                   <div key={student.id} className="bg-white dark:bg-slate-900 p-5 rounded-[32px] border border-slate-100 dark:border-slate-800 flex items-center justify-between group hover:shadow-md transition-all">
                     <div className="flex items-center gap-3">
-                      {student.photo ? <img src={student.photo} className="w-12 h-12 rounded-2xl object-cover" alt="" /> : <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-lg ${BELT_COLORS[student.belt].split(' ')[0]}`}>{student.name.charAt(0)}</div>}
+                      {student.photo ? <img src={student.photo} className="w-12 h-12 rounded-2xl object-cover" alt="" /> : <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-lg ${(BELT_COLORS[student.belt] ?? BELT_COLORS[Belt.WHITE]).split(' ')[0]}`}>{student.name.charAt(0)}</div>}
                       <div>
                         <h4 className="font-black text-slate-800 dark:text-slate-100 text-sm leading-tight uppercase italic">{student.name}</h4>
                         <div className="flex items-center gap-2 mt-1">
@@ -1716,7 +1715,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                 absenceAlerts.slice(0, 4).map(student => (
                   <div key={student.id} className="bg-white dark:bg-slate-900 p-5 rounded-[32px] border border-slate-100 dark:border-slate-800 flex items-center justify-between group hover:shadow-md transition-all shadow-sm">
                     <div className="flex items-center gap-3">
-                      {student.photo ? <img src={student.photo} className="w-12 h-12 rounded-2xl object-cover" alt="" /> : <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-lg ${BELT_COLORS[student.belt].split(' ')[0]}`}>{student.name.charAt(0)}</div>}
+                      {student.photo ? <img src={student.photo} className="w-12 h-12 rounded-2xl object-cover" alt="" /> : <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-lg ${(BELT_COLORS[student.belt] ?? BELT_COLORS[Belt.WHITE]).split(' ')[0]}`}>{student.name.charAt(0)}</div>}
                       <div>
                         <h4 className="font-black text-slate-800 dark:text-slate-100 text-sm leading-tight uppercase italic">{student.name}</h4>
                         <div className="flex items-center gap-2">
