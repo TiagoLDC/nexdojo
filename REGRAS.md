@@ -22,9 +22,35 @@
 ## 2. Servidor de Desenvolvimento
 
 - **Sempre** usar a porta `3002` (nunca 3000 ou 3001)
-- Comando para iniciar: `npm run dev` dentro de `d:\DEV_WEB\nexdojo`
-- URL local: `http://localhost:3002/`
-- Configuração em: `d:\DEV_WEB\nexdojo\vite.config.ts`
+- URL local Frontend: `http://localhost:3002/`
+- URL local API: `http://localhost:3005/`
+- Configuração Vite: `d:\DEV_WEB\nexdojo\vite.config.ts`
+
+### Subir o projeto localmente (ambos os servidores de uma vez)
+
+> Quando o usuário pedir **"rode o projeto localmente"**, **"sobe o servidor"**, **"inicia o dev"** ou equivalente, execute:
+
+```powershell
+cd d:\DEV_WEB\nexdojo
+npm run dev:all
+```
+
+Ou via script:
+```powershell
+cd d:\DEV_WEB\nexdojo
+.\start-dev.ps1
+```
+
+O `npm run dev:all` usa `concurrently` e exibe os logs da API (cyan) e do Frontend (magenta) no mesmo terminal.
+
+### Verificar se já está rodando antes de subir
+
+```powershell
+# Checar portas 3002 e 3005
+netstat -ano | findstr "3002 3005"
+```
+
+Se não retornar nada, os servidores não estão rodando — executar `npm run dev:all`.
 
 ---
 
@@ -102,14 +128,15 @@ GEMINI_API_KEY=<!-- PREENCHER -->
 
 ## 8. Regras Obrigatórias para o Agente
 
-1. **Porta**: NUNCA usar as portas `3000` ou `3001` neste projeto. Sempre `3002`.
+1. **Porta**: NUNCA usar as portas `3000` ou `3001` neste projeto. Sempre `3002` (frontend) e `3005` (API).
 2. **Diretório**: Todo código do projeto fica em `d:\DEV_WEB\nexdojo`.
 3. **Stack**: Não sugerir nem instalar outras bibliotecas de UI sem aprovação explícita do usuário.
-4. **Deploy**: `<!-- PREENCHER com regras de deploy automático, se houver -->`.
+4. **Deploy**: Ver seção 4 (deploy via SSH + docker compose no servidor QAS).
 5. **Commits**: Seguir o padrão definido na seção 3.
 6. **Frequência de Commit**: SÓ realizar commits quando o usuário solicitar explicitamente.
 7. **Tag de Versão QAS**: Antes de cada conclusão de tarefa ou deploy, você DEVE atualizar a tag de versão no arquivo `src/components/layout/Layout.tsx` (linha ~111) com a data e hora atual do sistema no formato: `VERSÃO QAS DD/MM/AAAA HH:MM:SS`. Certifique-se de manter apenas UMA tag de versão ativa no sistema (atualmente centralizada no topo).
 8. **Testes no Navegador**: NÃO abrir o navegador para testes, a menos que solicitado explicitamente pelo usuário. O usuário realizará os testes manualmente para agilizar as entregas.
+9. **Subir servidores locais**: Quando o usuário pedir para rodar/iniciar/subir o projeto localmente, verificar primeiro se as portas 3002 e 3005 já estão em uso (`netstat -ano | findstr "3002 3005"`). Se não estiverem, executar `cd d:\DEV_WEB\nexdojo && npm run dev:all`. Nunca subir o servidor para testes sem o usuário pedir explicitamente.
 
 ---
 
@@ -121,4 +148,4 @@ GEMINI_API_KEY=<!-- PREENCHER -->
 
 ---
 
-*Última atualização: 06/05/2026*
+*Última atualização: 08/05/2026*
