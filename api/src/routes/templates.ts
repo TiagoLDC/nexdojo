@@ -12,7 +12,8 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 
     const reqAcademyId = req.headers['x-academy-id'];
     const activeAcademyId = reqAcademyId || academyId;
-    const where = role === 'superuser' && !activeAcademyId ? {} : { academyId: activeAcademyId };
+    const baseWhere = role === 'superuser' && !activeAcademyId ? {} : { academyId: activeAcademyId };
+    const where = { ...baseWhere, deletedAt: null };
     const templates = await prisma.classTemplate.findMany({ where, orderBy: { name: 'asc' } });
     const formatted = templates.map(t => ({
       ...t,
@@ -66,11 +67,14 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
-// DELETE /api/templates/:id
+// DELETE /api/templates/:id (soft delete)
 router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
-    await prisma.classTemplate.delete({ where: { id: String(req.params.id) } });
-    return res.json({ message: 'Template removido.' });
+    await prisma.classTemplate.update({
+      where: { id: String(req.params.id) },
+      data: { deletedAt: new Date() }
+    });
+    return res.json({ message: 'Template movido para a lixeira.' });
   } catch (error) {
     return res.status(500).json({ error: 'Erro interno.' });
   }

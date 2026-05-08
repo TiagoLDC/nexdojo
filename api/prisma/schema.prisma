@@ -104,6 +104,7 @@ model Student {
   hasLoanedKimono    Boolean  @default(false)
   photo              String?  @db.LongText
 
+  deletedAt          DateTime?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -131,7 +132,7 @@ model GraduationHistory {
 }
 
 model Instructor {
-  id                 String   @id @default(uuid())
+  id                 String    @id @default(uuid())
   academyId          String
   name               String
   email              String?
@@ -141,18 +142,19 @@ model Instructor {
   maritalStatus      String?
   cep                String?
   address            String?
-  belt               String   @default("BLACK")
-  stripes            Int      @default(0)
-  status             String   @default("Active")
-  joinDate           DateTime @default(now())
+  belt               String    @default("BLACK")
+  stripes            Int       @default(0)
+  status             String    @default("Active")
+  joinDate           DateTime  @default(now())
   lastGraduationDate String?
   specialties        String?
-  medicalNotes       String?  @db.Text
-  photo              String?  @db.LongText
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  medicalNotes       String?   @db.Text
+  photo              String?   @db.LongText
+  deletedAt          DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  academy            Academy  @relation(fields: [academyId], references: [id])
+  academy            Academy   @relation(fields: [academyId], references: [id])
 }
 
 model Staff {
@@ -177,15 +179,16 @@ model Staff {
 }
 
 model ClassTemplate {
-  id              String   @id @default(uuid())
-  academyId       String
-  name            String
-  durationMinutes Int
-  schedules          String?  @db.Text // JSON string of schedules
-  assignedStudentIds String?  @db.LongText // JSON string of student IDs
+  id                 String    @id @default(uuid())
+  academyId          String
+  name               String
+  durationMinutes    Int
+  schedules          String?   @db.Text
+  assignedStudentIds String?   @db.LongText
   absenceLimit       Int?
+  deletedAt          DateTime?
 
-  academy            Academy  @relation(fields: [academyId], references: [id])
+  academy            Academy   @relation(fields: [academyId], references: [id])
   classes            ClassSession[]
 }
 

@@ -13,6 +13,7 @@ import instructorsRoutes from './routes/instructors';
 import staffRoutes from './routes/staff';
 
 import classRoutes from './routes/classes';
+import recycleBinRoutes from './routes/recycleBin';
 
 dotenv.config();
 
@@ -47,6 +48,7 @@ app.use('/api/instructors', instructorsRoutes);
 app.use('/api/staff', staffRoutes);
 
 app.use('/api/classes', classRoutes);
+app.use('/api/recycle-bin', recycleBinRoutes);
 
 // Health check
 app.get('/health', async (_req, res) => {

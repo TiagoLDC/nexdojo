@@ -119,6 +119,19 @@ export const ApiService = {
     return ApiService.request<any[]>(`/api/students/${studentId}/graduation-history`);
   },
 
+  // ── RECYCLE BIN ───────────────────────────────────────────────────────────
+  getRecycleBin: async () => {
+    return ApiService.request<any[]>('/api/recycle-bin');
+  },
+
+  restoreRecycleBinItem: async (type: string, id: string) => {
+    return ApiService.request<any>(`/api/recycle-bin/${type}/${id}/restore`, { method: 'POST' });
+  },
+
+  permanentDeleteRecycleBinItem: async (type: string, id: string) => {
+    return ApiService.request<any>(`/api/recycle-bin/${type}/${id}`, { method: 'DELETE' });
+  },
+
   // ── ACADEMIES ──────────────────────────────────────────────────────────────
   getAcademies: async () => {
     return ApiService.request<any[]>('/api/academies');

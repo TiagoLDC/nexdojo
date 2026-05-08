@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { authMiddleware } from '../middleware/auth';
+import { validate, createStudentSchema, updateStudentSchema } from '../lib/validate';
 
 const router = Router();
 
@@ -14,7 +15,8 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 
     const reqAcademyId = req.headers['x-academy-id'];
     const activeAcademyId = reqAcademyId || academyId;
-    const where = role === 'superuser' && !activeAcademyId ? {} : { academyId: activeAcademyId };
+    const baseWhere = role === 'superuser' && !activeAcademyId ? {} : { academyId: activeAcademyId };
+    const where = { ...baseWhere, deletedAt: null };
     const students = await prisma.student.findMany({
       where,
       orderBy: { name: 'asc' }
@@ -38,7 +40,7 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
 });
 
 // POST /api/students
-router.post('/', authMiddleware, async (req: Request, res: Response) => {
+router.post('/', authMiddleware, validate(createStudentSchema), async (req: Request, res: Response) => {
   try {
     const { academyId } = (req as any).user;
     const {
@@ -74,7 +76,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 });
 
 // PUT /api/students/:id
-router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
+router.put('/:id', authMiddleware, validate(updateStudentSchema), async (req: Request, res: Response) => {
   try {
     const {
       name, email, phone, birthDate, gender, bloodType, weight, height,
@@ -165,20 +167,18 @@ router.post('/:id/graduate', authMiddleware, async (req: Request, res: Response)
   }
 });
 
-// DELETE /api/students/:id
+// DELETE /api/students/:id  (soft delete)
 router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
     const student = await prisma.student.findUnique({ where: { id: String(req.params.id) } });
     if (!student) return res.status(404).json({ error: 'Aluno não encontrado.' });
 
-    await prisma.$transaction(async (tx) => {
-      await tx.student.delete({ where: { id: student.id } });
-      if (student.email) {
-        await tx.user.deleteMany({ where: { email: student.email, academyId: student.academyId } });
-      }
+    await prisma.student.update({
+      where: { id: student.id },
+      data: { deletedAt: new Date() }
     });
 
-    return res.json({ message: 'Aluno removido.' });
+    return res.json({ message: 'Aluno movido para a lixeira.' });
   } catch (error) {
     console.error('[DELETE /students/:id]', error);
     return res.status(500).json({ error: 'Erro interno.' });

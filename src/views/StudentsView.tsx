@@ -241,13 +241,14 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     setIsLoading(true);
     try {
       if (isNewStudent) {
-        await ApiService.createStudent(editingStudent);
+        const created = await ApiService.createStudent(editingStudent);
+        setStudents(prev => [...prev, created]);
         showNotification("Atleta cadastrado com sucesso!");
       } else {
-        await ApiService.updateStudent(editingStudent.id, editingStudent);
+        const updated = await ApiService.updateStudent(editingStudent.id, editingStudent);
+        setStudents(prev => prev.map(s => s.id === editingStudent.id ? { ...s, ...updated } : s));
         showNotification("Ficha atualizada com sucesso!");
       }
-      await fetchStudents();
       setIsEditModalOpen(false);
       setEditingStudent(null);
     } catch (e: any) {
@@ -263,8 +264,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     setIsLoading(true);
     try {
       await ApiService.deleteStudent(editingStudent.id);
+      setStudents(prev => prev.filter(s => s.id !== editingStudent.id));
       showNotification("Atleta removido com sucesso.", 'delete');
-      await fetchStudents();
       setIsDeleteModalOpen(false);
       setIsEditModalOpen(false);
       setEditingStudent(null);
@@ -366,7 +367,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
       setIsLoading(true);
       try {
         const updatedStudent = await ApiService.graduateStudent(student.id, newBelt, newStripes, notes);
-        await fetchStudents();
+        setStudents(prev => prev.map(s => s.id === student.id ? { ...s, ...updatedStudent } : s));
 
         if (editingStudent?.id === student.id) {
           setEditingStudent({ ...editingStudent, ...updatedStudent });

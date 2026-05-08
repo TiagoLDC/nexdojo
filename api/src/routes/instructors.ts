@@ -12,7 +12,8 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 
     const reqAcademyId = req.headers['x-academy-id'];
     const activeAcademyId = reqAcademyId || academyId;
-    const where = role === 'superuser' && !activeAcademyId ? {} : { academyId: activeAcademyId };
+    const baseWhere = role === 'superuser' && !activeAcademyId ? {} : { academyId: activeAcademyId };
+    const where = { ...baseWhere, deletedAt: null };
     const instructors = await prisma.instructor.findMany({
       where,
       orderBy: { name: 'asc' }
@@ -53,12 +54,13 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
-// Delete instructor
+// Delete instructor (soft delete)
 router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
-    await prisma.instructor.delete({
-      where: { id: String(id) }
+    await prisma.instructor.update({
+      where: { id: String(id) },
+      data: { deletedAt: new Date() }
     });
     return res.json({ success: true });
   } catch (error) {

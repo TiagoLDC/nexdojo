@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import prisma from '../lib/prisma';
+import { validate, loginSchema, registerAcademySchema, registerStudentSchema } from '../lib/validate';
 
 const loginLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minuto
@@ -17,7 +18,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error('Variável de ambiente JWT_SECRET não definida.');
 
 // POST /api/auth/login
-router.post('/login', loginLimiter, async (req: Request, res: Response) => {
+router.post('/login', loginLimiter, validate(loginSchema), async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -59,7 +60,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
 });
 
 // POST /api/auth/register-academy
-router.post('/register-academy', async (req: Request, res: Response) => {
+router.post('/register-academy', validate(registerAcademySchema), async (req: Request, res: Response) => {
   try {
     const { name, ownerName, email, password, phone, cep, address, addressNumber, logo } = req.body;
 
@@ -104,7 +105,7 @@ router.post('/register-academy', async (req: Request, res: Response) => {
 });
 
 // POST /api/auth/register-student
-router.post('/register-student', async (req: Request, res: Response) => {
+router.post('/register-student', validate(registerStudentSchema), async (req: Request, res: Response) => {
   try {
     const { name, email, password, academyId, birthDate, gender, belt, stripes } = req.body;
 
