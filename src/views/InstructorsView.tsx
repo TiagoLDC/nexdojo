@@ -44,25 +44,7 @@ import {
 } from 'lucide-react';
 import { BeltBadge } from '../components/common/BeltBadge';
 import { BELT_COLORS } from '../constants';
-
-// Funções utilitárias removidas e unificadas em services/cep.ts
-
-const compressImage = (base64Str: string, maxWidth = 400, maxHeight = 400): Promise<string> => {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.src = base64Str;
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      let width = img.width, height = img.height;
-      if (width > height) { if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; } }
-      else { if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; } }
-      canvas.width = width; canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx?.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', 0.7));
-    };
-  });
-};
+import { compressImage } from '../utils/image';
 
 const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
   const [instructors, setInstructors] = useState<Instructor[]>([]);
@@ -146,7 +128,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
 
   const handleSaveInstructor = async () => {
     if (!editingInstructor || !editingInstructor.name || !editingInstructor.birthDate) {
-      alert("Nome e Data de Nascimento são obrigatórios.");
+      showNotification("Nome e Data de Nascimento são obrigatórios.", 'error');
       return;
     }
 
@@ -191,7 +173,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !editingInstructor) return;
-    if (file.size > 2000000) { alert("Limite de 2MB por arquivo."); return; }
+    if (file.size > 2000000) { showNotification("Limite de 2MB por arquivo.", 'error'); return; }
 
     const reader = new FileReader();
     reader.onloadend = () => {

@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { BeltBadge } from '../components/common/BeltBadge';
 import { BELT_COLORS } from '../constants';
+import ConfirmModal from '../components/common/ConfirmModal';
 
 declare const Html5Qrcode: any;
 
@@ -69,6 +70,10 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [confirmState, setConfirmState] = useState<{ isOpen: boolean; message: string; action: (() => void) | null }>({ isOpen: false, message: '', action: null });
+
+  const openConfirm = (message: string, action: () => void) => setConfirmState({ isOpen: true, message, action });
+  const closeConfirm = () => setConfirmState({ isOpen: false, message: '', action: null });
 
   const [showAllStudents, setShowAllStudents] = useState(false);
 
@@ -258,14 +263,16 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
       });
 
       if (existing) {
-        if (confirm(`Já existe uma chamada de "${name}" aberta ou finalizada hoje. Deseja continuar ou editar a anterior?`)) {
-          setCurrentClass(existing);
-          // O backend retornará a lista de IDs de presença se for implementado, por enquanto mantemos local
-          setCheckedIds(new Set(existing.attendanceIds || []));
-          setEditingClassInitialIds(new Set(existing.attendanceIds || []));
-          setShowAllStudents(!templateId);
-          return;
-        }
+        openConfirm(
+          `Já existe uma chamada de "${name}" aberta ou finalizada hoje. Deseja editar a anterior?`,
+          () => {
+            setCurrentClass(existing);
+            setCheckedIds(new Set(existing.attendanceIds || []));
+            setEditingClassInitialIds(new Set(existing.attendanceIds || []));
+            setShowAllStudents(!templateId);
+          }
+        );
+        return;
       }
 
       const newClassPayload = {
@@ -366,6 +373,14 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
           <h1 className="text-2xl font-bold text-slate-800 tracking-tight dark:text-white">Seleção de Treino</h1>
           <p className="text-slate-500 font-medium">Escolha uma turma para abrir a chamada.</p>
         </header>
+
+        <ConfirmModal
+          isOpen={confirmState.isOpen}
+          message={confirmState.message}
+          onConfirm={() => { confirmState.action?.(); closeConfirm(); }}
+          onCancel={closeConfirm}
+          confirmLabel="Confirmar"
+        />
 
         {showSuccess && (
           <div className="bg-green-100 border border-green-200 text-green-700 px-5 py-4 rounded-[24px] flex items-center gap-3 animate-bounce">
@@ -743,16 +758,14 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
               >
                 Sair sem Salvar
               </button>
-              <button 
-                onClick={() => {
-                  if (confirm("Tem certeza que deseja apagar esta aula?")) {
-                    const updated = allClasses.filter(c => c.id !== currentClass.id);
-                    StorageService.saveClasses(updated);
-                    setAllClasses(updated);
-                    setCurrentClass(null);
-                    setIsDiscardModalOpen(false);
-                  }
-                }}
+              <button
+                onClick={() => openConfirm("Tem certeza que deseja apagar esta aula?", () => {
+                  const updated = allClasses.filter(c => c.id !== currentClass.id);
+                  StorageService.saveClasses(updated);
+                  setAllClasses(updated);
+                  setCurrentClass(null);
+                  setIsDiscardModalOpen(false);
+                })}
                 className="w-full bg-red-50 text-red-600 font-bold py-4 rounded-3xl transition-all active:scale-95"
               >
                 Apagar Aula

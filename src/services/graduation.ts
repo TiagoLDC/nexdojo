@@ -1,5 +1,15 @@
 
-import { Student, Belt } from '../types';
+import { Student, Belt, ClassTemplate, Academy } from '../types';
+
+export const getEffectiveAbsenceLimit = (student: Student, templates: ClassTemplate[], academy: Academy | null): number => {
+  if (student.absenceLimit) return student.absenceLimit;
+  const studentTemplates = templates.filter(t => (t.assignedStudentIds || []).includes(student.id));
+  const classLimits = studentTemplates
+    .map(t => t.absenceLimit)
+    .filter((limit): limit is number => limit !== undefined && limit !== null);
+  if (classLimits.length > 0) return Math.min(...classLimits);
+  return academy?.absenceLimit || 3;
+};
 
 export const BELT_LIST = [
   // Kids

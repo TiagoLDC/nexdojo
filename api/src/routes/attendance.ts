@@ -49,10 +49,13 @@ router.post('/bulk', authMiddleware, async (req: Request, res: Response) => {
         })),
       });
 
-      await tx.classSession.update({
+      const session = await tx.classSession.update({
         where: { id: classId },
         data: { status: 'Finalized' },
+        select: { templateId: true }
       });
+
+      const presentIds = new Set(records.map((r: any) => r.studentId));
 
       await Promise.all(
         records.map((r: any) =>
@@ -62,10 +65,33 @@ router.post('/bulk', authMiddleware, async (req: Request, res: Response) => {
               totalClasses: { increment: 1 },
               totalHours: { increment: Math.floor(r.durationMinutes / 60) },
               absentCount: 0,
+              lastAttendance: new Date().toISOString(),
             },
           })
         )
       );
+
+      // Incrementa absentCount para alunos da turma que não compareceram
+      if (session.templateId) {
+        const template = await tx.classTemplate.findUnique({
+          where: { id: session.templateId },
+          select: { assignedStudentIds: true }
+        });
+        if (template?.assignedStudentIds) {
+          const assignedIds: string[] = JSON.parse(template.assignedStudentIds);
+          const absentIds = assignedIds.filter(id => !presentIds.has(id));
+          if (absentIds.length > 0) {
+            await Promise.all(
+              absentIds.map(id =>
+                tx.student.update({
+                  where: { id },
+                  data: { absentCount: { increment: 1 } }
+                })
+              )
+            );
+          }
+        }
+      }
     });
 
     return res.status(201).json({ message: 'Chamada registrada com sucesso.' });

@@ -4,7 +4,9 @@ import { Student, Belt, StudentDocument, ClassTemplate, Academy, User } from '..
 import { StorageService } from '../services/storage';
 import ApiService from '../services/api';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
-import { calculateAge, isReadyForGraduation, getNextRank, BELT_LIST } from '../services/graduation';
+import { calculateAge, isReadyForGraduation, getNextRank, BELT_LIST, getEffectiveAbsenceLimit } from '../services/graduation';
+import { compressImage } from '../utils/image';
+import PrintHeader from '../components/common/PrintHeader';
 import { PrivacyValue } from '../components/PrivacyValue';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -62,53 +64,6 @@ import { BELT_COLORS } from '../constants';
 /**
  * Função para redimensionar e comprimir imagem Base64
  */
-const compressImage = (base64Str: string, maxWidth = 400, maxHeight = 400): Promise<string> => {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.src = base64Str;
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      let width = img.width;
-      let height = img.height;
-
-      if (width > height) {
-        if (width > maxWidth) {
-          height *= maxWidth / width;
-          width = maxWidth;
-        }
-      } else {
-        if (height > maxHeight) {
-          width *= maxHeight / height;
-          height = maxHeight;
-        }
-      }
-
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx?.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', 0.7));
-    };
-  });
-};
-
-const PrintHeader: React.FC<{ title: string }> = ({ title }) => {
-  const academy = StorageService.getAcademy();
-  return (
-    <div className="hidden print:block mb-8 border-b-2 border-slate-900 pb-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-black uppercase italic tracking-tighter">{academy.name}</h1>
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{academy.address}</p>
-        </div>
-        <div className="text-right">
-          <h2 className="text-xl font-black text-indigo-600 uppercase italic leading-none">{title}</h2>
-          <p className="text-[10px] font-bold text-slate-400 mt-1">{new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR')}</p>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 interface StudentsViewProps {
   academy: Academy;
@@ -253,7 +208,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     }
   };
 
-  const handleSaveStudent = () => {
+  const handleSaveStudent = async () => {
     if (!editingStudent) return;
 
     const age = calculateAge(editingStudent.birthDate);
@@ -283,51 +238,42 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
       }
     }
     
-    const save = async () => {
-      setIsLoading(true);
-      try {
-        if (isNewStudent) {
-          await ApiService.createStudent(editingStudent);
-          showNotification("Atleta cadastrado com sucesso!");
-        } else {
-          await ApiService.updateStudent(editingStudent.id, editingStudent);
-          showNotification("Ficha atualizada com sucesso!");
-        }
-        await fetchStudents();
-        setIsEditModalOpen(false);
-        setEditingStudent(null);
-      } catch (e: any) {
-        console.error(e);
-        showNotification(e.message || "Erro ao salvar aluno.", 'error');
-      } finally {
-        setIsLoading(false);
+    setIsLoading(true);
+    try {
+      if (isNewStudent) {
+        await ApiService.createStudent(editingStudent);
+        showNotification("Atleta cadastrado com sucesso!");
+      } else {
+        await ApiService.updateStudent(editingStudent.id, editingStudent);
+        showNotification("Ficha atualizada com sucesso!");
       }
-    };
-    
-    save();
+      await fetchStudents();
+      setIsEditModalOpen(false);
+      setEditingStudent(null);
+    } catch (e: any) {
+      console.error(e);
+      showNotification(e.message || "Erro ao salvar aluno.", 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleDeleteStudent = () => {
+  const handleDeleteStudent = async () => {
     if (!editingStudent) return;
-    
-    const del = async () => {
-      setIsLoading(true);
-      try {
-        await ApiService.deleteStudent(editingStudent.id);
-        showNotification("Atleta removido com sucesso.", 'delete');
-        await fetchStudents();
-        setIsDeleteModalOpen(false);
-        setIsEditModalOpen(false);
-        setEditingStudent(null);
-      } catch (error: any) {
-        console.error("Erro ao excluir aluno:", error);
-        showNotification(error.message || "Erro ao processar exclusão.", 'error');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    del();
+    setIsLoading(true);
+    try {
+      await ApiService.deleteStudent(editingStudent.id);
+      showNotification("Atleta removido com sucesso.", 'delete');
+      await fetchStudents();
+      setIsDeleteModalOpen(false);
+      setIsEditModalOpen(false);
+      setEditingStudent(null);
+    } catch (error: any) {
+      console.error("Erro ao excluir aluno:", error);
+      showNotification(error.message || "Erro ao processar exclusão.", 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -347,8 +293,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     const file = e.target.files?.[0];
     if (!file || !editingStudent) return;
 
-    if (file.size > 1000000) { 
-      alert("Arquivo muito grande. O limite para documentos é de 1MB.");
+    if (file.size > 1000000) {
+      showNotification("Arquivo muito grande. O limite para documentos é de 1MB.", 'error');
       return;
     }
 
@@ -438,20 +384,6 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     promote();
   };
 
-  const getEffectiveAbsenceLimit = (student: Student) => {
-    if (student.absenceLimit) return student.absenceLimit;
-    
-    // Encontrar turmas que o aluno participa
-    const studentTemplates = templates.filter(t => (t.assignedStudentIds || []).includes(student.id));
-    const classLimits = studentTemplates
-      .map(t => t.absenceLimit)
-      .filter((limit): limit is number => limit !== undefined && limit !== null);
-    
-    if (classLimits.length > 0) return Math.min(...classLimits);
-    
-    return academy?.absenceLimit || 3;
-  };
-
   const filtered = students.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === 'All' ? s.status !== 'Inactive' : s.status === statusFilter;
@@ -465,7 +397,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
       if (readinessFilter === 'Any') matchesReadiness = readyForStripe || readyForBelt;
     }
 
-    const matchesAbsence = !absenceFilter || (s.absentCount >= getEffectiveAbsenceLimit(s));
+    const matchesAbsence = !absenceFilter || (s.absentCount >= getEffectiveAbsenceLimit(s, templates, academy));
 
     return matchesSearch && matchesStatus && matchesBelt && matchesReadiness && matchesAbsence;
   }).sort((a, b) => a.name.localeCompare(b.name));
@@ -621,7 +553,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
             filtered.map(student => {
               const contactPhone = student.phone || student.guardianPhone;
               const { readyForBelt, readyForStripe } = isReadyForGraduation(student);
-              const effectiveLimit = getEffectiveAbsenceLimit(student);
+              const effectiveLimit = getEffectiveAbsenceLimit(student, templates, academy);
               
               return (
                 <div 
@@ -799,7 +731,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                             )}
                             {(() => {
                               const { readyForBelt, readyForStripe } = isReadyForGraduation(student);
-                              const effectiveLimit = getEffectiveAbsenceLimit(student);
+                              const effectiveLimit = getEffectiveAbsenceLimit(student, templates, academy);
                               const isAbsentee = student.absentCount >= effectiveLimit;
                               
                               return (

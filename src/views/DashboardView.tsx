@@ -7,7 +7,8 @@ import { StorageService } from '../services/storage';
 import ApiService from '../services/api';
 
 import { PrivacyValue } from '../components/PrivacyValue';
-import { calculateAge, isReadyForGraduation } from '../services/graduation';
+import { calculateAge, isReadyForGraduation, getEffectiveAbsenceLimit } from '../services/graduation';
+import { getBeltColor } from '../utils/belt';
 import { 
   Users, 
   TrendingUp, 
@@ -83,28 +84,12 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
           ApiService.getStaff(),
           ApiService.getTemplates()
         ]);
-        
-        // Filter data by academy if superuser (API returns all for superuser)
-        const filteredStudents = user.role === 'superuser' 
-          ? (Array.isArray(loadedStudents) ? loadedStudents.filter(s => s.academyId === academy.id) : [])
-          : loadedStudents;
-          
-        const filteredInstructors = user.role === 'superuser' 
-          ? (Array.isArray(loadedInstructors) ? loadedInstructors.filter(i => i.academyId === academy.id) : [])
-          : loadedInstructors;
-          
-        const filteredStaff = user.role === 'superuser' 
-          ? (Array.isArray(loadedStaff) ? loadedStaff.filter(s => s.academyId === academy.id) : [])
-          : loadedStaff;
-          
-        const filteredTemplates = user.role === 'superuser' 
-          ? (Array.isArray(loadedTemplates) ? loadedTemplates.filter(t => t.academyId === academy.id) : [])
-          : loadedTemplates;
 
-        setStudents(Array.isArray(filteredStudents) ? filteredStudents : []);
-        setInstructors(Array.isArray(filteredInstructors) ? filteredInstructors : []);
-        setStaff(Array.isArray(filteredStaff) ? filteredStaff : []);
-        setTemplates(Array.isArray(filteredTemplates) ? filteredTemplates : []);
+        // API already filters by x-academy-id header (sent automatically in ApiService.request)
+        setStudents(Array.isArray(loadedStudents) ? loadedStudents : []);
+        setInstructors(Array.isArray(loadedInstructors) ? loadedInstructors : []);
+        setStaff(Array.isArray(loadedStaff) ? loadedStaff : []);
+        setTemplates(Array.isArray(loadedTemplates) ? loadedTemplates : []);
         
         if (user.role === 'superuser') {
           // Superuser users list is already handled via StorageService or specific endpoint if exists
@@ -133,23 +118,6 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     const latestTimestamp = chatMessages[chatMessages.length - 1].timestamp;
     return latestTimestamp > lastReadChat;
   }, [chatMessages, lastReadChat]);
-
-  const getBeltColor = (belt: Belt) => {
-    switch (belt) {
-      case Belt.WHITE: return 'bg-white text-slate-900 border-slate-200';
-      case Belt.GREY: return 'bg-slate-400 text-white border-slate-500';
-      case Belt.YELLOW: return 'bg-yellow-400 text-slate-900 border-yellow-500';
-      case Belt.ORANGE: return 'bg-orange-500 text-white border-orange-600';
-      case Belt.GREEN: return 'bg-green-600 text-white border-green-700';
-      case Belt.BLUE: return 'bg-blue-600 text-white border-blue-400';
-      case Belt.PURPLE: return 'bg-purple-700 text-white border-purple-500';
-      case Belt.BROWN: return 'bg-amber-900 text-white border-amber-800';
-      case Belt.BLACK: return 'bg-slate-950 text-white border-slate-800';
-      case Belt.CORAL: return 'bg-gradient-to-r from-red-600 to-slate-900 text-white border-red-700';
-      case Belt.RED: return 'bg-red-700 text-white border-red-800';
-      default: return 'bg-indigo-600 text-white border-indigo-400';
-    }
-  };
 
   const getBeltTheme = (belt: Belt) => {
     switch (belt) {
@@ -259,16 +227,6 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [calendarEvents]);
 
-  const getEffectiveAbsenceLimit = (student: Student) => {
-    if (student.absenceLimit) return student.absenceLimit;
-    const studentTemplates = templates.filter(t => (t.assignedStudentIds || []).includes(student.id));
-    const classLimits = studentTemplates
-      .map(t => t.absenceLimit)
-      .filter((limit): limit is number => limit !== undefined && limit !== null);
-    if (classLimits.length > 0) return Math.min(...classLimits);
-    return academy?.absenceLimit || 3;
-  };
-
   const growthData = useMemo(() => {
     if (!students || students.length === 0) return [];
     
@@ -304,7 +262,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     total: students.length,
     active: students.filter(s => s.status === 'Active').length,
     todayAttendance: attendance.filter(a => a.date.startsWith(todayStr)).length,
-    alerts: students.filter(s => s.absentCount >= getEffectiveAbsenceLimit(s)).length
+    alerts: students.filter(s => s.absentCount >= getEffectiveAbsenceLimit(s, templates, academy)).length
   };
 
   const [refreshKey, setRefreshKey] = useState(0);
@@ -519,7 +477,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       .filter(s => s.status === 'Active' && s.absentCount > 0)
       .map(s => ({
         ...s,
-        effectiveLimit: getEffectiveAbsenceLimit(s)
+        effectiveLimit: getEffectiveAbsenceLimit(s, templates, academy)
       }))
       .sort((a, b) => b.absentCount - a.absentCount);
   }, [students, templates, academy?.id]);

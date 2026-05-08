@@ -11,9 +11,8 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     if (role !== 'superuser') {
       return res.status(403).json({ error: 'Acesso negado.' });
     }
-    const academies = await prisma.academy.findMany({
-      orderBy: { name: 'asc' }
-    });
+    const rawAcademies = await prisma.academy.findMany({ orderBy: { name: 'asc' } });
+    const academies = rawAcademies.map(({ logo: _logo, ...a }) => a);
     return res.json(academies);
   } catch (error) {
     console.error('[GET /academies]', error);

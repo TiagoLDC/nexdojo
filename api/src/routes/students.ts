@@ -19,7 +19,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       where,
       orderBy: { name: 'asc' }
     });
-    return res.json(students.map(s => ({ ...s, documents: s.documents ? JSON.parse(s.documents) : [] })));
+    return res.json(students.map(({ photo: _photo, ...s }) => ({ ...s, documents: s.documents ? JSON.parse(s.documents) : [] })));
   } catch (error) {
     console.error('[GET /students]', error);
     return res.status(500).json({ error: 'Erro interno.' });

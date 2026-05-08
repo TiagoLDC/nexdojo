@@ -19,6 +19,7 @@ import {
   Check
 } from 'lucide-react';
 import { BELT_COLORS } from '../constants';
+import ConfirmModal from '../components/common/ConfirmModal';
 
 const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
   const [items, setItems] = useState<RecycleBinItem[]>([]);
@@ -26,6 +27,10 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
   const [typeFilter, setTypeFilter] = useState<string>('All');
   const [toast, setToast] = useState<{message: string, type: 'success' | 'delete'} | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmState, setConfirmState] = useState<{ isOpen: boolean; message: string; action: (() => void) | null }>({ isOpen: false, message: '', action: null });
+
+  const openConfirm = (message: string, action: () => void) => setConfirmState({ isOpen: true, message, action });
+  const closeConfirm = () => setConfirmState({ isOpen: false, message: '', action: null });
 
   useEffect(() => {
     if (academy) {
@@ -104,25 +109,32 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
 
   const handleBulkDelete = () => {
     if (selectedIds.size === 0) return;
-    if (window.confirm(`Deseja excluir permanentemente os ${selectedIds.size} itens selecionados?`)) {
+    openConfirm(`Deseja excluir permanentemente os ${selectedIds.size} itens selecionados?`, () => {
       deleteMany(Array.from(selectedIds));
-    }
+    });
   };
 
   const handleEmptyBin = () => {
     if (items.length === 0) return;
-    if (window.confirm("Deseja realmente esvaziar a lixeira? Todos os dados serão perdidos para sempre.")) {
+    openConfirm("Deseja realmente esvaziar a lixeira? Todos os dados serão perdidos para sempre.", () => {
       const allBinItems = StorageService.getRecycleBin();
       const otherAcademiesItems = allBinItems.filter(i => i.academyId !== academy.id);
       StorageService.saveRecycleBin(otherAcademiesItems);
       setItems([]);
       setSelectedIds(new Set());
       showNotification("Lixeira esvaziada.", 'delete');
-    }
+    });
   };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-20 animate-in fade-in duration-500">
+      <ConfirmModal
+        isOpen={confirmState.isOpen}
+        message={confirmState.message}
+        onConfirm={() => { confirmState.action?.(); closeConfirm(); }}
+        onCancel={closeConfirm}
+        confirmLabel="Excluir"
+      />
       {toast && (
         <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl animate-in slide-in-from-top duration-300 ${
           toast.type === 'success' ? 'bg-indigo-600 text-white' : 'bg-red-600 text-white'
@@ -268,10 +280,8 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                 >
                   <RotateCcw size={18} />
                 </button>
-                <button 
-                  onClick={() => {
-                    if(window.confirm("Excluir permanentemente?")) deleteMany([item.id]);
-                  }}
+                <button
+                  onClick={() => openConfirm("Excluir permanentemente?", () => deleteMany([item.id]))}
                   className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
                   title="Excluir Permanentemente"
                 >
