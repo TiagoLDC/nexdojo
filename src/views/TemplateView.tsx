@@ -235,7 +235,6 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
 
   const handleSendNotification = () => {
     if (!notifyingTemplate) return;
-    console.log(`Enviando para ${(notifyingTemplate.assignedStudentIds || []).length} alunos: ${notificationMsg}`);
     setIsNotifyModalOpen(false);
     showNotification("Notificação enviada para os alunos!");
   };

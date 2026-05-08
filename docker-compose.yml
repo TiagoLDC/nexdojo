@@ -20,10 +20,8 @@ services:
     restart: always
     ports:
       - "3005:3005"
-    environment:
-      - PORT=3005
-      - DATABASE_URL=mysql://qasnexdojo_qas:yFkL8OvxPnr3@162.240.167.149:3306/qasnexdojo_qas
-      - JWT_SECRET=nexdojo_super_secret_jwt_key_2026
+    env_file:
+      - ./api/.env
     networks:
       - nexdojo-net
 

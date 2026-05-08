@@ -1,13 +1,23 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import prisma from '../lib/prisma';
 
+const loginLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minuto
+  max: 10,
+  message: { error: 'Muitas tentativas de login. Aguarde 1 minuto e tente novamente.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'nexdojo_secret_2026';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('Variável de ambiente JWT_SECRET não definida.');
 
 // POST /api/auth/login
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', loginLimiter, async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {

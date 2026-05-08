@@ -19,7 +19,21 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3005;
 
-app.use(cors());
+const allowedOrigins = [
+  'http://localhost:3002',
+  'http://localhost:3003',
+  'https://qas.nexdojo.com.br',
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Permitir requests sem origin (ex: curl, Postman, server-to-server)
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`Origem não permitida pelo CORS: ${origin}`));
+  },
+  credentials: true,
+}));
+
 app.use(express.json({ limit: '10mb' }));
 
 // Routes
