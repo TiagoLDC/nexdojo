@@ -87,9 +87,52 @@ ssh -p 22022 qasnexdojo@162.240.167.149
 ```
 
 ### Comando de Deploy
-```bash
-cd /home/qasnexdojo/nexdojo && git pull origin main && docker compose up -d --build
+
+> **IMPORTANTE:** O cliente SSH do Windows não suporta senha interativa via linha de comando. O deploy deve ser feito via **Python + paramiko** conforme abaixo.
+
+**Pré-requisito (instalar uma vez):**
+```powershell
+pip install paramiko --user
 ```
+
+**Script de deploy** — salvar como arquivo temporário e executar:
+```python
+import paramiko, sys, re
+sys.stdout.reconfigure(encoding='utf-8')
+
+client = paramiko.SSHClient()
+client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+client.connect('162.240.167.149', port=22022, username='qasnexdojo', password='@Tmd4738@', timeout=30)
+
+stdin, stdout, stderr = client.exec_command(
+    'cd /home/qasnexdojo/nexdojo && git fetch origin && git reset --hard origin/main && docker compose up -d --build 2>&1',
+    timeout=240
+)
+
+output = stdout.read().decode('utf-8', errors='replace')
+ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+clean = ansi_escape.sub('', output)
+
+for line in clean.splitlines():
+    line = line.strip()
+    if line:
+        print(line)
+
+exit_code = stdout.channel.recv_exit_status()
+client.close()
+print(f'\nExit code: {exit_code}')
+sys.exit(exit_code)
+```
+
+**Como executar o deploy pelo agente:**
+1. Criar o script acima como arquivo temporário (ex: `deploy_run.py`) na raiz do projeto
+2. Executar: `python deploy_run.py`
+3. Remover o arquivo após o deploy
+
+**Observações:**
+- Usar `git fetch + reset --hard` em vez de `git pull` para evitar conflitos de branches divergidas no servidor
+- O arquivo `api/.env` **não está no git** — se precisar recriar, usar SFTP via paramiko com o conteúdo do `api/.env` local
+- `api/.env` no servidor contém: `PORT=3005`, `DATABASE_URL` e `JWT_SECRET`
 
 ---
 

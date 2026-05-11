@@ -1,0 +1,177 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --primary-accent: var(--primary-accent-color, #4f46e5);
+  
+  --color-indigo-50: var(--primary-accent-50, #f5f3ff);
+  --color-indigo-100: var(--primary-accent-100, #e0e7ff);
+  --color-indigo-200: var(--primary-accent-200, #c7d2fe);
+  --color-indigo-300: var(--primary-accent-300, #a5b4fc);
+  --color-indigo-400: var(--primary-accent-400, #818cf8);
+  --color-indigo-500: var(--primary-accent-500, #6366f1);
+  --color-indigo-600: var(--primary-accent-color, #4f46e5);
+  --color-indigo-700: var(--primary-accent-700, #4338ca);
+  --color-indigo-800: var(--primary-accent-800, #3730a3);
+  --color-indigo-900: var(--primary-accent-900, #1e1b4b);
+  --color-indigo-950: var(--primary-accent-950, #0f172a);
+}
+
+@layer base {
+  html, body {
+    height: 100%;
+    height: 100dvh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* Prevents the whole page from scrolling/bouncing weirdly on mobile */
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  input, textarea, select {
+    user-select: text; /* Allow text selection in inputs */
+  }
+
+  #root {
+    height: 100%;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+
+  body {
+    background-color: white !important;
+    color: black !important;
+  }
+
+  .print-full-width {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Force charts to show in print */
+  .recharts-responsive-container {
+    width: 100% !important;
+    height: 400px !important;
+  }
+}
+
+:root {
+  --primary-accent-color: #4f46e5;
+  --background: 210 40% 98%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 221.2 83.2% 53.3%;
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 217.2 91.2% 59.8%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 224.3 76.3% 48%;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+}
+
+/* Custom styles for the BJJ app */
+.belt-white { background: #ffffff; color: #000000; border: 1px solid #e2e8f0; }
+.belt-blue { background: #2563eb; color: #ffffff; }
+.belt-purple { background: #7c3aed; color: #ffffff; }
+.belt-brown { background: #78350f; color: #ffffff; }
+.belt-black { background: #000000; color: #ffffff; }
+
+/* Animation for modals */
+@keyframes zoom-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-in.zoom-in {
+  animation: zoom-in 0.3s ease-out forwards;
+}
+
+@keyframes slide-in-from-bottom {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.animate-in.slide-in-from-bottom {
+  animation: slide-in-from-bottom 0.5s ease-out forwards;
+}
+
+/* Custom Scrollbar for Sidebar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}

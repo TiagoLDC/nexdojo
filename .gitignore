@@ -27,8 +27,10 @@ dist-ssr
 *.zip
 .gemini/
 
-# Secrets — nunca versionar
-api/.env
+# Secrets
+.env
 .env.production
 .env.*.local
 
+# Claude Code memory
+.claude/
