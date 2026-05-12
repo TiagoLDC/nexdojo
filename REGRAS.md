@@ -71,7 +71,26 @@ As mensagens de commit devem seguir rigorosamente o formato:
 
 ---
 
-## 4. Servidor Remoto / Deploy
+## 4. Portas Reservadas no Servidor QAS (162.240.167.149)
+
+> **CRÍTICO:** Nunca usar essas portas ao criar novos serviços (ex: backend do nexdojo).
+
+| Porta | Serviço |
+|---|---|
+| **80** | Apache/cPanel (proxy reverso — porta do sistema) |
+| **3001** | tna-frontend-qas (container Docker) |
+| **3002** | louvorhub-prod (container Docker) |
+| **3003** | **nexdojo-frontend QAS (container Docker)** |
+| **3004** | wordtetris-prod (container Docker) |
+| **21, 25, 26, 53, 143, 587, 993, 995** | Serviços de sistema (FTP, SMTP, DNS, IMAP, etc.) |
+| **2077–2096** | cPanel/WHM |
+| **22022** | SSH |
+
+**Padrão de deploy no servidor:** cada serviço roda em um container Docker numa porta exclusiva, e o Apache do cPanel faz proxy reverso via `.htaccess` no `public_html` do domínio (`RewriteRule ^(.*)$ http://127.0.0.1:<PORTA>/$1 [P,L]`).
+
+---
+
+## 5. Servidor Remoto / Deploy
 
 | Campo | Valor |
 |---|---|
@@ -105,7 +124,7 @@ client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 client.connect('162.240.167.149', port=22022, username='qasnexdojo', password='@Tmd4738@', timeout=30)
 
 stdin, stdout, stderr = client.exec_command(
-    'cd /home/qasnexdojo/nexdojo && git fetch origin && git reset --hard origin/main && docker compose up -d --build 2>&1',
+    'cd /home/qasnexdojo/nexdojo && git fetch origin && git reset --hard origin/main && docker compose down && docker compose up -d --build 2>&1',
     timeout=240
 )
 
@@ -136,7 +155,7 @@ sys.exit(exit_code)
 
 ---
 
-## 5. Banco de Dados
+## 6. Banco de Dados
 
 | Campo | Valor |
 |---|---|
@@ -149,7 +168,7 @@ sys.exit(exit_code)
 
 ---
 
-## 6. Variáveis de Ambiente
+## 7. Variáveis de Ambiente
 
 Arquivo: `d:\DEV_WEB\nexdojo\.env`
 
@@ -161,7 +180,7 @@ GEMINI_API_KEY=<!-- PREENCHER -->
 
 ---
 
-## 7. Credenciais de Serviços Externos
+## 8. Credenciais de Serviços Externos
 
 | Serviço | Usuário / API Key | Observação |
 |---|---|---|
@@ -169,21 +188,22 @@ GEMINI_API_KEY=<!-- PREENCHER -->
 
 ---
 
-## 8. Regras Obrigatórias para o Agente
+## 9. Regras Obrigatórias para o Agente
 
-1. **Porta**: NUNCA usar as portas `3000` ou `3001` neste projeto. Sempre `3002` (frontend) e `3005` (API).
-2. **Diretório**: Todo código do projeto fica em `d:\DEV_WEB\nexdojo`.
-3. **Stack**: Não sugerir nem instalar outras bibliotecas de UI sem aprovação explícita do usuário.
-4. **Deploy**: Ver seção 4 (deploy via SSH + docker compose no servidor QAS).
-5. **Commits**: Seguir o padrão definido na seção 3.
-6. **Frequência de Commit**: SÓ realizar commits quando o usuário solicitar explicitamente.
-7. **Tag de Versão QAS**: **A CADA ALTERAÇÃO DE CÓDIGO** feita no projeto, você DEVE obrigatoriamente atualizar a etiqueta de versão localizada em `src/components/layout/AppLayout.tsx`, dentro da div com comentário `{/* Version tag */}`. Substitua o texto `VERSÃO QAS DD/MM/AAAA HH:MM:SS` com a data e hora reais do sistema (usar `Get-Date -Format "dd/MM/yyyy HH:mm:ss"` no PowerShell). Deve existir **apenas UMA** etiqueta de versão no sistema. Não concluir nenhuma tarefa sem atualizar a etiqueta.
-8. **Testes no Navegador**: NÃO abrir o navegador para testes, a menos que solicitado explicitamente pelo usuário. O usuário realizará os testes manualmente para agilizar as entregas.
-9. **Subir servidores locais**: Quando o usuário pedir para rodar/iniciar/subir o projeto localmente, verificar primeiro se as portas 3002 e 3005 já estão em uso (`netstat -ano | findstr "3002 3005"`). Se não estiverem, executar `cd d:\DEV_WEB\nexdojo && npm run dev:all`. Nunca subir o servidor para testes sem o usuário pedir explicitamente.
+1. **Porta local**: NUNCA usar as portas `3000` ou `3001` neste projeto. Sempre `3002` (frontend) e `3005` (API).
+2. **Portas no servidor QAS**: Ver seção 4 para a lista completa de portas reservadas. Para novos serviços (ex: backend), usar portas a partir de **3006** em diante (verificar disponibilidade antes).
+3. **Diretório**: Todo código do projeto fica em `d:\DEV_WEB\nexdojo`.
+4. **Stack**: Não sugerir nem instalar outras bibliotecas de UI sem aprovação explícita do usuário.
+5. **Deploy**: Ver seção 5 (deploy via SSH + docker compose no servidor QAS).
+6. **Commits**: Seguir o padrão definido na seção 3.
+7. **Frequência de Commit**: SÓ realizar commits quando o usuário solicitar explicitamente.
+8. **Tag de Versão QAS**: **A CADA ALTERAÇÃO DE CÓDIGO** feita no projeto, você DEVE obrigatoriamente atualizar a etiqueta de versão localizada em `src/components/layout/AppLayout.tsx`, dentro da div com comentário `{/* Version tag */}`. Substitua o texto `VERSÃO QAS DD/MM/AAAA HH:MM:SS` com a data e hora reais do sistema (usar `Get-Date -Format "dd/MM/yyyy HH:mm:ss"` no PowerShell). Deve existir **apenas UMA** etiqueta de versão no sistema. Não concluir nenhuma tarefa sem atualizar a etiqueta.
+9. **Testes no Navegador**: NÃO abrir o navegador para testes, a menos que solicitado explicitamente pelo usuário. O usuário realizará os testes manualmente para agilizar as entregas.
+10. **Subir servidores locais**: Quando o usuário pedir para rodar/iniciar/subir o projeto localmente, verificar primeiro se as portas 3002 e 3005 já estão em uso (`netstat -ano | findstr "3002 3005"`). Se não estiverem, executar `cd d:\DEV_WEB\nexdojo && npm run dev:all`. Nunca subir o servidor para testes sem o usuário pedir explicitamente.
 
 ---
 
-## 9. Observações Adicionais
+## 10. Observações Adicionais
 
 ```
 <!-- Espaço livre para anotações, gotchas, bugs conhecidos, etc. -->
