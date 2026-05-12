@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:all": "concurrently --names \"API,FE\" --prefix-colors \"cyan,magenta\" \"npm run dev --prefix api\" \"vite\"",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
@@ -41,6 +42,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.0.0",
+    "concurrently": "^9.2.1",
     "eslint": "^10.3.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
