@@ -92,8 +92,7 @@ const compressImage = (base64Str: string, maxWidth = 400, maxHeight = 400): Prom
   });
 };
 
-const PrintHeader: React.FC<{ title: string }> = ({ title }) => {
-  const academy = StorageService.getAcademy();
+const PrintHeader: React.FC<{ title: string; academy: Academy }> = ({ title, academy }) => {
   return (
     <div className="hidden print:block mb-8 border-b-2 border-slate-900 pb-6">
       <div className="flex justify-between items-center">
@@ -567,7 +566,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 relative">
-      <PrintHeader title="Listagem Geral de Atletas" />
+      <PrintHeader title="Listagem Geral de Atletas" academy={academy} />
       
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print px-1">
         <div>

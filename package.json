@@ -1,32 +1,59 @@
 {
-  "name": "projeto-pronto",
+  "name": "nexdojo",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "lint": "tsc --noEmit",
-    "preview": "vite preview"
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "format": "prettier --write src",
+    "format:check": "prettier --check src"
   },
   "dependencies": {
     "@google/genai": "^1.51.0",
+    "@hookform/resolvers": "^5.2.2",
     "@tailwindcss/vite": "^4.2.1",
+    "@tanstack/react-query": "^5.100.10",
+    "axios": "^1.16.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.563.0",
     "motion": "^12.38.0",
+    "msw": "^2.14.6",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-hook-form": "^7.75.0",
     "react-router-dom": "^7.13.0",
     "recharts": "^3.7.0",
-    "tailwindcss": "^4.2.1"
+    "tailwindcss": "^4.2.1",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@tanstack/react-query-devtools": "^5.100.10",
     "@types/node": "^22.14.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.0.0",
+    "eslint": "^10.3.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.6.0",
+    "prettier": "^3.8.3",
     "typescript": "~5.8.2",
+    "typescript-eslint": "^8.59.2",
     "vite": "^6.2.0"
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
   }
 }

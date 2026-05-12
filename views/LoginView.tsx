@@ -1,5 +1,6 @@
 
 import React, { useState, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { User, Academy, Student, Instructor, Staff, Belt, ChatMessage } from '../types';
 import { StorageService } from '../services/storage';
 import { useTranslation } from '../services/LanguageContext';
@@ -79,7 +80,28 @@ type AuthView = 'login' | 'choice' | 'signup-academy' | 'signup-student' | 'sign
 
 const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const { t, showNotification } = useTranslation();
-  const [view, setView] = useState<AuthView>('login');
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+
+  const view: AuthView =
+    pathname === '/login/esqueci-senha' ? 'forgot-password' :
+    pathname.startsWith('/login/cadastro/academia') ? 'signup-academy' :
+    pathname.startsWith('/login/cadastro/aluno') ? 'signup-student' :
+    pathname.startsWith('/login/cadastro/instrutor') ? 'signup-instructor' :
+    pathname.startsWith('/login/cadastro') ? 'choice' :
+    'login';
+
+  const setView = (v: AuthView) => {
+    const paths: Record<AuthView, string> = {
+      login: '/login',
+      'forgot-password': '/login/esqueci-senha',
+      choice: '/login/cadastro',
+      'signup-academy': '/login/cadastro/academia',
+      'signup-student': '/login/cadastro/aluno',
+      'signup-instructor': '/login/cadastro/instrutor',
+    };
+    navigate(paths[v]);
+  };
   const [email, setEmail] = useState('admin@oss.com');
   const [password, setPassword] = useState('oss123');
   const [forgotEmail, setForgotEmail] = useState('');

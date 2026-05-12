@@ -1,0 +1,95 @@
+import React, { Suspense } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { Spinner } from '@/components/ui';
+import { PrivateRoute } from '@/app/PrivateRoute';
+import { RoleGuard } from '@/app/RoleGuard';
+import { AppLayoutRoute } from '@/app/AppLayoutRoute';
+
+const LoginPage            = React.lazy(() => import('@/pages/LoginPage'));
+const DashboardPage        = React.lazy(() => import('@/pages/DashboardPage'));
+const StudentsPage         = React.lazy(() => import('@/pages/StudentsPage'));
+const InstructorsPage      = React.lazy(() => import('@/pages/InstructorsPage'));
+const StaffPage            = React.lazy(() => import('@/pages/StaffPage'));
+const AttendancePage       = React.lazy(() => import('@/pages/AttendancePage'));
+const FinancesPage         = React.lazy(() => import('@/pages/FinancesPage'));
+const TemplatesPage        = React.lazy(() => import('@/pages/TemplatesPage'));
+const SchedulesPage        = React.lazy(() => import('@/pages/SchedulesPage'));
+const CalendarPage         = React.lazy(() => import('@/pages/CalendarPage'));
+const ChatPage             = React.lazy(() => import('@/pages/ChatPage'));
+const InventoryPage        = React.lazy(() => import('@/pages/InventoryPage'));
+const ReportsPage          = React.lazy(() => import('@/pages/ReportsPage'));
+const RecycleBinPage       = React.lazy(() => import('@/pages/RecycleBinPage'));
+const SettingsPage         = React.lazy(() => import('@/pages/SettingsPage'));
+const StudentProfilePage   = React.lazy(() => import('@/pages/StudentProfilePage'));
+const InstructorProfilePage = React.lazy(() => import('@/pages/InstructorProfilePage'));
+const PaymentPage          = React.lazy(() => import('@/pages/PaymentPage'));
+
+const PageLoader: React.FC = () => (
+  <div className="flex items-center justify-center h-full min-h-[200px]">
+    <Spinner size="lg" className="text-indigo-500" />
+  </div>
+);
+
+const App: React.FC = () => (
+  <Suspense fallback={<PageLoader />}>
+    <Routes>
+      {/* Public */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/login/esqueci-senha" element={<LoginPage />} />
+      <Route path="/login/cadastro" element={<LoginPage />} />
+      <Route path="/login/cadastro/academia" element={<LoginPage />} />
+      <Route path="/login/cadastro/aluno" element={<LoginPage />} />
+      <Route path="/login/cadastro/instrutor" element={<LoginPage />} />
+
+      {/* Protected — requires auth */}
+      <Route element={<PrivateRoute />}>
+        <Route element={<AppLayoutRoute />}>
+
+          {/* All authenticated roles */}
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/schedules"  element={<SchedulesPage />} />
+          <Route path="/calendar"   element={<CalendarPage />} />
+          <Route path="/chat"       element={<ChatPage />} />
+          <Route path="/inventory"  element={<InventoryPage />} />
+          <Route path="/settings"   element={<SettingsPage />} />
+
+          {/* Admin + Instructor */}
+          <Route element={<RoleGuard roles={['superuser', 'admin', 'instructor']} />}>
+            <Route path="/attendance" element={<AttendancePage />} />
+            <Route path="/templates"  element={<TemplatesPage />} />
+          </Route>
+
+          {/* Admin + Instructor + Staff */}
+          <Route element={<RoleGuard roles={['superuser', 'admin', 'instructor', 'staff']} />}>
+            <Route path="/students" element={<StudentsPage />} />
+          </Route>
+
+          {/* Admin only */}
+          <Route element={<RoleGuard roles={['superuser', 'admin']} />}>
+            <Route path="/finances"    element={<FinancesPage />} />
+            <Route path="/instructors" element={<InstructorsPage />} />
+            <Route path="/staff"       element={<StaffPage />} />
+            <Route path="/reports"     element={<ReportsPage />} />
+            <Route path="/recycle-bin" element={<RecycleBinPage />} />
+          </Route>
+
+          {/* Student only */}
+          <Route element={<RoleGuard roles={['student']} />}>
+            <Route path="/profile" element={<StudentProfilePage />} />
+            <Route path="/pay"     element={<PaymentPage />} />
+          </Route>
+
+          {/* Instructor / Staff only */}
+          <Route element={<RoleGuard roles={['instructor', 'staff']} />}>
+            <Route path="/instructor-profile" element={<InstructorProfilePage />} />
+          </Route>
+
+          {/* Catch-all */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Route>
+    </Routes>
+  </Suspense>
+);
+
+export default App;

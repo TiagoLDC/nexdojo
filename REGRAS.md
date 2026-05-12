@@ -177,7 +177,7 @@ GEMINI_API_KEY=<!-- PREENCHER -->
 4. **Deploy**: Ver seção 4 (deploy via SSH + docker compose no servidor QAS).
 5. **Commits**: Seguir o padrão definido na seção 3.
 6. **Frequência de Commit**: SÓ realizar commits quando o usuário solicitar explicitamente.
-7. **Tag de Versão QAS**: Antes de cada conclusão de tarefa ou deploy, você DEVE atualizar a tag de versão no arquivo `src/components/layout/Layout.tsx` (linha ~111) com a data e hora atual do sistema no formato: `VERSÃO QAS DD/MM/AAAA HH:MM:SS`. Certifique-se de manter apenas UMA tag de versão ativa no sistema (atualmente centralizada no topo).
+7. **Tag de Versão QAS**: **A CADA ALTERAÇÃO DE CÓDIGO** feita no projeto, você DEVE obrigatoriamente atualizar a etiqueta de versão localizada em `src/components/layout/AppLayout.tsx`, dentro da div com comentário `{/* Version tag */}`. Substitua o texto `VERSÃO QAS DD/MM/AAAA HH:MM:SS` com a data e hora reais do sistema (usar `Get-Date -Format "dd/MM/yyyy HH:mm:ss"` no PowerShell). Deve existir **apenas UMA** etiqueta de versão no sistema. Não concluir nenhuma tarefa sem atualizar a etiqueta.
 8. **Testes no Navegador**: NÃO abrir o navegador para testes, a menos que solicitado explicitamente pelo usuário. O usuário realizará os testes manualmente para agilizar as entregas.
 9. **Subir servidores locais**: Quando o usuário pedir para rodar/iniciar/subir o projeto localmente, verificar primeiro se as portas 3002 e 3005 já estão em uso (`netstat -ano | findstr "3002 3005"`). Se não estiverem, executar `cd d:\DEV_WEB\nexdojo && npm run dev:all`. Nunca subir o servidor para testes sem o usuário pedir explicitamente.
 
@@ -191,4 +191,4 @@ GEMINI_API_KEY=<!-- PREENCHER -->
 
 ---
 
-*Última atualização: 08/05/2026*
+*Última atualização: 12/05/2026*
