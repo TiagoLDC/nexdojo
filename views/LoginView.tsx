@@ -199,7 +199,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     const academyEmail = StorageService.getAcademyById(academyId)?.email || 'contato@ct.com';
     const typeLabel = type === 'student' ? 'Aluno' : type === 'instructor' ? 'Instrutor' : 'Colaborador';
     const subject = encodeURIComponent(`[OSS] Novo Cadastro de ${typeLabel}`);
-    const body = encodeURIComponent(`Olá Professor/Adm,\n\nUm novo cadastro foi realizado no sistema ${MOCK_ACADEMY.name}:\n\nNome: ${name}\nTipo: ${typeLabel.toUpperCase()}\nData: ${new Date().toLocaleDateString()}\n\nAcesse o sistema para validar a ficha.\n\nOSS!`);
+    const body = encodeURIComponent(`Olá Instrutor/Adm,\n\nUm novo cadastro foi realizado no sistema ${MOCK_ACADEMY.name}:\n\nNome: ${name}\nTipo: ${typeLabel.toUpperCase()}\nData: ${new Date().toLocaleDateString()}\n\nAcesse o sistema para validar a ficha.\n\nOSS!`);
     
     window.open(`mailto:${academyEmail}?subject=${subject}&body=${body}`, '_blank');
   };
@@ -487,7 +487,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               )}
             </div>
             <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic leading-none">{academyData.name || MOCK_ACADEMY.name}</h1>
-            <p className="text-slate-400 mt-3 font-bold text-xs uppercase tracking-[0.3em] opacity-80">O LEGADO CONTINUA</p>
+            <p className="text-slate-400 mt-3 font-bold text-xs uppercase tracking-[0.3em] opacity-80">{t.legacyContinues}</p>
           </div>
         )}
 
@@ -497,23 +497,23 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-4 flex items-start gap-3">
               <div className="bg-amber-500/20 p-2 rounded-xl"><Info className="text-amber-500" size={20} /></div>
               <div>
-                <p className="text-xs font-bold text-slate-300 uppercase tracking-widest">Modo Demonstração</p>
-                <p className="text-xs text-slate-400 mt-1 italic">Utilize admin@oss.com / oss123</p>
+                <p className="text-xs font-bold text-slate-300 uppercase tracking-widest">{t.demoMode}</p>
+                <p className="text-xs text-slate-400 mt-1 italic">{t.demoCredentials}</p>
               </div>
             </div>
 
             <form onSubmit={handleLogin} className="bg-white dark:bg-slate-900 rounded-[40px] p-8 md:p-10 shadow-2xl space-y-6 animate-in fade-in zoom-in duration-300">
-              <h2 className="text-2xl font-black text-slate-800 dark:text-white text-center tracking-tight">Acesse seu Portal</h2>
+              <h2 className="text-2xl font-black text-slate-800 dark:text-white text-center tracking-tight">{t.accessPortal}</h2>
               <div className="space-y-4">
                 <Input label="E-mail" type="email" value={email} onChange={setEmail} placeholder="professor@oss.com" icon={<Mail size={18} />} />
                 <Input label="Senha" type="password" value={password} onChange={setPassword} placeholder="••••••••" icon={<Lock size={18} />} />
               </div>
               <button type="submit" className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95">
-                Entrar no Tatame <ArrowRight size={20} />
+                {t.enterMat} <ArrowRight size={20} />
               </button>
               <div className="pt-2 flex flex-col items-center gap-3">
-                <button type="button" onClick={() => setView('forgot-password')} className="text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">Esqueci minha senha</button>
-                <button type="button" onClick={() => setView('choice')} className="text-sm font-bold text-indigo-600 hover:text-indigo-400 transition-colors">Novo por aqui? Cadastre-se</button>
+                <button type="button" onClick={() => setView('forgot-password')} className="text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">{t.forgotPasswordLabel}</button>
+                <button type="button" onClick={() => setView('choice')} className="text-sm font-bold text-indigo-600 hover:text-indigo-400 transition-colors">{t.newHereSignUp}</button>
               </div>
             </form>
           </div>
@@ -523,15 +523,15 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         {view === 'forgot-password' && (
           <div className="max-w-md mx-auto space-y-6 animate-in fade-in zoom-in duration-300">
             <button onClick={() => { setView('login'); setForgotStep(1); }} className="text-white flex items-center gap-2 mb-4 hover:text-indigo-400 transition-colors font-bold text-xs uppercase tracking-[0.2em]">
-              <ChevronLeft size={18} /> Voltar ao Login
+              <ChevronLeft size={18} /> {t.backToLogin}
             </button>
             
             <div className="bg-white dark:bg-slate-900 rounded-[40px] p-8 md:p-10 shadow-2xl space-y-6">
               {forgotStep === 1 ? (
                 <>
                   <div className="text-center space-y-2">
-                    <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Criar ou Recuperar Senha</h2>
-                    <p className="text-sm text-slate-400 font-medium leading-relaxed">Insira seu e-mail cadastrado pelo seu professor ou academia para definir sua senha de acesso.</p>
+                    <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">{t.createOrRecoverPassword}</h2>
+                    <p className="text-sm text-slate-400 font-medium leading-relaxed">{t.enterRegisteredEmail}</p>
                   </div>
 
                   <div className="space-y-4">
@@ -548,31 +548,31 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   <button 
                     onClick={() => {
                       if (!forgotEmail) {
-                        showNotification("Por favor, insira seu e-mail.", 'error');
+                        showNotification(t.enterEmailPlease, 'error');
                         return;
                       }
-                      
+
                       const allUsers = StorageService.getUsers();
                       const user = allUsers.find(u => u.email.toLowerCase() === forgotEmail.toLowerCase());
-                      
+
                       if (!user) {
-                        showNotification("E-mail não encontrado no sistema. Verifique com seu professor.", 'error');
+                        showNotification(t.emailNotFound, 'error');
                         return;
                       }
-                      
+
                       setForgotStep(2);
-                      showNotification("E-mail validado! Agora defina sua nova senha.");
+                      showNotification(t.emailValidated);
                     }} 
                     className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95"
                   >
-                    Validar E-mail <ArrowRight size={20} />
+                    {t.validateEmail} <ArrowRight size={20} />
                   </button>
                 </>
               ) : (
                 <>
                   <div className="text-center space-y-2">
-                    <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Definir Senha</h2>
-                    <p className="text-sm text-slate-400 font-medium leading-relaxed">Crie uma senha forte para acessar seu portal.</p>
+                    <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">{t.setPasswordTitle}</h2>
+                    <p className="text-sm text-slate-400 font-medium leading-relaxed">{t.createStrongPassword}</p>
                   </div>
 
                   <div className="space-y-4">
@@ -597,11 +597,11 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   <button 
                     onClick={() => {
                       if (newPassword.length < 4) {
-                        showNotification("A senha deve ter pelo menos 4 caracteres.", 'error');
+                        showNotification(t.passwordTooShort, 'error');
                         return;
                       }
                       if (newPassword !== confirmPassword) {
-                        showNotification("As senhas não coincidem.", 'error');
+                        showNotification(t.passwordsMismatch, 'error');
                         return;
                       }
 
@@ -618,7 +618,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                         StorageService.saveUsers(updatedUsers, user.academyId);
                       }
                       
-                      showNotification("Senha definida com sucesso! Agora você já pode entrar.");
+                      showNotification(t.passwordSetSuccess);
                       setView('login');
                       setForgotStep(1);
                       setEmail(forgotEmail);
@@ -626,7 +626,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                     }} 
                     className="w-full py-5 bg-green-600 hover:bg-green-500 text-white font-black rounded-2xl shadow-xl shadow-green-600/20 transition-all flex items-center justify-center gap-2 active:scale-95"
                   >
-                    Salvar e Entrar <Trophy size={20} />
+                    {t.saveAndEnter} <Trophy size={20} />
                   </button>
                 </>
               )}
@@ -641,9 +641,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               <ChevronLeft size={18} /> Voltar ao Login
             </button>
             <div className={`grid grid-cols-1 ${isFromSharedLink ? 'sm:grid-cols-2' : 'sm:grid-cols-3'} gap-4`}>
-              {!isFromSharedLink && <ChoiceCard icon={<Trophy size={28} />} title="Nova Academia" desc="Para professores e gestores." onClick={() => setView('signup-academy')} />}
+              {!isFromSharedLink && <ChoiceCard icon={<Trophy size={28} />} title="Nova Academia" desc="Para instrutores e gestores." onClick={() => setView('signup-academy')} />}
               <ChoiceCard icon={<Users size={28} />} title="Sou Aluno" desc="Fazer matrícula agora." onClick={() => setView('signup-student')} />
-              <ChoiceCard icon={<Award size={28} />} title="Sou Instrutor" desc="Ficha técnica do mestre." onClick={() => setView('signup-instructor')} />
+              <ChoiceCard icon={<Award size={28} />} title="Sou Instrutor" desc="Ficha técnica do instrutor." onClick={() => setView('signup-instructor')} />
             </div>
           </div>
         )}
@@ -763,7 +763,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                 <AlertCircle className="text-amber-500 shrink-0" size={24} />
                 <div>
                   <h4 className="font-black text-amber-800 dark:text-amber-400 text-sm uppercase tracking-tight">Link da Unidade Necessário</h4>
-                  <p className="text-amber-700/70 dark:text-amber-500/60 text-xs font-bold mt-1">Para realizar sua matrícula, você deve utilizar o link oficial enviado pela sua academia. Caso não possua, solicite-o ao seu professor. OSS!</p>
+                  <p className="text-amber-700/70 dark:text-amber-500/60 text-xs font-bold mt-1">Para realizar sua matrícula, você deve utilizar o link oficial enviado pela sua academia. Caso não possua, solicite-o ao seu instrutor. OSS!</p>
                 </div>
               </div>
             )}
@@ -940,7 +940,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               <div className="flex items-center gap-4">
                 <div className="bg-slate-900 dark:bg-slate-800 p-3 rounded-2xl text-white shadow-lg"><Award size={28} /></div>
                 <div>
-                  <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Ficha do Professor</h2>
+                  <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Ficha do Instrutor</h2>
                   <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Corpo Docente</p>
                 </div>
               </div>
@@ -985,7 +985,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               </div>
 
               <div className="space-y-8">
-                <SectionHeader icon={<UserIcon size={16} />} title="Dados do Professor" />
+                <SectionHeader icon={<UserIcon size={16} />} title="Dados do Instrutor" />
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="md:col-span-2">
                     <Input label="Nome Completo" required value={instructorData.name || ''} onChange={v => setInstructorData({...instructorData, name: v})} placeholder="Ex: Prof. Hélio" />

@@ -29,7 +29,7 @@ export const instructorsHandlers = [
   http.get(`${API}/instructors/:id`, async ({ params }) => {
     await delay(100);
     const item = db.instructors.getById(params.id as string);
-    if (!item) return HttpResponse.json({ message: 'Mestre não encontrado.' }, { status: 404 });
+    if (!item) return HttpResponse.json({ message: 'Instrutor não encontrado.' }, { status: 404 });
     return HttpResponse.json(item);
   }),
 
@@ -44,14 +44,14 @@ export const instructorsHandlers = [
     await delay(200);
     const body = (await request.json()) as UpdateInstructorDTO;
     const updated = db.instructors.update(params.id as string, body);
-    if (!updated) return HttpResponse.json({ message: 'Mestre não encontrado.' }, { status: 404 });
+    if (!updated) return HttpResponse.json({ message: 'Instrutor não encontrado.' }, { status: 404 });
     return HttpResponse.json(updated);
   }),
 
   http.delete(`${API}/instructors/:id`, async ({ params }) => {
     await delay(200);
     const deleted = db.instructors.delete(params.id as string);
-    if (!deleted) return HttpResponse.json({ message: 'Mestre não encontrado.' }, { status: 404 });
+    if (!deleted) return HttpResponse.json({ message: 'Instrutor não encontrado.' }, { status: 404 });
     db.recycleBin.add({ academyId: deleted.academyId, type: 'instructor', originalData: deleted });
     return new HttpResponse(null, { status: 204 });
   }),
@@ -60,7 +60,7 @@ export const instructorsHandlers = [
     await delay(200);
     const { newBelt, newStripes, date, instructorId, notes } = (await request.json()) as GraduateStudentDTO;
     const item = db.instructors.getById(params.id as string);
-    if (!item) return HttpResponse.json({ message: 'Mestre não encontrado.' }, { status: 404 });
+    if (!item) return HttpResponse.json({ message: 'Instrutor não encontrado.' }, { status: 404 });
     const historyItem = { id: db.uid(), previousBelt: item.belt, newBelt, previousStripes: item.stripes, newStripes, date, instructorId, notes };
     const updated = db.instructors.update(params.id as string, {
       belt: newBelt, stripes: newStripes, lastGraduationDate: date,
@@ -73,7 +73,7 @@ export const instructorsHandlers = [
     await delay(300);
     const body = (await request.json()) as AddDocumentDTO;
     const item = db.instructors.getById(params.id as string);
-    if (!item) return HttpResponse.json({ message: 'Mestre não encontrado.' }, { status: 404 });
+    if (!item) return HttpResponse.json({ message: 'Instrutor não encontrado.' }, { status: 404 });
     const doc = { ...body, id: db.uid(), uploadedAt: db.now() };
     const updated = db.instructors.update(params.id as string, { documents: [...(item.documents ?? []), doc] });
     return HttpResponse.json(updated);
@@ -82,7 +82,7 @@ export const instructorsHandlers = [
   http.delete(`${API}/instructors/:id/documents/:docId`, async ({ params }) => {
     await delay(150);
     const item = db.instructors.getById(params.id as string);
-    if (!item) return HttpResponse.json({ message: 'Mestre não encontrado.' }, { status: 404 });
+    if (!item) return HttpResponse.json({ message: 'Instrutor não encontrado.' }, { status: 404 });
     const updated = db.instructors.update(params.id as string, {
       documents: (item.documents ?? []).filter((d) => d.id !== params.docId),
     });

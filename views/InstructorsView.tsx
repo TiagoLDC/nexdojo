@@ -65,7 +65,7 @@ const compressImage = (base64Str: string, maxWidth = 400, maxHeight = 400): Prom
 };
 
 const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
-  const { t, language, showNotification } = useTranslation();
+  const { t, showNotification } = useTranslation();
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -179,9 +179,9 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
 
       setIsEditModalOpen(false);
       setEditingInstructor(null);
-      showNotification(exists ? "Ficha atualizada!" : "Professor cadastrado com sucesso!");
+      showNotification(exists ? t.profileUpdated : t.instructorAdded);
     } catch (e) {
-      showNotification("Erro ao salvar. Tente remover arquivos pesados.", 'error');
+      showNotification(t.savingError, 'error');
     }
   };
 
@@ -196,13 +196,13 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
     setIsDeleteModalOpen(false);
     setIsEditModalOpen(false);
     setEditingInstructor(null);
-    showNotification("Professor removido.", 'delete');
+    showNotification(t.instructorDeleted, 'delete');
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !editingInstructor) return;
-    if (file.size > 2000000) { alert("Limite de 2MB por arquivo."); return; }
+    if (file.size > 2000000) { alert(t.fileSizeLimit); return; }
 
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -218,7 +218,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
         ...editingInstructor,
         documents: [...(editingInstructor.documents || []), newDoc]
       });
-      showNotification("Arquivo anexado!");
+      showNotification(t.fileAttached);
     };
     reader.readAsDataURL(file);
   };
@@ -238,7 +238,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
       ...editingInstructor,
       documents: editingInstructor.documents?.filter(d => d.id !== docId) || []
     });
-    showNotification("Documento removido.", 'delete');
+    showNotification(t.documentRemoved, 'delete');
   };
 
   const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -264,15 +264,15 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
     <div className="max-w-4xl mx-auto space-y-6 relative">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Instrutores</h1>
-          <p className="text-slate-500">Gestão completa do corpo docente.</p>
+          <h1 className="text-2xl font-bold text-slate-800">{t.instructors}</h1>
+          <p className="text-slate-500">{t.instructorSubtitle}</p>
         </div>
         <button 
           onClick={handleOpenNewInstructor}
           className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg transition-all"
         >
           <UserPlus size={20} />
-          Novo Professor
+          {t.newInstructor}
         </button>
       </header>
 
@@ -281,7 +281,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
           <input 
             type="text" 
-            placeholder="Buscar por nome..."
+            placeholder={t.searchByName}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-white border border-slate-200 rounded-2xl pl-12 pr-4 py-4 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
@@ -296,10 +296,10 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
             onChange={(e) => setStatusFilter(e.target.value)}
             className="text-xs font-bold text-slate-700 outline-none bg-transparent"
           >
-            <option value="All">Todos</option>
-            <option value="Active">Ativos</option>
-            <option value="Inactive">Inativos</option>
-            <option value="Pending">Pendentes</option>
+            <option value="All">{t.all}</option>
+            <option value="Active">{t.activeTitle}</option>
+            <option value="Inactive">{t.inactiveTitle}</option>
+            <option value="Pending">{t.pendingTitle}</option>
           </select>
         </div>
       </div>
@@ -318,11 +318,11 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                   )}
                 </div>
                 <div>
-                  <div className="font-bold text-slate-800 text-sm">{instructor.name || "Sem nome"}</div>
+                  <div className="font-bold text-slate-800 text-sm">{instructor.name || t.noName}</div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <BeltBadge belt={instructor.belt} stripes={instructor.stripes} />
                     <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-black uppercase ${instructor.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}`}>
-                      {instructor.status === 'Active' ? 'Ativo' : 'Inativo'}
+                      {instructor.status === 'Active' ? t.activeTitle : t.inactiveTitle}
                     </span>
                   </div>
                 </div>
@@ -422,7 +422,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
         </div>
       </div>
 
-      {/* Modal Unificado: Ficha do Professor */}
+      {/* Modal Unificado: Ficha do Instrutor */}
       {isEditModalOpen && editingInstructor && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-0 md:p-4">
           <div className="bg-white w-full max-w-4xl rounded-t-3xl md:rounded-3xl p-6 md:p-8 animate-in slide-in-from-bottom duration-300 max-h-[95vh] overflow-y-auto">
@@ -472,7 +472,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                   <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2">
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">{t.fullName} <span className="text-red-500">*</span></label>
-                      <input type="text" value={editingInstructor.name} onChange={(e) => setEditingInstructor({...editingInstructor, name: e.target.value})} placeholder="Ex: Professor Hélio Gracie" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-medium" />
+                      <input type="text" value={editingInstructor.name} onChange={(e) => setEditingInstructor({...editingInstructor, name: e.target.value})} placeholder="Ex: Instrutor Hélio Gracie" className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-medium" />
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">{t.birthDate} <span className="text-red-500">*</span></label>
@@ -481,7 +481,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">{t.gender}</label>
                       <select value={editingInstructor.gender || ''} onChange={(e) => setEditingInstructor({...editingInstructor, gender: e.target.value as any})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-medium text-slate-700">
-                        <option value="">{t.filter}</option>
+                        <option value="">{t.select}</option>
                         <option value="M">{t.male}</option>
                         <option value="F">{t.female}</option>
                         <option value="Outro">{t.other}</option>
@@ -644,7 +644,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                 {/* Histórico de Graduação */}
                 <div className="mt-6 bg-slate-50/50 rounded-2xl p-4 border border-slate-100">
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{language === 'pt' ? 'Histórico de Graduações' : 'Graduation History'}</h4>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{t.graduationHistory}</h4>
                     <button 
                       onClick={() => {
                         const newItem: GraduationHistoryItem = {
@@ -690,7 +690,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                          </div>
                       ))
                     ) : (
-                      <p className="text-[10px] text-slate-400 text-center py-4 italic">{language === 'pt' ? 'Nenhuma graduação registrada.' : 'No graduations recorded.'}</p>
+                      <p className="text-[10px] text-slate-400 text-center py-4 italic">{t.noGraduationsRecorded}</p>
                     )}
                   </div>
                 </div>
@@ -739,7 +739,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                 <h3 className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
                   <Activity size={14} /> {t.healthInfo}
                 </h3>
-                <textarea rows={3} placeholder="Alergias, cirurgias recentes ou condições crônicas que o mestre possua..." value={editingInstructor.medicalNotes || ''} onChange={(e) => setEditingInstructor({...editingInstructor, medicalNotes: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-4 outline-none font-medium text-sm focus:ring-2 focus:ring-indigo-500" />
+                <textarea rows={3} placeholder={t.healthPlaceholder} value={editingInstructor.medicalNotes || ''} onChange={(e) => setEditingInstructor({...editingInstructor, medicalNotes: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-4 outline-none font-medium text-sm focus:ring-2 focus:ring-indigo-500" />
               </div>
 
               {/* Botões de Ação */}

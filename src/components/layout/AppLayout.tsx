@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
+import { useTranslation } from '@/hooks/useTranslation';
 import { Toast } from '@/components/ui/Toast';
 import { Sidebar } from './Sidebar';
 import { MobileHeader } from './MobileHeader';
@@ -15,6 +16,7 @@ interface AppLayoutProps {
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { user, academy } = useAuthStore();
   const { sidebarCollapsed } = useUIStore();
+  const { t } = useTranslation();
   const [inputFocused, setInputFocused] = useState(false);
 
   useEffect(() => {
@@ -43,7 +45,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       {/* Version tag */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
         <div className="bg-amber-400 text-amber-950 text-[8px] font-black uppercase tracking-widest px-3 py-px rounded-b-lg select-none shadow-sm">
-          VERSÃO QAS 12/05/2026 08:55:00
+          VERSÃO QAS 12/05/2026 10:02:07
         </div>
       </div>
 
@@ -68,18 +70,18 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 <ShieldCheck size={22} />
               </div>
               <div>
-                <h3 className="font-black text-xs uppercase tracking-tight">Modo de Gestão Master Ativo</h3>
+                <h3 className="font-black text-xs uppercase tracking-tight">{t.activeMasterMode}</h3>
                 <p className="text-[10px] opacity-90 font-bold uppercase tracking-widest">
                   {academy ? (
-                    <>Gerenciando: <span className="text-white underline">{academy.name}</span></>
+                    <>{t.managing} <span className="text-white underline">{academy.name}</span></>
                   ) : (
-                    'Nenhuma unidade selecionada'
+                    t.noUnitSelected
                   )}
                 </p>
               </div>
             </div>
             <div className="bg-white text-indigo-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest animate-pulse">
-              {academy ? 'Unidade Selecionada' : 'Seleção Pendente'}
+              {academy ? t.unitSelected : t.pendingSelection}
             </div>
           </div>
         )}
