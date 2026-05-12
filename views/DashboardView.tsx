@@ -937,12 +937,12 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
               <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto">
                 <div className="hidden lg:block bg-slate-50 dark:bg-slate-800 px-4 py-3 rounded-2xl border border-slate-100 dark:border-slate-800 max-w-[200px] xl:max-w-[250px]">
                   <p className="text-[9px] font-mono text-slate-400 truncate tracking-tighter">
-                    {`${window.location.origin}/#/login?academyId=${academy.id}`}
+                    {`${window.location.origin}/login/${academy.alias || academy.id}`}
                   </p>
                 </div>
-                <button 
+                <button
                   onClick={() => {
-                    const link = `${window.location.origin}/#/login?academyId=${academy.id}`;
+                    const link = `${window.location.origin}/login/${academy.alias || academy.id}`;
                     navigator.clipboard.writeText(link);
                     showNotification(t.linkCopied, 'success');
                   }}
@@ -951,8 +951,8 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                 >
                   <Plus size={18} className="sm:size-[20px]" />
                 </button>
-                <a 
-                  href={`https://wa.me/?text=${encodeURIComponent(t.whatsappShareText.replace('{academy}', academy.name).replace('{link}', `${window.location.origin}/#/login?academyId=${academy.id}`))}`}
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(t.whatsappShareText.replace('{academy}', academy.name).replace('{link}', `${window.location.origin}/login/${academy.alias || academy.id}`))}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 md:flex-none bg-[#25D366] hover:bg-[#128C7E] text-white px-5 sm:px-8 py-3.5 sm:py-4 rounded-2xl font-black text-[10px] sm:text-xs uppercase tracking-widest flex items-center justify-center gap-2 sm:gap-3 shadow-lg shadow-green-500/20 transition-all active:scale-95"

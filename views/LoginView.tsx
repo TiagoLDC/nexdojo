@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { User, Academy, Student, Instructor, Staff, Belt, ChatMessage } from '../types';
 import { StorageService } from '../services/storage';
 import { useTranslation } from '../services/LanguageContext';
@@ -90,23 +90,25 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const { t, showNotification } = useTranslation();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { alias } = useParams<{ alias?: string }>();
 
   const view: AuthView =
-    pathname === '/login/esqueci-senha' ? 'forgot-password' :
-    pathname.startsWith('/login/cadastro/academia') ? 'signup-academy' :
-    pathname.startsWith('/login/cadastro/aluno') ? 'signup-student' :
-    pathname.startsWith('/login/cadastro/instrutor') ? 'signup-instructor' :
-    pathname.startsWith('/login/cadastro') ? 'choice' :
+    pathname.includes('/esqueci-senha') ? 'forgot-password' :
+    pathname.includes('/cadastro/academia') ? 'signup-academy' :
+    pathname.includes('/cadastro/aluno') ? 'signup-student' :
+    pathname.includes('/cadastro/instrutor') ? 'signup-instructor' :
+    pathname.includes('/cadastro') ? 'choice' :
     'login';
 
   const setView = (v: AuthView) => {
+    const base = alias ? `/login/${alias}` : '/login';
     const paths: Record<AuthView, string> = {
-      login: '/login',
-      'forgot-password': '/login/esqueci-senha',
-      choice: '/login/cadastro',
+      login: base,
+      'forgot-password': `${base}/esqueci-senha`,
+      choice: `${base}/cadastro`,
       'signup-academy': '/login/cadastro/academia',
-      'signup-student': '/login/cadastro/aluno',
-      'signup-instructor': '/login/cadastro/instrutor',
+      'signup-student': `${base}/cadastro/aluno`,
+      'signup-instructor': `${base}/cadastro/instrutor`,
     };
     navigate(paths[v]);
   };
@@ -119,6 +121,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [isFromSharedLink, setIsFromSharedLink] = useState(false);
+  const [linkedAcademy, setLinkedAcademy] = useState<Academy | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
 
@@ -129,27 +132,42 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     }
   }, [view]);
 
-  // Detecção de AcademyId via URL para branding e pré-seleção
+  // Detecção de academia via alias de rota OU query param legado ?academyId=
   React.useEffect(() => {
-    const params = new URLSearchParams(window.location.search || window.location.hash.split('?')[1]);
-    const academyIdFromUrl = params.get('academyId');
-    
-    if (academyIdFromUrl) {
-      const found = StorageService.getAcademyById(academyIdFromUrl);
-      if (found) {
-        setIsFromSharedLink(true);
-        setView('choice'); // Direciona para a escolha de cadastro (Aluno/Instrutor)
-        setAcademyData(prev => ({ 
-          ...prev, 
-          name: found.name, 
-          logo: found.logo || prev.logo 
-        }));
-        setStudentData(prev => ({ ...prev, academyId: academyIdFromUrl }));
-        setInstructorData(prev => ({ ...prev, academyId: academyIdFromUrl }));
-        setStaffData(prev => ({ ...prev, academyId: academyIdFromUrl }));
+    // Inicializa academias mock para garantir que existam no localStorage
+    StorageService.getAcademies();
+
+    let found: Academy | null = null;
+    let redirectToChoice = false;
+
+    if (alias) {
+      // Rota /login/:alias — mostra branding da academia mas fica no login
+      found = StorageService.getAcademyByAlias(alias) || StorageService.getAcademyById(alias);
+    }
+
+    if (!found) {
+      // Suporte legado a ?academyId= — redireciona para cadastro
+      const params = new URLSearchParams(window.location.search);
+      const academyIdFromUrl = params.get('academyId');
+      if (academyIdFromUrl) {
+        found = StorageService.getAcademyById(academyIdFromUrl);
+        redirectToChoice = true;
       }
     }
-  }, []);
+
+    if (found) {
+      setLinkedAcademy(found);
+      setIsFromSharedLink(true);
+      setStudentData(prev => ({ ...prev, academyId: found!.id }));
+      setInstructorData(prev => ({ ...prev, academyId: found!.id }));
+      setStaffData(prev => ({ ...prev, academyId: found!.id }));
+      if (redirectToChoice && view === 'login') {
+        const slug = found!.alias || found!.id;
+        navigate(`/login/${slug}/cadastro`, { replace: true });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alias]);
 
   // Estados para cadastros públicos completos
   const academies = StorageService.getAcademies();
@@ -611,19 +629,28 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         {/* Header Comum */}
         {(view === 'login' || view === 'choice') && (
           <div className="text-center animate-in fade-in duration-700">
-            <div className="inline-flex items-center justify-center w-28 h-28 bg-indigo-600 rounded-[32px] mb-6 shadow-2xl shadow-indigo-600/30 overflow-hidden ring-4 ring-slate-800/50">
-              {academyData.logo || MOCK_ACADEMY.logo ? (
-                <img 
-                  src={academyData.logo || MOCK_ACADEMY.logo} 
-                  alt={academyData.name || MOCK_ACADEMY.name} 
-                  className="w-full h-full object-contain p-2"
-                />
-              ) : (
-                <Award className="text-white" size={40} />
-              )}
-            </div>
-            <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic leading-none">{academyData.name || MOCK_ACADEMY.name}</h1>
-            <p className="text-slate-400 mt-3 font-bold text-xs uppercase tracking-[0.3em] opacity-80">{t.legacyContinues}</p>
+            {linkedAcademy ? (
+              <>
+                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] mb-4">NEXDOJO</p>
+                <div className="inline-flex items-center justify-center w-28 h-28 bg-indigo-600 rounded-[32px] mb-6 shadow-2xl shadow-indigo-600/30 overflow-hidden ring-4 ring-slate-800/50">
+                  {linkedAcademy.logo ? (
+                    <img src={linkedAcademy.logo} alt={linkedAcademy.name} className="w-full h-full object-contain p-2" />
+                  ) : (
+                    <Award className="text-white" size={40} />
+                  )}
+                </div>
+                <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic leading-none">{linkedAcademy.name}</h1>
+                <p className="text-slate-400 mt-3 font-bold text-xs uppercase tracking-[0.3em] opacity-80">{t.legacyContinues}</p>
+              </>
+            ) : (
+              <>
+                <div className="inline-flex items-center justify-center w-28 h-28 bg-indigo-600 rounded-[32px] mb-6 shadow-2xl shadow-indigo-600/30 overflow-hidden ring-4 ring-slate-800/50">
+                  <Trophy className="text-white" size={40} />
+                </div>
+                <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic leading-none">NEXDOJO</h1>
+                <p className="text-slate-400 mt-3 font-bold text-xs uppercase tracking-[0.3em] opacity-80">{t.legacyContinues}</p>
+              </>
+            )}
           </div>
         )}
 
@@ -1306,7 +1333,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           </div>
         )}
 
-        <p className="text-center text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">{(academies[0]?.name || MOCK_ACADEMY.name)} • O LEGADO CONTINUA</p>
+        <p className="text-center text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">{linkedAcademy ? `${linkedAcademy.name} • O LEGADO CONTINUA` : 'NEXDOJO • O LEGADO CONTINUA'}</p>
       </div>
     </div>
   );

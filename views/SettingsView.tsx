@@ -365,13 +365,12 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="flex-1 bg-slate-50 dark:bg-slate-800 rounded-2xl px-4 py-3 border border-slate-100 dark:border-slate-700 font-mono text-[10px] text-slate-500 dark:text-slate-400 flex items-center overflow-hidden">
-                  <span className="truncate">{`${window.location.href.split('#')[0]}#/login?academyId=${academy.id}`}</span>
+                  <span className="truncate">{`${window.location.origin}/login/${academy.alias || academy.id}`}</span>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  <button 
+                  <button
                     onClick={(e) => {
-                      const baseUrl = window.location.href.split('#')[0];
-                      const url = `${baseUrl}#/login?academyId=${academy.id}`;
+                      const url = `${window.location.origin}/login/${academy.alias || academy.id}`;
                       navigator.clipboard.writeText(url);
                       const btn = e.currentTarget;
                       const originalText = btn.innerText;
@@ -386,8 +385,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                   >
                     Copiar
                   </button>
-                  <a 
-                    href={`https://wa.me/?text=${encodeURIComponent(`Olá! Faça sua matrícula na ${academy.name} através do link: ${window.location.href.split('#')[0]}#/login?academyId=${academy.id}`)}`}
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(`Olá! Faça sua matrícula na ${academy.name} através do link: ${window.location.origin}/login/${academy.alias || academy.id}`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="bg-[#25D366] hover:bg-[#128C7E] text-white font-black px-6 py-3 rounded-2xl text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-green-500/20 flex items-center gap-2"
@@ -404,7 +403,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                   <div>
                     <h5 className="text-[10px] font-black text-amber-800 dark:text-amber-400 uppercase">Atenção: Link em modo Edição</h5>
                     <p className="text-[9px] text-amber-700 dark:text-amber-500 font-bold mt-1 leading-relaxed">
-                      Este link direciona diretamente para a página de cadastro da sua unidade. Para compartilhar com alunos, clique em <b>"Share"</b> no topo do AI Studio e envie o <b>"Shared App URL"</b> que o Google fornecer, adicionando <code className="bg-amber-100 dark:bg-amber-900/50 px-1 rounded">#/login?academyId={academy.id}</code> ao final.
+                      Este link direciona diretamente para a página de cadastro da sua unidade. Para compartilhar com alunos, clique em <b>"Share"</b> no topo do AI Studio e envie o <b>"Shared App URL"</b> que o Google fornecer, adicionando <code className="bg-amber-100 dark:bg-amber-900/50 px-1 rounded">/login/{academy.alias || academy.id}</code> ao final.
                     </p>
                   </div>
                 </div>

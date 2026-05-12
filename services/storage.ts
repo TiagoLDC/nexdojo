@@ -93,6 +93,19 @@ export const StorageService = {
       StorageService.saveAcademies(academies);
     }
 
+    // Migration: sincroniza alias das academias mock que ainda não possuem o campo
+    const needsAlias = academies.some((a: Academy) => {
+      const mock = MOCK_ACADEMIES.find(m => m.id === a.id);
+      return mock && mock.alias && !a.alias;
+    });
+    if (needsAlias) {
+      academies = academies.map((a: Academy) => {
+        const mock = MOCK_ACADEMIES.find(m => m.id === a.id);
+        return mock && mock.alias && !a.alias ? { ...a, alias: mock.alias } : a;
+      });
+      StorageService.saveAcademies(academies);
+    }
+
     return [...academies].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
   },
   saveAcademies: (academies: Academy[]) => {
@@ -118,6 +131,12 @@ export const StorageService = {
   getAcademyById: (id: string): Academy | null => {
     const all = StorageService.getAcademies();
     return all.find(a => a.id === id) || null;
+  },
+
+  getAcademyByAlias: (alias: string): Academy | null => {
+    const normalized = alias.toLowerCase().trim();
+    const all = StorageService.getAcademies();
+    return all.find(a => a.alias?.toLowerCase() === normalized) || null;
   },
   
   getStudents: (academyId?: string): Student[] => {

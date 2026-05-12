@@ -204,6 +204,7 @@ export interface AcademyPlan {
 export interface Academy {
   id: string;
   name: string;
+  alias?: string;
   logo?: string; // Adicionado campo para logotipo Base64
   ownerName: string;
   email: string;

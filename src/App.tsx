@@ -40,6 +40,12 @@ const App: React.FC = () => (
       <Route path="/login/cadastro/academia" element={<LoginPage />} />
       <Route path="/login/cadastro/aluno" element={<LoginPage />} />
       <Route path="/login/cadastro/instrutor" element={<LoginPage />} />
+      {/* Academy alias routes */}
+      <Route path="/login/:alias" element={<LoginPage />} />
+      <Route path="/login/:alias/esqueci-senha" element={<LoginPage />} />
+      <Route path="/login/:alias/cadastro" element={<LoginPage />} />
+      <Route path="/login/:alias/cadastro/aluno" element={<LoginPage />} />
+      <Route path="/login/:alias/cadastro/instrutor" element={<LoginPage />} />
 
       {/* Protected — requires auth */}
       <Route element={<PrivateRoute />}>
