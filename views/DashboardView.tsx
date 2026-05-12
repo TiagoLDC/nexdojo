@@ -38,7 +38,8 @@ import {
   Calendar,
   PieChart as PieChartIcon,
   Share2,
-  Smartphone
+  Smartphone,
+  Copy
 } from 'lucide-react';
 import { 
   PieChart, 
@@ -335,6 +336,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   const [selectedAcademy, setSelectedAcademy] = React.useState<Academy | null>(null);
   const [isManageModalOpen, setIsManageModalOpen] = React.useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [aliasError, setAliasError] = useState('');
   const [academySearch, setAcademySearch] = React.useState('');
   
   const [systemConfig, setSystemConfig] = React.useState(StorageService.getSystemConfig());
@@ -454,12 +456,27 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     setIsPlanEditModalOpen(false);
   };
 
+  const handleAliasChange = (val: string) => {
+    const cleaned = val.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    setSelectedAcademy(prev => prev ? { ...prev, alias: cleaned } : prev);
+    if (cleaned.length > 0 && cleaned.length < 3) {
+      setAliasError('Mínimo 3 caracteres');
+    } else if (cleaned.length >= 3) {
+      const all = StorageService.getAcademies();
+      const conflict = all.find(a => a.alias?.toLowerCase() === cleaned && a.id !== selectedAcademy?.id);
+      setAliasError(conflict ? 'Este alias já está em uso por outra academia' : '');
+    } else {
+      setAliasError('');
+    }
+  };
+
   const handleUpdateAcademyStatus = (academyId: string, updates: Partial<Academy>) => {
     const all = StorageService.getAcademies();
     const updated = all.map(a => a.id === academyId ? { ...a, ...updates } : a);
     StorageService.saveAcademies(updated);
     setIsManageModalOpen(false);
     setSelectedAcademy(null);
+    setAliasError('');
     triggerRefresh();
   };
 
@@ -949,7 +966,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                   className="p-3.5 sm:p-4 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-indigo-600 rounded-2xl transition-all active:scale-95 border border-slate-100 dark:border-slate-800 shrink-0"
                   title={t.copyLink}
                 >
-                  <Plus size={18} className="sm:size-[20px]" />
+                  <Copy size={18} className="sm:size-[20px]" />
                 </button>
                 <a
                   href={`https://wa.me/?text=${encodeURIComponent(t.whatsappShareText.replace('{academy}', academy.name).replace('{link}', `${window.location.origin}/login/${academy.alias || academy.id}`))}`}
@@ -1124,6 +1141,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                       onClick={() => {
                         setSelectedAcademy(acc);
                         setIsManageModalOpen(true);
+                        setAliasError('');
                       }}
                     >
                       Gerenciar Unidade
@@ -1189,6 +1207,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                             onClick={() => {
                               setSelectedAcademy(acc);
                               setIsManageModalOpen(true);
+                              setAliasError('');
                             }}
                           >
                             Gerenciar
@@ -1220,10 +1239,47 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gestão de SaaS / Licenciamento</p>
                     </div>
                   </div>
-                  <button onClick={() => setIsManageModalOpen(false)} className="p-3 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-red-500">
+                  <button onClick={() => { setIsManageModalOpen(false); setAliasError(''); }} className="p-3 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-red-500">
                     <X size={24} />
                   </button>
                 </header>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome da Academia</label>
+                    <input
+                      type="text"
+                      value={selectedAcademy.name}
+                      onChange={(e) => setSelectedAcademy({ ...selectedAcademy, name: e.target.value })}
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-600/20 transition-all"
+                      placeholder="Nome da academia"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                      ID Personalizado (Link de Acesso)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={selectedAcademy.alias || ''}
+                        onChange={(e) => handleAliasChange(e.target.value)}
+                        className={`w-full bg-slate-50 dark:bg-slate-800 border rounded-2xl p-4 text-sm font-mono font-bold outline-none focus:ring-2 transition-all ${aliasError ? 'border-red-400 focus:ring-red-400/20 text-red-600' : 'border-slate-100 dark:border-slate-800 focus:ring-indigo-600/20'}`}
+                        placeholder="minha-academia"
+                        maxLength={40}
+                      />
+                    </div>
+                    {aliasError ? (
+                      <p className="text-[10px] font-bold text-red-500 ml-1">{aliasError}</p>
+                    ) : selectedAcademy.alias ? (
+                      <p className="text-[10px] font-mono text-indigo-500 ml-1">
+                        nexdojo.com.br/login/<span className="font-black">{selectedAcademy.alias}</span>
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-slate-400 ml-1">Apenas letras minúsculas, números e hífens</p>
+                    )}
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -1280,6 +1336,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                     onClick={() => {
                       setIsManageModalOpen(false);
                       setIsConfirmingDelete(false);
+                      setAliasError('');
                     }}
                     className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black rounded-2xl text-xs uppercase tracking-widest"
                   >
@@ -1298,9 +1355,10 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                     </button>
                   )}
                   {!isConfirmingDelete && (
-                    <button 
-                      onClick={() => selectedAcademy && handleUpdateAcademyStatus(selectedAcademy.id, selectedAcademy)}
-                      className="flex-1 py-4 bg-slate-800 text-white font-black rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all"
+                    <button
+                      onClick={() => selectedAcademy && !aliasError && handleUpdateAcademyStatus(selectedAcademy.id, selectedAcademy)}
+                      disabled={!!aliasError}
+                      className="flex-1 py-4 bg-slate-800 text-white font-black rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       Salvar
                     </button>

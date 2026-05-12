@@ -211,6 +211,7 @@ export interface AcademyPlan {
 export interface Academy {
   id: string;
   name: string;
+  alias?: string;
   logo?: string;
   ownerName: string;
   email: string;

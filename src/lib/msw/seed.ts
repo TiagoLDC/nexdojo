@@ -35,6 +35,7 @@ const ACAD_3 = 'mock_acad_3';
 const ACADEMY_1: Academy = {
   id: ACAD_1,
   name: 'Academia NexFight',
+  alias: 'nexfight',
   logo: 'https://images.unsplash.com/photo-1552072092-7f9b8d63efcb?q=80&w=400&h=400&auto=format&fit=crop',
   ownerName: 'Prof. Carlos Gracie Jr.',
   email: 'admin@oss.com',
@@ -64,6 +65,7 @@ const ACADEMY_1: Academy = {
 const ACADEMY_2: Academy = {
   id: ACAD_2,
   name: 'Samurai BJJ',
+  alias: 'samurai',
   logo: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=400&h=400&auto=format&fit=crop',
   ownerName: 'Prof. Takeshi Nakamura',
   email: 'admin@samurai.com',
@@ -93,6 +95,7 @@ const ACADEMY_2: Academy = {
 const ACADEMY_3: Academy = {
   id: ACAD_3,
   name: 'Dragão Fight',
+  alias: 'dragao',
   logo: 'https://images.unsplash.com/photo-1517438476312-10d79c077509?q=80&w=400&h=400&auto=format&fit=crop',
   ownerName: 'Prof. Rodrigo Dragão',
   email: 'admin@dragao.com',
