@@ -105,7 +105,11 @@ As mensagens de commit devem seguir rigorosamente o formato:
 ssh -p 22022 qasnexdojo@162.240.167.149
 ```
 
-### Comando de Deploy
+### Fluxo Completo de Deploy (quando o usuário pedir "commit, push e deploy")
+
+1. Atualizar a tag de versão em `src/components/layout/AppLayout.tsx`
+2. `git add` nos arquivos alterados → `git commit` (padrão da seção 3) → `git push origin main`
+3. Criar `deploy_run.py` na raiz, executar `python deploy_run.py`, remover após
 
 > **IMPORTANTE:** O cliente SSH do Windows não suporta senha interativa via linha de comando. O deploy deve ser feito via **Python + paramiko** conforme abaixo.
 
@@ -114,7 +118,7 @@ ssh -p 22022 qasnexdojo@162.240.167.149
 pip install paramiko --user
 ```
 
-**Script de deploy** — salvar como arquivo temporário e executar:
+**Script de deploy** — salvar como `deploy_run.py` na raiz e executar:
 ```python
 import paramiko, sys, re
 sys.stdout.reconfigure(encoding='utf-8')
@@ -125,7 +129,7 @@ client.connect('162.240.167.149', port=22022, username='qasnexdojo', password='@
 
 stdin, stdout, stderr = client.exec_command(
     'cd /home/qasnexdojo/nexdojo && git fetch origin && git reset --hard origin/main && docker compose down && docker compose up -d --build 2>&1',
-    timeout=240
+    timeout=300
 )
 
 output = stdout.read().decode('utf-8', errors='replace')
@@ -143,10 +147,17 @@ print(f'\nExit code: {exit_code}')
 sys.exit(exit_code)
 ```
 
-**Como executar o deploy pelo agente:**
-1. Criar o script acima como arquivo temporário (ex: `deploy_run.py`) na raiz do projeto
-2. Executar: `python deploy_run.py`
-3. Remover o arquivo após o deploy
+**Como executar pelo agente:**
+1. Criar o script acima como `deploy_run.py` na raiz do projeto
+2. Executar via PowerShell: `cd D:\DEV_WEB\nexdojo; python deploy_run.py` (timeout 360000ms)
+3. Remover o arquivo após o deploy: `Remove-Item deploy_run.py`
+
+**Decisões técnicas já resolvidas (não alterar sem necessidade):**
+- `docker compose down` antes do `up` é obrigatório — evita conflito de porta e rede
+- `Dockerfile` usa `npx vite build` (não `npm run build`) — intencional para ignorar erros TS pré-existentes no QAS
+- `docker-compose.yml` usa porta `3003:80` — o container nginx escuta na 80 internamente, exposto na 3003 do host
+- O `~/public_html/.htaccess` no servidor **já está configurado** com proxy para `localhost:3003` — **não reescrever a cada deploy**, só se a porta mudar
+- O Apache do cPanel controla a porta 80 e faz o proxy reverso de `qas.nexdojo.com.br` → `localhost:3003` via `.htaccess`
 
 **Observações:**
 - Usar `git fetch + reset --hard` em vez de `git pull` para evitar conflitos de branches divergidas no servidor

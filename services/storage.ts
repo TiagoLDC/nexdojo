@@ -50,10 +50,11 @@ export const StorageService = {
     if (!data) return null;
     let academy = JSON.parse(data);
     
-    // Migration: Rename Guerreiros to NexDojo
-    if (academy.id === 'mock_acad_1' && academy.name === 'Guerreiros') {
+    // Migration: normaliza nome da academia mock_acad_1 para "Academia NexFight"
+    const oldNames = ['Guerreiros', 'NexDojo', 'NexDojoACA'];
+    if (academy.id === 'mock_acad_1' && oldNames.includes(academy.name)) {
       const targetLogo = 'https://images.unsplash.com/photo-1552072092-7f9b8d63efcb?q=80&w=400&h=400&auto=format&fit=crop';
-      academy = { ...academy, name: 'NexDojo', logo: targetLogo };
+      academy = { ...academy, name: 'Academia NexFight', logo: targetLogo };
       StorageService.saveAcademy(academy);
     }
     
@@ -70,40 +71,26 @@ export const StorageService = {
 
   getAcademies: (): Academy[] => {
     const data = localStorage.getItem(KEYS.ACADEMIES);
-    let academies = data ? JSON.parse(data) : MOCK_ACADEMIES;
-    
-    // Migration: Keep only NexDojo (mock_acad_1) and filter out old mocks
-    let changed = false;
-    const initialCount = academies.length;
-    
-    // Filter out mock_acad_2 and mock_acad_3
-    academies = academies.filter((a: Academy) => a.id !== 'mock_acad_2' && a.id !== 'mock_acad_3');
-    
-    // Rename mock_acad_1 to NexDojo
-    academies = academies.map((a: Academy) => {
-      if (a.id === 'mock_acad_1') {
-        const targetLogo = 'https://images.unsplash.com/photo-1552072092-7f9b8d63efcb?q=80&w=400&h=400&auto=format&fit=crop';
-        if (a.name !== 'NexDojo' || a.logo !== targetLogo) {
-          changed = true;
-          return { ...a, name: 'NexDojo', logo: targetLogo };
-        }
-      }
-      return a;
-    });
+    let academies: Academy[] = data ? JSON.parse(data) : [];
 
-    if (academies.length !== initialCount) changed = true;
-
-    if (changed) {
+    // Garante que as 3 academias mock sempre existam na lista
+    const existingIds = academies.map((a: Academy) => a.id);
+    const missing = MOCK_ACADEMIES.filter((m: Academy) => !existingIds.includes(m.id));
+    if (missing.length > 0) {
+      academies = [...academies, ...missing];
       StorageService.saveAcademies(academies);
-      // Also update current active academy if needed
-      const currentData = localStorage.getItem(KEYS.ACADEMY);
-      if (currentData) {
-        const current = JSON.parse(currentData);
-        if (current.id === 'mock_acad_1' || current.id === 'mock_acad_2' || current.id === 'mock_acad_3') {
-          // Force active to be NexDojo if it was a mock
-          StorageService.saveAcademy(academies.find((a: Academy) => a.id === 'mock_acad_1') || academies[0]);
-        }
-      }
+    }
+
+    // Migration: normaliza nome da academia mock_acad_1 na lista
+    const oldNames = ['Guerreiros', 'NexDojo', 'NexDojoACA'];
+    const needsUpdate = academies.some((a: Academy) => a.id === 'mock_acad_1' && oldNames.includes(a.name));
+    if (needsUpdate) {
+      academies = academies.map((a: Academy) =>
+        a.id === 'mock_acad_1' && oldNames.includes(a.name)
+          ? { ...a, name: 'Academia NexFight' }
+          : a
+      );
+      StorageService.saveAcademies(academies);
     }
 
     return [...academies].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));

@@ -6,7 +6,7 @@ import type {
 import {
   SEED_ACADEMY, SEED_ACADEMIES, SEED_USERS, SEED_STUDENTS, SEED_INSTRUCTORS,
   SEED_STAFF, SEED_TEMPLATES, SEED_SESSIONS, SEED_ATTENDANCE, SEED_TRANSACTIONS,
-  SEED_CALENDAR, SEED_CHAT, SEED_PRODUCTS,
+  SEED_CALENDAR, SEED_CHAT, SEED_PRODUCTS, SEED_RECYCLE_BIN,
 } from './seed';
 
 const clone = <T>(arr: T[]): T[] => arr.map((item) => ({ ...item }));
@@ -23,7 +23,7 @@ let transactions= clone(SEED_TRANSACTIONS);
 let calendar    = clone(SEED_CALENDAR);
 let chat        = clone(SEED_CHAT);
 let products    = clone(SEED_PRODUCTS);
-let recycleBin: RecycleBinItem[] = [];
+let recycleBin: RecycleBinItem[] = clone(SEED_RECYCLE_BIN);
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 const now = () => new Date().toISOString();

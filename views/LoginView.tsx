@@ -5,7 +5,15 @@ import { User, Academy, Student, Instructor, Staff, Belt, ChatMessage } from '..
 import { StorageService } from '../services/storage';
 import { useTranslation } from '../services/LanguageContext';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
-import { MOCK_ACADEMY, MOCK_USER, MOCK_SUPERUSER, MOCK_INSTRUCTOR_USER, MOCK_STAFF_USER, MOCK_STUDENT_USER, MOCK_STUDENTS, MOCK_CLASSES, MOCK_TEMPLATES, MOCK_ATTENDANCE } from '../services/mockData';
+import {
+  MOCK_ACADEMY, MOCK_USER, MOCK_SUPERUSER, MOCK_INSTRUCTOR_USER, MOCK_STAFF_USER, MOCK_STUDENT_USER,
+  MOCK_STUDENTS, MOCK_CLASSES, MOCK_TEMPLATES, MOCK_ATTENDANCE,
+  MOCK_INSTRUCTORS, MOCK_STAFF, MOCK_FINANCES, MOCK_CALENDAR, MOCK_CHAT, MOCK_PRODUCTS,
+  MOCK_ACADEMY_2, MOCK_USERS_A2, MOCK_STUDENTS_A2, MOCK_INSTRUCTORS_A2, MOCK_STAFF_A2,
+  MOCK_TEMPLATES_A2, MOCK_CLASSES_A2, MOCK_ATTENDANCE_A2, MOCK_FINANCES_A2, MOCK_CALENDAR_A2, MOCK_CHAT_A2, MOCK_PRODUCTS_A2,
+  MOCK_ACADEMY_3, MOCK_USERS_A3, MOCK_STUDENTS_A3, MOCK_INSTRUCTORS_A3, MOCK_STAFF_A3,
+  MOCK_TEMPLATES_A3, MOCK_CLASSES_A3, MOCK_ATTENDANCE_A3, MOCK_FINANCES_A3, MOCK_CALENDAR_A3, MOCK_CHAT_A3, MOCK_PRODUCTS_A3,
+} from '../services/mockData';
 import { 
   Trophy, 
   Mail, 
@@ -204,14 +212,63 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     window.open(`mailto:${academyEmail}?subject=${subject}&body=${body}`, '_blank');
   };
 
+  // Inicializa dados mockados de uma academia se ainda não existirem no localStorage
+  const initAcademyData = (
+    academyId: string,
+    students: any[], instructors: any[], staff: any[], users: any[],
+    templates: any[], classes: any[], attendance: any[],
+    finances: any[], calendar: any[], chat: any[], products: any[],
+  ) => {
+    if (StorageService.getStudents(academyId).length === 0)
+      StorageService.saveStudents(students, academyId);
+    if (StorageService.getInstructors(academyId).length === 0)
+      StorageService.saveInstructors(instructors, academyId);
+    if (StorageService.getStaff(academyId).length === 0)
+      StorageService.saveStaff(staff, academyId);
+    if (StorageService.getUsers(academyId).length === 0)
+      StorageService.saveUsers(users, academyId);
+    if (StorageService.getTemplates(academyId).length === 0)
+      StorageService.saveTemplates(templates, academyId);
+    if (StorageService.getClasses(academyId).length === 0)
+      StorageService.saveClasses(classes, academyId);
+    if (StorageService.getAttendance(academyId).length === 0)
+      StorageService.saveAttendance(attendance, academyId);
+    if (StorageService.getFinances(academyId).length === 0)
+      StorageService.saveFinances(finances, academyId);
+    if (StorageService.getCalendarEvents(academyId).length === 0)
+      StorageService.saveCalendarEvents(calendar, academyId);
+    if (StorageService.getChatMessages(academyId).length === 0)
+      StorageService.saveChatMessages(chat, academyId);
+    if (StorageService.getProducts(academyId).length === 0)
+      StorageService.saveProducts(products, academyId);
+  };
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Assegura que as academias existem
-    const allAcademies = StorageService.getAcademies();
-    if (allAcademies.length === 0) {
-      StorageService.saveAcademies([MOCK_ACADEMY]);
-    }
+
+    // Assegura que as 3 academias existem na lista
+    StorageService.getAcademies();
+
+    // Inicializa dados de TODAS as academias em qualquer login (necessário para o superuser)
+    initAcademyData(
+      MOCK_ACADEMY.id,
+      MOCK_STUDENTS, MOCK_INSTRUCTORS, MOCK_STAFF,
+      [MOCK_USER, MOCK_INSTRUCTOR_USER, MOCK_STAFF_USER, MOCK_STUDENT_USER],
+      MOCK_TEMPLATES, MOCK_CLASSES, MOCK_ATTENDANCE,
+      MOCK_FINANCES, MOCK_CALENDAR, MOCK_CHAT, MOCK_PRODUCTS,
+    );
+    initAcademyData(
+      MOCK_ACADEMY_2.id,
+      MOCK_STUDENTS_A2, MOCK_INSTRUCTORS_A2, MOCK_STAFF_A2, MOCK_USERS_A2,
+      MOCK_TEMPLATES_A2, MOCK_CLASSES_A2, MOCK_ATTENDANCE_A2,
+      MOCK_FINANCES_A2, MOCK_CALENDAR_A2, MOCK_CHAT_A2, MOCK_PRODUCTS_A2,
+    );
+    initAcademyData(
+      MOCK_ACADEMY_3.id,
+      MOCK_STUDENTS_A3, MOCK_INSTRUCTORS_A3, MOCK_STAFF_A3, MOCK_USERS_A3,
+      MOCK_TEMPLATES_A3, MOCK_CLASSES_A3, MOCK_ATTENDANCE_A3,
+      MOCK_FINANCES_A3, MOCK_CALENDAR_A3, MOCK_CHAT_A3, MOCK_PRODUCTS_A3,
+    );
 
     const users = StorageService.getUsers();
     let foundUser = users.find(u => u.email === email && u.password === password);
@@ -236,31 +293,110 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       foundUser = MOCK_STUDENT_USER;
     }
 
-    // Permitir sempre o acesso do admin de demonstração
+    // ── Academia 1: admin de demonstração ──
     if (!foundUser && email === 'admin@oss.com' && password === 'oss123') {
-      // Se for o primeiro acesso real (sem nenhum usuário), inicializa os dados mock
-      if (users.length === 0) {
-        StorageService.saveStudents(MOCK_STUDENTS, MOCK_ACADEMY.id);
-        StorageService.saveTemplates(MOCK_TEMPLATES, MOCK_ACADEMY.id);
-        StorageService.saveClasses(MOCK_CLASSES, MOCK_ACADEMY.id);
-        StorageService.saveAttendance(MOCK_ATTENDANCE, MOCK_ACADEMY.id);
-      } else {
-        // Se já existem usuários, garante que os estudantes mock tenham as fotos atualizadas
-        const currentStudents = StorageService.getStudents(MOCK_ACADEMY.id);
-        const updatedStudents = currentStudents.map(s => {
-          const mock = MOCK_STUDENTS.find(m => m.id === s.id);
-          if (mock && !s.photo) return { ...s, photo: mock.photo };
-          return s;
-        });
-        StorageService.saveStudents(updatedStudents, MOCK_ACADEMY.id);
-      }
-      
-      // Garante que o MOCK_USER esteja na lista de usuários para futuras consultas
-      if (!users.find(u => u.email === 'admin@oss.com')) {
-        StorageService.saveUsers([...users, MOCK_USER], MOCK_ACADEMY.id);
-      }
-      
+      initAcademyData(
+        MOCK_ACADEMY.id,
+        MOCK_STUDENTS, MOCK_INSTRUCTORS, MOCK_STAFF,
+        [MOCK_USER, MOCK_INSTRUCTOR_USER, MOCK_STAFF_USER, MOCK_STUDENT_USER],
+        MOCK_TEMPLATES, MOCK_CLASSES, MOCK_ATTENDANCE,
+        MOCK_FINANCES, MOCK_CALENDAR, MOCK_CHAT, MOCK_PRODUCTS,
+      );
       foundUser = MOCK_USER;
+    }
+
+    // ── Academia 2: Samurai BJJ ──
+    if (!foundUser && email === 'admin@samurai.com' && password === 'sam123') {
+      initAcademyData(
+        MOCK_ACADEMY_2.id,
+        MOCK_STUDENTS_A2, MOCK_INSTRUCTORS_A2, MOCK_STAFF_A2, MOCK_USERS_A2,
+        MOCK_TEMPLATES_A2, MOCK_CLASSES_A2, MOCK_ATTENDANCE_A2,
+        MOCK_FINANCES_A2, MOCK_CALENDAR_A2, MOCK_CHAT_A2, MOCK_PRODUCTS_A2,
+      );
+      foundUser = MOCK_USERS_A2.find((u: any) => u.role === 'admin') as any;
+    }
+    if (!foundUser && email === 'kenji@samurai.com' && password === 'sam123') {
+      initAcademyData(
+        MOCK_ACADEMY_2.id,
+        MOCK_STUDENTS_A2, MOCK_INSTRUCTORS_A2, MOCK_STAFF_A2, MOCK_USERS_A2,
+        MOCK_TEMPLATES_A2, MOCK_CLASSES_A2, MOCK_ATTENDANCE_A2,
+        MOCK_FINANCES_A2, MOCK_CALENDAR_A2, MOCK_CHAT_A2, MOCK_PRODUCTS_A2,
+      );
+      foundUser = MOCK_USERS_A2.find((u: any) => u.id === 'a2_instr_1') as any;
+    }
+    if (!foundUser && email === 'camila@samurai.com' && password === 'sam123') {
+      initAcademyData(
+        MOCK_ACADEMY_2.id,
+        MOCK_STUDENTS_A2, MOCK_INSTRUCTORS_A2, MOCK_STAFF_A2, MOCK_USERS_A2,
+        MOCK_TEMPLATES_A2, MOCK_CLASSES_A2, MOCK_ATTENDANCE_A2,
+        MOCK_FINANCES_A2, MOCK_CALENDAR_A2, MOCK_CHAT_A2, MOCK_PRODUCTS_A2,
+      );
+      foundUser = MOCK_USERS_A2.find((u: any) => u.id === 'a2_instr_2') as any;
+    }
+    if (!foundUser && email === 'sec@samurai.com' && password === 'sam123') {
+      initAcademyData(
+        MOCK_ACADEMY_2.id,
+        MOCK_STUDENTS_A2, MOCK_INSTRUCTORS_A2, MOCK_STAFF_A2, MOCK_USERS_A2,
+        MOCK_TEMPLATES_A2, MOCK_CLASSES_A2, MOCK_ATTENDANCE_A2,
+        MOCK_FINANCES_A2, MOCK_CALENDAR_A2, MOCK_CHAT_A2, MOCK_PRODUCTS_A2,
+      );
+      foundUser = MOCK_USERS_A2.find((u: any) => u.id === 'a2_staff_1') as any;
+    }
+    if (!foundUser && email === 'aluno@samurai.com' && password === 'sam123') {
+      initAcademyData(
+        MOCK_ACADEMY_2.id,
+        MOCK_STUDENTS_A2, MOCK_INSTRUCTORS_A2, MOCK_STAFF_A2, MOCK_USERS_A2,
+        MOCK_TEMPLATES_A2, MOCK_CLASSES_A2, MOCK_ATTENDANCE_A2,
+        MOCK_FINANCES_A2, MOCK_CALENDAR_A2, MOCK_CHAT_A2, MOCK_PRODUCTS_A2,
+      );
+      foundUser = MOCK_USERS_A2.find((u: any) => u.id === 'a2_student_user_1') as any;
+    }
+
+    // ── Academia 3: Dragão Fight ──
+    if (!foundUser && email === 'admin@dragao.com' && password === 'drg123') {
+      initAcademyData(
+        MOCK_ACADEMY_3.id,
+        MOCK_STUDENTS_A3, MOCK_INSTRUCTORS_A3, MOCK_STAFF_A3, MOCK_USERS_A3,
+        MOCK_TEMPLATES_A3, MOCK_CLASSES_A3, MOCK_ATTENDANCE_A3,
+        MOCK_FINANCES_A3, MOCK_CALENDAR_A3, MOCK_CHAT_A3, MOCK_PRODUCTS_A3,
+      );
+      foundUser = MOCK_USERS_A3.find((u: any) => u.role === 'admin') as any;
+    }
+    if (!foundUser && email === 'diego@dragao.com' && password === 'drg123') {
+      initAcademyData(
+        MOCK_ACADEMY_3.id,
+        MOCK_STUDENTS_A3, MOCK_INSTRUCTORS_A3, MOCK_STAFF_A3, MOCK_USERS_A3,
+        MOCK_TEMPLATES_A3, MOCK_CLASSES_A3, MOCK_ATTENDANCE_A3,
+        MOCK_FINANCES_A3, MOCK_CALENDAR_A3, MOCK_CHAT_A3, MOCK_PRODUCTS_A3,
+      );
+      foundUser = MOCK_USERS_A3.find((u: any) => u.id === 'a3_instr_1') as any;
+    }
+    if (!foundUser && email === 'leticia@dragao.com' && password === 'drg123') {
+      initAcademyData(
+        MOCK_ACADEMY_3.id,
+        MOCK_STUDENTS_A3, MOCK_INSTRUCTORS_A3, MOCK_STAFF_A3, MOCK_USERS_A3,
+        MOCK_TEMPLATES_A3, MOCK_CLASSES_A3, MOCK_ATTENDANCE_A3,
+        MOCK_FINANCES_A3, MOCK_CALENDAR_A3, MOCK_CHAT_A3, MOCK_PRODUCTS_A3,
+      );
+      foundUser = MOCK_USERS_A3.find((u: any) => u.id === 'a3_instr_2') as any;
+    }
+    if (!foundUser && email === 'atend@dragao.com' && password === 'drg123') {
+      initAcademyData(
+        MOCK_ACADEMY_3.id,
+        MOCK_STUDENTS_A3, MOCK_INSTRUCTORS_A3, MOCK_STAFF_A3, MOCK_USERS_A3,
+        MOCK_TEMPLATES_A3, MOCK_CLASSES_A3, MOCK_ATTENDANCE_A3,
+        MOCK_FINANCES_A3, MOCK_CALENDAR_A3, MOCK_CHAT_A3, MOCK_PRODUCTS_A3,
+      );
+      foundUser = MOCK_USERS_A3.find((u: any) => u.id === 'a3_staff_1') as any;
+    }
+    if (!foundUser && email === 'aluno@dragao.com' && password === 'drg123') {
+      initAcademyData(
+        MOCK_ACADEMY_3.id,
+        MOCK_STUDENTS_A3, MOCK_INSTRUCTORS_A3, MOCK_STAFF_A3, MOCK_USERS_A3,
+        MOCK_TEMPLATES_A3, MOCK_CLASSES_A3, MOCK_ATTENDANCE_A3,
+        MOCK_FINANCES_A3, MOCK_CALENDAR_A3, MOCK_CHAT_A3, MOCK_PRODUCTS_A3,
+      );
+      foundUser = MOCK_USERS_A3.find((u: any) => u.id === 'a3_student_user_1') as any;
     }
 
     if (!foundUser) {

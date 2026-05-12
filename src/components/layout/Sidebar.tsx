@@ -1,9 +1,11 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Settings, ShieldCheck, Sun, Moon, ChevronLeft, ChevronRight, Award } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useTranslation } from '@/hooks/useTranslation';
+import { academyService } from '@/features/settings/services/academyService';
 import { MAIN_NAV, MANAGEMENT_NAV } from './navConfig';
 import { NavIcon } from './NavIcons';
 import type { Language } from '@/types';
@@ -19,10 +21,18 @@ export const Sidebar: React.FC = () => {
   const { user, academy, logout, setAcademy } = useAuthStore();
   const { sidebarCollapsed, toggleSidebar, theme, toggleTheme } = useUIStore();
   const { t, language, setLanguage } = useTranslation();
+  const queryClient = useQueryClient();
 
   if (!user) return null;
 
   const collapsed = sidebarCollapsed;
+
+  const { data: allAcademies = [] } = useQuery({
+    queryKey: ['academies-all'],
+    queryFn: academyService.getAll,
+    enabled: user.role === 'superuser',
+    staleTime: 60_000,
+  });
 
   const mainItems = MAIN_NAV.filter((item) => item.roles.includes(user.role));
   const mgmtItems = MANAGEMENT_NAV.filter((item) => item.roles.includes(user.role));
@@ -47,21 +57,38 @@ export const Sidebar: React.FC = () => {
       </button>
 
       {/* Logo / Academy */}
-      <div className="p-6 pb-2">
-        <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
-          <div className="w-10 h-10 bg-indigo-500 rounded-xl overflow-hidden shrink-0 shadow-lg shadow-indigo-500/20 flex items-center justify-center p-0.5">
-            {academy?.logo ? (
-              <img src={academy.logo} alt={academy.name} className="w-full h-full object-contain" />
-            ) : (
-              <Award className="text-white" size={22} />
-            )}
+      <div className="p-4 pb-2">
+        {collapsed ? (
+          <div className="flex justify-center">
+            <div className="w-10 h-10 bg-indigo-500 rounded-xl overflow-hidden shrink-0 shadow-lg shadow-indigo-500/20 flex items-center justify-center p-0.5">
+              {academy?.logo ? (
+                <img src={academy.logo} alt={academy.name} className="w-full h-full object-contain" />
+              ) : (
+                <Award className="text-white" size={22} />
+              )}
+            </div>
           </div>
-          {!collapsed && (
-            <h1 className="text-lg font-black tracking-tighter uppercase italic leading-tight break-words flex-1 line-clamp-2">
-              {academy?.name ?? 'NexDojo'}
+        ) : (
+          <div className="flex flex-col gap-2">
+            {/* System name */}
+            <h1 className="text-xl font-black tracking-tighter uppercase italic leading-none text-white">
+              NexDojo
             </h1>
-          )}
-        </div>
+            {/* Academy row */}
+            <div className="flex items-center gap-2 bg-slate-800/60 rounded-xl px-2 py-1.5">
+              <div className="w-7 h-7 bg-indigo-500 rounded-lg overflow-hidden shrink-0 shadow shadow-indigo-500/20 flex items-center justify-center p-0.5">
+                {academy?.logo ? (
+                  <img src={academy.logo} alt={academy.name} className="w-full h-full object-contain" />
+                ) : (
+                  <Award className="text-white" size={14} />
+                )}
+              </div>
+              <span className="text-xs font-bold text-slate-300 leading-tight line-clamp-2 flex-1">
+                {academy?.name ?? '—'}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Nav */}
@@ -88,14 +115,18 @@ export const Sidebar: React.FC = () => {
                   <select
                     value={academy?.id ?? ''}
                     onChange={(e) => {
-                      const all = JSON.parse(localStorage.getItem('nexdojo-db-academies') ?? '[]') as { id: string; name: string }[];
-                      const found = all.find((a) => a.id === e.target.value);
-                      if (found) setAcademy(found as Parameters<typeof setAcademy>[0]);
+                      const found = allAcademies.find((a) => a.id === e.target.value);
+                      if (found) {
+                        setAcademy(found);
+                        queryClient.invalidateQueries();
+                      }
                     }}
                     className="w-full bg-slate-800 border-none rounded-lg text-[10px] font-bold text-slate-300 py-1.5 px-2 outline-none focus:ring-1 focus:ring-indigo-500 appearance-none cursor-pointer"
                   >
-                    <option value="" disabled>Select a Unit</option>
-                    {academy && <option value={academy.id}>{academy.name}</option>}
+                    <option value="" disabled>Selecionar unidade</option>
+                    {allAcademies.map((a) => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
                   </select>
                 </div>
               )}
@@ -222,7 +253,7 @@ export const Sidebar: React.FC = () => {
         {/* Version tag */}
         {!collapsed && (
           <p className="text-[7px] font-bold text-slate-600 uppercase tracking-widest text-center py-1">
-            VERSÃO QAS 11/05/2026 12:30:00
+            VERSÃO QAS 12/05/2026 14:23:47
           </p>
         )}
 
