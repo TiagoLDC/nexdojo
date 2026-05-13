@@ -17,6 +17,8 @@ process.on('uncaughtException', (err) => {
 const app = express();
 const PORT = process.env.PORT || 3005;
 
+app.set('trust proxy', 1);
+
 app.use(cors({
   origin: ['http://localhost:3002', 'https://qas.nexdojo.com.br'],
   credentials: true,
