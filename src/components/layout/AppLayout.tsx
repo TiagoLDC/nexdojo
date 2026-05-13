@@ -45,7 +45,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       {/* Version tag */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
         <div className="bg-amber-400 text-amber-950 text-[8px] font-black uppercase tracking-widest px-3 py-px rounded-b-lg select-none shadow-sm">
-          VERSÃO QAS 13/05/2026 15:36:20
+          VERSÃO QAS 13/05/2026 15:42:23
         </div>
       </div>
 

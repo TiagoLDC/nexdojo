@@ -32,8 +32,10 @@ function transformKeys(obj: unknown, transform: (k: string) => string): unknown 
   return obj;
 }
 
+const defaultBaseURL = import.meta.env.PROD ? '/api' : 'http://localhost:3005/api';
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:3005/api',
+  baseURL: import.meta.env.VITE_API_URL ?? defaultBaseURL,
   headers: { 'Content-Type': 'application/json' },
   timeout: 15000,
 });
