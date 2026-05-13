@@ -622,12 +622,129 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const studentAge = calculateAge(studentData.birthDate || '');
   const isMinor = studentAge > 0 && studentAge < 18;
 
+  if (view === 'login') {
+    const academyInitials = linkedAcademy
+      ? linkedAcademy.name.split(/\s+/).map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
+      : 'ND';
+
+    return (
+      <div className="h-[100dvh] overflow-hidden relative login-app">
+        <div className="login-grain" />
+        <div className="login-split">
+          {/* ── Hero Panel ── */}
+          <aside className="login-hero">
+            <div className="login-hero-top">
+              <div className="login-mark">
+                {linkedAcademy?.logo ? (
+                  <img src={linkedAcademy.logo} alt={linkedAcademy.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '6px', borderRadius: '16px' }} />
+                ) : (
+                  <Trophy size={26} color="#fff" strokeWidth={2.5} />
+                )}
+              </div>
+              <span className="login-wordmark">NEXDOJO</span>
+            </div>
+
+            {linkedAcademy && (
+              <div className="login-academy-badge">
+                <div className="login-academy-img">
+                  {linkedAcademy.logo ? (
+                    <img src={linkedAcademy.logo} alt={linkedAcademy.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                  ) : (
+                    <span className="login-academy-initials">{academyInitials}</span>
+                  )}
+                  <div className="login-academy-ring" />
+                </div>
+                <div className="login-academy-meta">
+                  <span className="login-academy-name">{linkedAcademy.name}</span>
+                  <span className="login-academy-tag">Academia verificada</span>
+                </div>
+              </div>
+            )}
+
+            <div className="login-hero-mid">
+              <h1 className="login-hero-h1">
+                Bem-vindo<br />de volta ao<br />
+                <span className="login-hero-accent">tatame.</span>
+              </h1>
+              <p className="login-hero-lead">Gerencie sua academia de BJJ com precisão, eficiência e estilo.</p>
+            </div>
+
+            <p className="login-micro">◆ Mais de 320 academias confiam no NexDojo</p>
+          </aside>
+
+          {/* ── Form Panel ── */}
+          <main className="login-form-side">
+            <div className="login-form-shell">
+              {/* Demo banner */}
+              <button
+                type="button"
+                className="login-demo-banner"
+                onClick={() => { setEmail('admin@oss.com'); setPassword('oss123'); }}
+              >
+                <div className="login-demo-ic">
+                  <Info size={14} strokeWidth={2.5} />
+                </div>
+                <div>
+                  <span className="login-demo-b">{t.demoMode}</span>
+                  <span className="login-demo-creds">{t.demoCredentials}</span>
+                </div>
+              </button>
+
+              <h2 className="login-form-title">{t.accessPortal}</h2>
+              <p className="login-form-sub">Entre com suas credenciais para continuar</p>
+
+              <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {/* Email field */}
+                <div className="login-field">
+                  <label className="login-field-label">E-mail</label>
+                  <div className="login-input-wrap">
+                    <span className="login-input-icon"><Mail size={16} /></span>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      placeholder="professor@academia.com"
+                      className="login-input"
+                      autoComplete="email"
+                    />
+                  </div>
+                </div>
+
+                {/* Password field */}
+                <LoginPasswordField value={password} onChange={setPassword} />
+
+                <button type="submit" className="login-btn-primary">
+                  {t.enterMat} <ArrowRight size={18} />
+                </button>
+              </form>
+
+              <div className="login-below">
+                <span className="login-below-a">{t.forgotPasswordLabel}?&nbsp;
+                  <button type="button" onClick={() => setView('forgot-password')} className="login-lnk">{t.forgotPasswordLabel}</button>
+                </span>
+                <button type="button" onClick={() => setView('choice')} className="login-lnk" style={{ marginTop: '4px' }}>{t.newHereSignUp}</button>
+              </div>
+
+              <div className="login-footer-bar">
+                <span>© 2026 NexDojo</span>
+                <span style={{ margin: '0 6px' }}>·</span>
+                <span>Termos</span>
+                <span style={{ margin: '0 6px' }}>·</span>
+                <span>Privacidade</span>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-[100dvh] h-[100dvh] overflow-y-auto bg-slate-900 flex flex-col items-center justify-start py-8 px-4 transition-colors relative custom-scrollbar">
       <div className="w-full max-w-5xl space-y-8 py-10">
-        
+
         {/* Header Comum */}
-        {(view === 'login' || view === 'choice') && (
+        {view === 'choice' && (
           <div className="text-center animate-in fade-in duration-700">
             {linkedAcademy ? (
               <>
@@ -651,34 +768,6 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                 <p className="text-slate-400 mt-3 font-bold text-xs uppercase tracking-[0.3em] opacity-80">{t.legacyContinues}</p>
               </>
             )}
-          </div>
-        )}
-
-        {/* VIEW: LOGIN */}
-        {view === 'login' && (
-          <div className="max-w-md mx-auto space-y-6 w-full pb-10">
-            <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-4 flex items-start gap-3">
-              <div className="bg-amber-500/20 p-2 rounded-xl"><Info className="text-amber-500" size={20} /></div>
-              <div>
-                <p className="text-xs font-bold text-slate-300 uppercase tracking-widest">{t.demoMode}</p>
-                <p className="text-xs text-slate-400 mt-1 italic">{t.demoCredentials}</p>
-              </div>
-            </div>
-
-            <form onSubmit={handleLogin} className="bg-white dark:bg-slate-900 rounded-[40px] p-8 md:p-10 shadow-2xl space-y-6 animate-in fade-in zoom-in duration-300">
-              <h2 className="text-2xl font-black text-slate-800 dark:text-white text-center tracking-tight">{t.accessPortal}</h2>
-              <div className="space-y-4">
-                <Input label="E-mail" type="email" value={email} onChange={setEmail} placeholder="professor@oss.com" icon={<Mail size={18} />} />
-                <Input label="Senha" type="password" value={password} onChange={setPassword} placeholder="••••••••" icon={<Lock size={18} />} />
-              </div>
-              <button type="submit" className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95">
-                {t.enterMat} <ArrowRight size={20} />
-              </button>
-              <div className="pt-2 flex flex-col items-center gap-3">
-                <button type="button" onClick={() => setView('forgot-password')} className="text-sm font-bold text-slate-500 hover:text-indigo-600 transition-colors">{t.forgotPasswordLabel}</button>
-                <button type="button" onClick={() => setView('choice')} className="text-sm font-bold text-indigo-600 hover:text-indigo-400 transition-colors">{t.newHereSignUp}</button>
-              </div>
-            </form>
           </div>
         )}
 
@@ -1383,6 +1472,33 @@ const Input: React.FC<{ label: string; value: string; onChange: (v: string) => v
             {show ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         )}
+      </div>
+    </div>
+  );
+};
+
+const LoginPasswordField: React.FC<{ value: string; onChange: (v: string) => void }> = ({ value, onChange }) => {
+  const [show, setShow] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
+
+  return (
+    <div className="login-field">
+      <label className="login-field-label">Senha</label>
+      <div className="login-input-wrap" style={{ position: 'relative' }}>
+        <span className="login-input-icon"><Lock size={16} /></span>
+        <input
+          type={show ? 'text' : 'password'}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder="••••••••"
+          className="login-input"
+          autoComplete="current-password"
+          onKeyUp={e => setCapsLock(e.getModifierState('CapsLock'))}
+        />
+        {capsLock && <span className="login-caps-pill">CAPS</span>}
+        <button type="button" onClick={() => setShow(s => !s)} className="login-input-trail">
+          {show ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
       </div>
     </div>
   );

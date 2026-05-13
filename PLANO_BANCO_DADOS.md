@@ -10,12 +10,12 @@
 
 | Fase | Nome | Status |
 |------|------|--------|
-| 1 | Backend: Estrutura e servidor Express | ⬜ Pendente |
-| 2 | Banco: Schema MySQL (drop + create) | ⬜ Pendente |
-| 3 | Banco: Seed com dados mockados | ⬜ Pendente |
-| 4 | API: Rotas de autenticação | ⬜ Pendente |
-| 5 | API: Rotas CRUD — Students, Instructors, Staff | ⬜ Pendente |
-| 6 | API: Rotas CRUD — Templates, Attendance, Finances | ⬜ Pendente |
+| 1 | Backend: Estrutura e servidor Express | ✅ Concluída |
+| 2 | Banco: Schema MySQL (drop + create) | ✅ Concluída |
+| 3 | Banco: Seed com dados mockados | ✅ Concluída |
+| 4 | API: Rotas de autenticação | ✅ Concluída |
+| 5 | API: Rotas CRUD — Students, Instructors, Staff | ✅ Concluída |
+| 6 | API: Rotas CRUD — Templates, Attendance, Finances | ✅ Concluída |
 | 7 | API: Rotas CRUD — Calendar, Chat, Inventory, Academies, Recycle Bin | ⬜ Pendente |
 | 8 | Frontend: Desligar MSW e remover mocks | ⬜ Pendente |
 
@@ -232,6 +232,7 @@ CREATE TABLE students (
   absence_limit INT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
   FOREIGN KEY (plan_id) REFERENCES academy_plans(id) ON DELETE SET NULL
 );
 
@@ -288,7 +289,8 @@ CREATE TABLE instructors (
   status ENUM('Active','Inactive','Dropped','Pending') DEFAULT 'Active',
   join_date DATE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE
+  FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- Staff
@@ -312,7 +314,8 @@ CREATE TABLE staff (
   status ENUM('Active','Inactive','Dropped','Pending') DEFAULT 'Active',
   join_date DATE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE
+  FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- Templates de aula
@@ -357,7 +360,8 @@ CREATE TABLE class_sessions (
   status ENUM('In Progress','Finalized') DEFAULT 'In Progress',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE,
-  FOREIGN KEY (template_id) REFERENCES class_templates(id) ON DELETE SET NULL
+  FOREIGN KEY (template_id) REFERENCES class_templates(id) ON DELETE SET NULL,
+  FOREIGN KEY (instructor_id) REFERENCES instructors(id) ON DELETE SET NULL
 );
 
 -- Presenças
@@ -473,19 +477,92 @@ Criar script `api/src/scripts/seed.ts` que:
 
 ---
 
-## Fase 4 — API: Autenticação
+## Fase 4 — API: Autenticação ✅
 
-### Endpoints
+### Endpoints implementados
 | Método | Rota | Descrição |
 |--------|------|-----------|
 | POST | `/api/auth/login` | Email + password → JWT |
-| POST | `/api/auth/logout` | Invalida token (stateless: apenas 200 OK) |
-| GET | `/api/auth/me` | Retorna usuário autenticado via token |
+| POST | `/api/auth/logout` | Stateless — sinaliza ao cliente para descartar o token |
+| GET | `/api/auth/me` | Retorna dados do usuário autenticado (requer Bearer token) |
 
-### Detalhes
-- JWT com payload: `{ userId, academyId, role }`
-- Expiração do token: 7 dias
-- Middleware `auth.ts` verifica Bearer token em todas as rotas protegidas
+### Arquivo criado
+`api/src/routes/auth.ts`
+
+### Detalhes de segurança implementados
+- **Senha criptografada**: `bcrypt.hash` (salt rounds 10) no seed; `bcrypt.compare` no login — timing-safe, nunca comparação direta
+- **Nenhum dado sensível retornado**: `password_hash` é **nunca** incluído nas respostas
+- **Mensagem genérica de erro**: `"Credenciais inválidas"` para email errado e para senha errada — não revela qual campo falhou (evita user enumeration)
+- **Conta bloqueada**: `status = 'Blocked'` retorna 403 antes de comparar a senha
+- **JWT payload**: `{ userId, academyId, role }` | expiração: 7 dias
+- **Queries parametrizadas**: mysql2 com `?` em todas as queries — imune a SQL injection
+- **`email` normalizado**: `.toLowerCase().trim()` antes da query
+- **Middleware `requireAuth`**: verifica `Bearer` token em `/logout` e `/me`
+
+### Ligações entre tabelas (FKs corrigidas nesta fase)
+| Coluna | Tabela | Referencia | Comportamento |
+|--------|--------|------------|---------------|
+| `user_id` | `students` | `users.id` | SET NULL ao deletar usuário |
+| `user_id` | `instructors` | `users.id` | SET NULL ao deletar usuário |
+| `user_id` | `staff` | `users.id` | SET NULL ao deletar usuário |
+| `instructor_id` | `class_sessions` | `instructors.id` | SET NULL ao deletar instrutor |
+
+> **Nota**: `graduation_history.instructor_id` não possui FK por restrição de ordem de criação de tabelas (`graduation_history` é criada antes de `instructors`). O histórico é imutável por design — a referência é mantida como dado textual.
+
+### Rate limiting ✅
+`express-rate-limit` instalado e aplicado no endpoint `/api/auth/login`: máx. **10 tentativas por IP** em janela de 15 minutos. Retorna HTTP 429 com mensagem descritiva ao exceder o limite.
+
+---
+
+---
+
+## Pré-requisitos da Fase 5 — Padrões obrigatórios para todos os CRUDs ✅
+
+> Implementados antes da Fase 5 para garantir consistência em todas as rotas.
+
+### 1. Autorização por role — `requireRole`
+Arquivo: `api/src/middleware/requireRole.ts`
+
+```ts
+// Uso nas rotas:
+router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), handler);
+```
+
+| Role | Permissões típicas |
+|------|-------------------|
+| `superuser` | Acesso total a todas as academias |
+| `admin` | CRUD completo na própria academia |
+| `instructor` | Leitura + ações de aula (attendance, sessions) |
+| `staff` | Leitura + financeiro |
+| `student` | Somente leitura dos próprios dados |
+
+### 2. Escopo por academia — `getAcademyId`
+Arquivo: `api/src/utils/academyScope.ts`
+
+```ts
+// Uso nas rotas — academyId NUNCA vem do body/query de usuários comuns:
+const academyId = getAcademyId(req, res);
+if (!academyId) return; // resposta de erro já foi enviada
+// ...
+const [rows] = await pool.execute('SELECT * FROM students WHERE academy_id = ?', [academyId]);
+```
+
+- Usuários comuns: `academyId` extraído do JWT — imune a adulteração
+- Superusuário: aceita `?academyId=` na query ou no body (obrigatório)
+
+### 3. Validação de entrada — `validate`
+Arquivo: `api/src/utils/validate.ts`  
+Sem dependências externas. Suporta: `required`, `type` (string/number/email/date), `enum`, `maxLength`, `min`, `max`.
+
+```ts
+// Uso nas rotas:
+const errors = validate(req.body, {
+  name:   { required: true, type: 'string', maxLength: 255 },
+  email:  { type: 'email' },
+  status: { enum: ['Active', 'Inactive', 'Dropped', 'Pending'] },
+});
+if (errors.length) return res.status(400).json({ error: errors[0] });
+```
 
 ---
 
@@ -663,6 +740,15 @@ Status HTTP: 400 (validação), 401 (não autenticado), 403 (sem permissão), 40
 
 ### CORS
 Origem permitida: `http://localhost:3002` (dev) e domínio de produção.
+
+### Conexão com banco em QAS/Produção
+No servidor, a API roda diretamente no host (não em container). O `api/.env` do servidor deve usar `DB_HOST=127.0.0.1` em vez do IP externo — evita o roteamento desnecessário pela interface de rede da própria máquina.
+
+| Arquivo | Local | QAS/Prod |
+|---|---|---|
+| `api/.env` → `DB_HOST` | `162.240.167.149` | `127.0.0.1` |
+
+O `db.ts` já tem `enableKeepAlive: true` — mantém conexões ativas no pool e evita reconexões após idle.
 
 ---
 
