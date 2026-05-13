@@ -6,7 +6,7 @@ import { useTranslation } from '../services/LanguageContext';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
 import { authService } from '@/features/auth/services/authService';
 import { academyService } from '@/features/settings/services/academyService';
-import { api } from '@/lib/api';
+import { api, setApiToken } from '@/lib/api';
 import {
   Trophy,
   Mail,
@@ -181,6 +181,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     setIsLoggingIn(true);
     try {
       const { token, user } = await authService.login({ email, password });
+      setApiToken(token);
       let academy: Academy | null = null;
       if (user.academyId) {
         try {
