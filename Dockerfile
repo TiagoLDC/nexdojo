@@ -3,6 +3,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
+ENV VITE_API_URL=/api
 RUN npx vite build
 
 FROM nginx:alpine
