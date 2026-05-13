@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+﻿import { Router, Request, Response, NextFunction } from 'express';
 import pool from '../db';
 import { requireAuth } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
@@ -7,7 +7,7 @@ import { getAcademyId } from '../utils/academyScope';
 const router = Router();
 
 // GET /api/recycle-bin
-router.get('/', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response): Promise<void> => {
+router.get('/', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -24,12 +24,12 @@ router.get('/', requireAuth, requireRole('admin', 'superuser'), async (req: Requ
     );
     res.json({ data: rows, total: (rows as any[]).length });
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 
 // POST /api/recycle-bin/:id/restore — restaurar item
-router.post('/:id/restore', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response): Promise<void> => {
+router.post('/:id/restore', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -206,12 +206,12 @@ router.post('/:id/restore', requireAuth, requireRole('admin', 'superuser'), asyn
     await pool.execute('DELETE FROM recycle_bin WHERE id = ?', [req.params.id]);
     res.json({ message: 'Item restaurado com sucesso' });
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 
 // DELETE /api/recycle-bin/:id — excluir permanentemente
-router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response): Promise<void> => {
+router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -225,7 +225,7 @@ router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), async (req
     await pool.execute('DELETE FROM recycle_bin WHERE id = ?', [req.params.id]);
     res.json({ message: 'Item excluído permanentemente' });
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 

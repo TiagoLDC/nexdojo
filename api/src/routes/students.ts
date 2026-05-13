@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+﻿import { Router, Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import pool from '../db';
 import { requireAuth } from '../middleware/auth';
@@ -26,7 +26,7 @@ const UPDATABLE_FIELDS = [
 ];
 
 // GET /api/students
-router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
+router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -59,18 +59,18 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
     const total = (countRows[0] as any).total;
 
     const [rows] = await pool.execute<any[]>(
-      `SELECT * FROM students ${where} ORDER BY name ASC LIMIT ? OFFSET ?`,
-      [...params, limitNum, offset]
+      `SELECT * FROM students ${where} ORDER BY name ASC LIMIT ${limitNum} OFFSET ${offset}`,
+      params
     );
 
     res.json({ data: rows, total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) });
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 
 // GET /api/students/:id
-router.get('/:id', requireAuth, async (req: Request, res: Response): Promise<void> => {
+router.get('/:id', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -96,12 +96,12 @@ router.get('/:id', requireAuth, async (req: Request, res: Response): Promise<voi
 
     res.json({ ...rows[0], documents: docs, graduationHistory: grad });
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 
 // POST /api/students
-router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response): Promise<void> => {
+router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -201,12 +201,12 @@ router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Req
       res.status(err.statusCode).json({ error: err.message });
       return;
     }
-    throw err;
+    next(err);
   }
 });
 
 // PUT /api/students/:id
-router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response): Promise<void> => {
+router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -239,12 +239,12 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
     const [rows] = await pool.execute<any[]>('SELECT * FROM students WHERE id = ?', [req.params.id]);
     res.json(rows[0]);
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 
 // DELETE /api/students/:id — move para lixeira
-router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response): Promise<void> => {
+router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -275,12 +275,12 @@ router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), async (req
 
     res.json({ message: 'Aluno movido para a lixeira' });
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 
 // POST /api/students/:id/graduate
-router.post('/:id/graduate', requireAuth, requireRole('admin', 'superuser', 'instructor'), async (req: Request, res: Response): Promise<void> => {
+router.post('/:id/graduate', requireAuth, requireRole('admin', 'superuser', 'instructor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -320,12 +320,12 @@ router.post('/:id/graduate', requireAuth, requireRole('admin', 'superuser', 'ins
     const [updated] = await pool.execute<any[]>('SELECT * FROM students WHERE id = ?', [req.params.id]);
     res.json(updated[0]);
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 
 // POST /api/students/:id/documents
-router.post('/:id/documents', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response): Promise<void> => {
+router.post('/:id/documents', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -351,12 +351,12 @@ router.post('/:id/documents', requireAuth, requireRole('admin', 'superuser'), as
     const [rows] = await pool.execute<any[]>('SELECT * FROM student_documents WHERE id = ?', [docId]);
     res.status(201).json(rows[0]);
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 
 // DELETE /api/students/:id/documents/:docId
-router.delete('/:id/documents/:docId', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response): Promise<void> => {
+router.delete('/:id/documents/:docId', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -376,7 +376,7 @@ router.delete('/:id/documents/:docId', requireAuth, requireRole('admin', 'superu
     await pool.execute('DELETE FROM student_documents WHERE id = ?', [req.params.docId]);
     res.json({ message: 'Documento removido' });
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 

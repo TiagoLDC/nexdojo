@@ -1,26 +1,26 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Staff, StudentDocument, Academy, User } from '../types';
-import { StorageService } from '../services/storage';
+import { staffService } from '@/features/staff/services/staffService';
 import { useTranslation } from '../services/LanguageContext';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
-import { 
-  UserPlus, 
-  Search, 
-  MoreVertical, 
-  X, 
-  Trash2, 
-  Save, 
-  Phone, 
-  MessageCircle, 
-  FileText, 
-  Upload, 
-  Download, 
-  FileIcon, 
-  Filter, 
-  Check, 
-  User as UserIcon, 
-  CheckCircle2, 
+import {
+  UserPlus,
+  Search,
+  MoreVertical,
+  X,
+  Trash2,
+  Save,
+  Phone,
+  MessageCircle,
+  FileText,
+  Upload,
+  Download,
+  FileIcon,
+  Filter,
+  Check,
+  User as UserIcon,
+  CheckCircle2,
   Briefcase,
   Mail,
   MapPin,
@@ -60,13 +60,17 @@ const StaffView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }
 
   useEffect(() => {
     if (academy) {
-      setStaff(StorageService.getStaff(academy.id));
+      staffService.getAll(academy.id).then((res) => {
+        setStaff(Array.isArray(res.data) ? res.data : []);
+      }).catch(() => {
+        setStaff([]);
+      });
     }
   }, [academy]);
 
   const handleOpenNewStaff = () => {
     const newStaff: Staff = {
-      id: 'staff_' + Math.random().toString(36).substr(2, 9),
+      id: '',
       academyId: academy.id,
       name: '',
       birthDate: '',
@@ -104,73 +108,73 @@ const StaffView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }
     }
   };
 
-  const handleSaveStaff = () => {
+  const handleSaveStaff = async () => {
     if (!editingStaff || !editingStaff.name || !editingStaff.birthDate) {
       alert("Nome e Data de Nascimento são obrigatórios.");
       return;
     }
 
     try {
-      const currentStaffList = StorageService.getStaff();
-      const exists = currentStaffList.find(s => s.id === editingStaff.id);
-      
-      let updated;
-      if (exists) {
-        updated = currentStaffList.map(s => s.id === editingStaff.id ? editingStaff : s);
+      const isNew = !editingStaff.id;
+
+      if (isNew) {
+        const created = await staffService.create(academy.id, {
+          name: editingStaff.name,
+          birthDate: editingStaff.birthDate,
+          status: editingStaff.status,
+          joinDate: editingStaff.joinDate,
+          photo: editingStaff.photo,
+          phone: editingStaff.phone,
+          email: editingStaff.email,
+          cpf: editingStaff.cpf,
+          rg: editingStaff.rg,
+          address: editingStaff.address,
+          cep: editingStaff.cep,
+          medicalNotes: editingStaff.medicalNotes,
+          position: editingStaff.position,
+        });
+        setStaff(prev => [...prev, created]);
+        showNotification("Colaborador cadastrado!");
       } else {
-        updated = [...currentStaffList, editingStaff];
-      }
-
-      StorageService.saveStaff(updated, academy.id);
-      setStaff(updated.filter(s => s.academyId === academy.id));
-
-      // Criar ou atualizar usuário de acesso
-      if (editingStaff.email) {
-        const currentUsers = StorageService.getUsers(academy.id);
-        const existingUser = currentUsers.find(u => u.email.toLowerCase() === editingStaff.email?.toLowerCase());
-
-        if (!existingUser) {
-          const newUser: User = {
-            id: 'u_' + Math.random().toString(36).substr(2, 9),
-            academyId: academy.id,
-            role: 'staff',
-            name: editingStaff.name,
-            email: editingStaff.email.toLowerCase(),
-            status: 'Active',
-            password: '' 
-          };
-          StorageService.saveUsers([...currentUsers, newUser], academy.id);
-        } else if (existingUser.name !== editingStaff.name) {
-          const updatedUsers = currentUsers.map(u => 
-            u.email.toLowerCase() === editingStaff.email?.toLowerCase() 
-              ? { ...u, name: editingStaff.name } 
-              : u
-          );
-          StorageService.saveUsers(updatedUsers, academy.id);
-        }
+        const updated = await staffService.update(editingStaff.id, {
+          name: editingStaff.name,
+          birthDate: editingStaff.birthDate,
+          status: editingStaff.status,
+          joinDate: editingStaff.joinDate,
+          photo: editingStaff.photo,
+          phone: editingStaff.phone,
+          email: editingStaff.email,
+          cpf: editingStaff.cpf,
+          rg: editingStaff.rg,
+          address: editingStaff.address,
+          cep: editingStaff.cep,
+          medicalNotes: editingStaff.medicalNotes,
+          position: editingStaff.position,
+        });
+        setStaff(prev => prev.map(s => s.id === updated.id ? updated : s));
+        showNotification("Colaborador atualizado!");
       }
 
       setIsEditModalOpen(false);
       setEditingStaff(null);
-      showNotification(exists ? "Colaborador atualizado!" : "Colaborador cadastrado!");
     } catch (e) {
       showNotification("Erro ao salvar.", 'error');
     }
   };
 
-  const handleDeleteStaff = () => {
+  const handleDeleteStaff = async () => {
     if (!editingStaff) return;
-    
-    const id = editingStaff.id;
-    const currentStaffList = StorageService.getStaff();
-    const updated = currentStaffList.filter(s => s.id !== id);
-    StorageService.saveStaff(updated, academy.id);
-    setStaff(updated.filter(s => s.academyId === academy.id));
-    
-    setIsDeleteModalOpen(false);
-    setIsEditModalOpen(false);
-    setEditingStaff(null);
-    showNotification("Colaborador removido.", 'delete');
+
+    try {
+      await staffService.delete(editingStaff.id);
+      setStaff(prev => prev.filter(s => s.id !== editingStaff.id));
+      setIsDeleteModalOpen(false);
+      setIsEditModalOpen(false);
+      setEditingStaff(null);
+      showNotification("Colaborador removido.", 'delete');
+    } catch {
+      showNotification("Erro ao remover colaborador.", 'error');
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -239,7 +243,7 @@ const StaffView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Equipe Administrativa (Staff)</h1>
           <p className="text-slate-500 dark:text-slate-400">Gerencie os colaboradores da sua unidade.</p>
         </div>
-        <button 
+        <button
           onClick={handleOpenNewStaff}
           className="bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg transition-all"
         >
@@ -251,8 +255,8 @@ const StaffView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }
       <div className="space-y-4">
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-          <input 
-            type="text" 
+          <input
+            type="text"
             placeholder="Buscar por nome..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -263,7 +267,7 @@ const StaffView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }
         <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 shadow-sm w-fit">
           <Filter size={14} className="text-slate-400" />
           <span className="text-xs font-bold text-slate-400 uppercase">Status:</span>
-          <select 
+          <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="text-xs font-bold text-slate-700 dark:text-slate-300 outline-none bg-transparent"
@@ -336,7 +340,7 @@ const StaffView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[200] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-[32px] p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase italic">{editingStaff.id.startsWith('new') ? 'Novo Colaborador' : 'Editar Ficha'}</h2>
+              <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase italic">{!editingStaff.id ? 'Novo Colaborador' : 'Editar Ficha'}</h2>
               <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-600">
                 <X size={24} />
               </button>
@@ -344,7 +348,7 @@ const StaffView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }
 
             <div className="space-y-6">
                <div className="flex justify-center mb-6">
-                <div 
+                <div
                   className="w-24 h-24 rounded-[32px] bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-300 overflow-hidden border-2 border-dashed border-slate-200 dark:border-slate-700 cursor-pointer hover:border-indigo-500 transition-all"
                   onClick={() => editPhotoInputRef.current?.click()}
                 >
@@ -363,8 +367,8 @@ const StaffView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nome Completo *</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={editingStaff.name}
                     onChange={(e) => setEditingStaff({ ...editingStaff, name: e.target.value })}
                     className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
@@ -397,24 +401,26 @@ const StaffView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }
                 </div>
 
                 <div className="md:col-span-2 text-right">
-                  <button 
-                    onClick={() => setIsDeleteModalOpen(true)}
-                    className="text-red-500 text-[10px] font-black uppercase tracking-widest flex items-center gap-1 ml-auto hover:underline"
-                  >
-                    <Trash2 size={14} /> Excluir Colaborador
-                  </button>
+                  {editingStaff.id && (
+                    <button
+                      onClick={() => setIsDeleteModalOpen(true)}
+                      className="text-red-500 text-[10px] font-black uppercase tracking-widest flex items-center gap-1 ml-auto hover:underline"
+                    >
+                      <Trash2 size={14} /> Excluir Colaborador
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
 
             <div className="flex flex-col gap-2 mt-8">
-              <button 
+              <button
                 onClick={handleSaveStaff}
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-600/20 active:scale-95 transition-all text-sm uppercase tracking-widest"
               >
                 Salvar Colaborador
               </button>
-              <button 
+              <button
                 onClick={() => setIsEditModalOpen(false)}
                 className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-4 rounded-2xl active:scale-95 transition-all text-sm uppercase"
               >

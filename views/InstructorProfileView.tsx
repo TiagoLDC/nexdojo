@@ -1,28 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Instructor, Academy, Belt, StudentDocument, Staff } from '../types';
-import { StorageService } from '../services/storage';
-import { 
-  User as UserIcon, 
-  MapPin, 
-  Phone, 
-  Award, 
-  Calendar as CalendarIcon, 
-  Shield, 
-  Save, 
-  Camera, 
-  Heart, 
-  UserCheck, 
-  FileText, 
-  Upload, 
-  FileIcon, 
-  Download, 
-  Trash2, 
-  GraduationCap, 
-  CalendarClock, 
-  Activity, 
-  Briefcase, 
-  Plus, 
-  Minus, 
+import { instructorService } from '@/features/instructors/services/instructorService';
+import {
+  User as UserIcon,
+  MapPin,
+  Phone,
+  Award,
+  Calendar as CalendarIcon,
+  Shield,
+  Save,
+  Camera,
+  Heart,
+  UserCheck,
+  FileText,
+  Upload,
+  FileIcon,
+  Download,
+  Trash2,
+  GraduationCap,
+  CalendarClock,
+  Activity,
+  Briefcase,
+  Plus,
+  Minus,
   X,
   CheckCircle2,
   Mail,
@@ -50,65 +50,42 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Instructor | Staff | null>(null);
   const [isLoadingCep, setIsLoadingCep] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const loadProfile = () => {
-      if (user.role === 'instructor') {
-        const instructors = StorageService.getInstructors();
-        const found = instructors.find(i => i.email?.toLowerCase() === user.email?.toLowerCase());
-        
-        if (found) {
-          setProfile(found);
-          setEditData(JSON.parse(JSON.stringify(found)));
+    const loadProfile = async () => {
+      setIsLoading(true);
+      try {
+        if (user.role === 'instructor') {
+          const res = await instructorService.getAll(academy.id, { limit: 1000 });
+          const found = res.data.find(i => i.email?.toLowerCase() === user.email?.toLowerCase()) || null;
+          if (found) {
+            setProfile(found);
+            setEditData(JSON.parse(JSON.stringify(found)));
+          } else {
+            setProfile(null);
+            setEditData(null);
+          }
         } else {
-          const defaultInstructor: Instructor = {
-            id: `inst_${Math.random().toString(36).substr(2, 9)}`,
-            academyId: academy.id,
-            name: user.name,
-            email: user.email,
-            belt: Belt.BLACK,
-            stripes: 0,
-            birthDate: '',
-            status: 'Active',
-            joinDate: new Date().toISOString(),
-            documents: [],
-            graduationHistory: []
-          };
-          setProfile(defaultInstructor);
-          setEditData(JSON.parse(JSON.stringify(defaultInstructor)));
+          // staff role: no dedicated staff service yet — show empty state
+          setProfile(null);
+          setEditData(null);
         }
-      } else if (user.role === 'staff') {
-        const staffList = (StorageService as any).getStaff ? (StorageService as any).getStaff() : []; // Fallback if getStaff is not explicitly in storage service (checking later)
-        const found = staffList.find((s: Staff) => s.email?.toLowerCase() === user.email?.toLowerCase());
-        
-        if (found) {
-          setProfile(found);
-          setEditData(JSON.parse(JSON.stringify(found)));
-        } else {
-          const defaultStaff: Staff = {
-            id: `staff_${Math.random().toString(36).substr(2, 9)}`,
-            academyId: academy.id,
-            name: user.name,
-            email: user.email,
-            birthDate: '',
-            status: 'Active',
-            joinDate: new Date().toISOString(),
-            documents: []
-          };
-          setProfile(defaultStaff);
-          setEditData(JSON.parse(JSON.stringify(defaultStaff)));
-        }
+      } catch (err) {
+        console.error('Erro ao carregar perfil:', err);
+        setProfile(null);
+        setEditData(null);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
-    const timer = setTimeout(loadProfile, 500);
-    return () => clearTimeout(timer);
-  }, [academy.id, user.email, user.name, user.role]);
+    loadProfile();
+  }, [academy.id, user.email, user.role]);
 
   const handleCepLookup = async (value: string) => {
     if (!editData) return;
@@ -128,31 +105,29 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
     }
   };
 
-  const handleSave = () => {
-    if (!editData) return;
-    
-    if (user.role === 'instructor') {
-      const allInstructors = StorageService.getInstructors();
-      const updated = allInstructors.some(i => i.id === editData.id)
-        ? allInstructors.map(i => i.id === editData.id ? editData as Instructor : i)
-        : [...allInstructors, editData as Instructor];
-      
-      StorageService.saveInstructors(updated, academy.id);
-    } else if (user.role === 'staff') {
-      const allStaff = (StorageService as any).getStaff ? (StorageService as any).getStaff() : [];
-      const updated = allStaff.some((s: Staff) => s.id === editData.id)
-        ? allStaff.map((s: Staff) => s.id === editData.id ? editData as Staff : s)
-        : [...allStaff, editData as Staff];
-      
-      if ((StorageService as any).saveStaff) {
-        (StorageService as any).saveStaff(updated, academy.id);
+  const handleSave = async () => {
+    if (!editData || !editData.id) return;
+
+    setIsSaving(true);
+    try {
+      if (user.role === 'instructor') {
+        const updated = await instructorService.update(editData.id, editData as Instructor);
+        setProfile(updated);
+        setEditData(JSON.parse(JSON.stringify(updated)));
+      } else {
+        // staff: no service yet, just update local state
+        setProfile(editData);
       }
+      setIsEditing(false);
+      setMessage({ type: 'success', text: 'Seus dados foram atualizados com sucesso! OSS!' });
+      setTimeout(() => setMessage(null), 3000);
+    } catch (err) {
+      console.error('Erro ao salvar perfil:', err);
+      setMessage({ type: 'error', text: 'Erro ao salvar. Tente novamente.' });
+      setTimeout(() => setMessage(null), 3000);
+    } finally {
+      setIsSaving(false);
     }
-    
-    setProfile(editData);
-    setIsEditing(false);
-    setMessage({ type: 'success', text: 'Seus dados foram atualizados com sucesso! OSS!' });
-    setTimeout(() => setMessage(null), 3000);
   };
 
   const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -170,7 +145,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
     const file = e.target.files?.[0];
     if (!file || !editData) return;
 
-    if (file.size > 2000000) { 
+    if (file.size > 2000000) {
       alert("Arquivo muito grande. O limite é de 2MB.");
       return;
     }
@@ -212,7 +187,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
     document.body.removeChild(link);
   };
 
-  if (isLoading || !profile || !editData) {
+  if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-[70vh] gap-6 animate-pulse">
         <div className="w-24 h-24 bg-indigo-100 dark:bg-slate-800 rounded-[40px] flex items-center justify-center text-indigo-600">
@@ -221,6 +196,20 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
         <div className="text-center space-y-2">
           <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase italic tracking-tight">Carregando Ficha...</h2>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Sincronizando seus dados, OSS!</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile || !editData) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[70vh] gap-6">
+        <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800 rounded-[40px] flex items-center justify-center text-slate-400">
+          <UserIcon size={40} strokeWidth={1} />
+        </div>
+        <div className="text-center space-y-2">
+          <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase italic tracking-tight">Perfil Não Encontrado</h2>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Nenhum registro encontrado para este e-mail. Contate o administrador.</p>
         </div>
       </div>
     );
@@ -247,15 +236,16 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
           {isEditing ? (
-            <button 
+            <button
               onClick={handleSave}
-              className="w-full sm:w-auto bg-emerald-600 text-white px-5 py-3.5 rounded-2xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 animate-in fade-in zoom-in duration-300"
+              disabled={isSaving}
+              className="w-full sm:w-auto bg-emerald-600 text-white px-5 py-3.5 rounded-2xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 animate-in fade-in zoom-in duration-300 disabled:opacity-60"
             >
-              <Save size={18} />
-              <span className="text-[10px] font-black uppercase tracking-widest">Salvar Alterações</span>
+              {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+              <span className="text-[10px] font-black uppercase tracking-widest">{isSaving ? 'Salvando...' : 'Salvar Alterações'}</span>
             </button>
           ) : (
-            <button 
+            <button
               onClick={() => setIsEditing(true)}
               className="w-full sm:w-auto bg-indigo-600 text-white px-5 py-3.5 rounded-2xl shadow-lg shadow-indigo-600/20 active:scale-95 transition-all flex items-center justify-center gap-2"
             >
@@ -276,13 +266,13 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
       )}
 
       <div className="space-y-8 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[40px] p-4 sm:p-6 md:p-10 shadow-sm transition-colors">
-        
+
         {/* Profile Info Section */}
         <section className="space-y-8">
           <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2">
             <UserCheck size={16} /> DADOS PESSOAIS
           </h3>
-          
+
           <div className="flex flex-col md:flex-row gap-10 items-start">
             {/* Photo Column */}
             <div className="flex flex-col items-center gap-4 shrink-0 mx-auto md:mx-0">
@@ -296,7 +286,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
                   </div>
                 )}
                 {isEditing && (
-                  <div 
+                  <div
                     onClick={() => photoInputRef.current?.click()}
                     className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white"
                   >
@@ -312,9 +302,9 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
               <div className="md:col-span-2">
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Nome Completo *</label>
-                <input 
+                <input
                   disabled={!isEditing}
-                  type="text" 
+                  type="text"
                   value={editData.name}
                   onChange={(e) => setEditData({...editData, name: e.target.value})}
                   className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none font-bold text-slate-800 dark:text-white transition-all disabled:opacity-60"
@@ -322,7 +312,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
               </div>
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Sexo</label>
-                <select 
+                <select
                   disabled={!isEditing}
                   value={editData.gender || ''}
                   onChange={(e) => setEditData({...editData, gender: e.target.value as any})}
@@ -336,9 +326,9 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
               </div>
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1 text-indigo-500">Nascimento *</label>
-                <input 
+                <input
                   disabled={!isEditing}
-                  type="date" 
+                  type="date"
                   value={editData.birthDate}
                   onChange={(e) => setEditData({...editData, birthDate: e.target.value})}
                   className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none font-black text-slate-800 dark:text-white transition-all disabled:opacity-60"
@@ -346,9 +336,9 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
               </div>
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">CPF</label>
-                <input 
+                <input
                   disabled={!isEditing}
-                  type="text" 
+                  type="text"
                   value={editData.cpf || ''}
                   onChange={(e) => setEditData({...editData, cpf: maskCPF(e.target.value)})}
                   placeholder="000.000.000-00"
@@ -357,9 +347,9 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
               </div>
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">RG</label>
-                <input 
+                <input
                   disabled={!isEditing}
-                  type="text" 
+                  type="text"
                   value={editData.rg || ''}
                   onChange={(e) => setEditData({...editData, rg: maskRG(e.target.value)})}
                   placeholder="00.000.000-0"
@@ -368,9 +358,9 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
               </div>
               <div className="md:col-span-2 lg:col-span-3">
                 <label className="block text-[10px] font-black text-indigo-500 uppercase mb-2 ml-1">E-mail Profissional (Login) *</label>
-                <input 
+                <input
                   disabled={true}
-                  type="email" 
+                  type="email"
                   value={editData.email || ''}
                   className="w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none font-bold text-slate-400 dark:text-slate-500 transition-all cursor-not-allowed"
                 />
@@ -388,9 +378,9 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
                <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">WhatsApp</label>
-               <input 
+               <input
                   disabled={!isEditing}
-                  type="tel" 
+                  type="tel"
                   value={editData.phone || ''}
                   onChange={(e) => setEditData({...editData, phone: maskPhone(e.target.value)})}
                   placeholder="(00) 00000-0000"
@@ -401,9 +391,9 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
               <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1 flex items-center justify-between">
                 CEP {isLoadingCep && <Loader2 size={12} className="animate-spin text-indigo-500" />}
               </label>
-              <input 
+              <input
                 disabled={!isEditing}
-                type="text" 
+                type="text"
                 value={editData.cep || ''}
                 onChange={(e) => handleCepLookup(e.target.value)}
                 placeholder="00000-000"
@@ -412,9 +402,9 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
             </div>
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Endereço Completo</label>
-              <input 
+              <input
                 disabled={!isEditing}
-                type="text" 
+                type="text"
                 value={editData.address || ''}
                 onChange={(e) => setEditData({...editData, address: e.target.value})}
                 placeholder="Rua, Número, Bairro, Cidade - UF"
@@ -430,13 +420,13 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
             <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2">
               <GraduationCap size={16} /> CARREIRA & GRADUAÇÃO
             </h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
               <div className="space-y-6">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-3">Graus na Faixa Atual</label>
                   <div className={`flex items-center justify-between border-2 transition-all rounded-[32px] px-6 py-4 shadow-inner ${(editData as Instructor).belt ? BELT_COLORS[(editData as Instructor).belt] : 'bg-slate-900 border-slate-800'}`}>
-                    <button 
+                    <button
                       disabled={!isEditing}
                       onClick={() => setEditData({ ...editData, stripes: Math.max(0, (editData.stripes || 0) - 1) } as Instructor)}
                       className="text-white/50 hover:scale-125 transition-all p-2 disabled:opacity-40"
@@ -445,13 +435,13 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
                     </button>
                     <div className={`flex gap-2 p-1.5 rounded-lg px-4 bg-opacity-90 ${(editData as Instructor).belt === Belt.BLACK ? 'bg-red-600' : 'bg-slate-950 shadow-2xl shadow-indigo-500/20'}`}>
                        {[...Array((editData as Instructor).belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
-                        <div 
-                          key={i} 
-                          className={`w-3 h-8 rounded-sm transition-all ${i < (editData.stripes || 0) ? 'bg-white shadow-[0_0_12px_rgba(255,255,255,0.7)] scale-y-110' : 'bg-white/10'}`} 
+                        <div
+                          key={i}
+                          className={`w-3 h-8 rounded-sm transition-all ${i < (editData.stripes || 0) ? 'bg-white shadow-[0_0_12px_rgba(255,255,255,0.7)] scale-y-110' : 'bg-white/10'}`}
                         />
                       ))}
                     </div>
-                    <button 
+                    <button
                       disabled={!isEditing}
                       onClick={() => setEditData({ ...editData, stripes: Math.min((editData as Instructor).belt === Belt.BLACK ? 6 : 4, (editData.stripes || 0) + 1) } as Instructor)}
                       className="text-white/50 hover:scale-125 transition-all p-2 disabled:opacity-40"
@@ -463,9 +453,9 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
 
                 <div>
                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Minhas Especialidades</label>
-                   <input 
+                   <input
                       disabled={!isEditing}
-                      type="text" 
+                      type="text"
                       value={(editData as Instructor).specialties || ''}
                       onChange={(e) => setEditData({...editData, specialties: e.target.value} as Instructor)}
                       placeholder="Ex: Kids, No-Gi, Competição..."
@@ -483,8 +473,8 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
                       disabled={!isEditing}
                       onClick={() => setEditData({...editData, belt} as Instructor)}
                       className={`py-3 px-1 rounded-2xl border-2 text-[8px] font-black uppercase tracking-tighter transition-all ${
-                        (editData as Instructor).belt === belt 
-                          ? `${BELT_COLORS[belt]} shadow-lg scale-105 ring-4 ring-indigo-500/10` 
+                        (editData as Instructor).belt === belt
+                          ? `${BELT_COLORS[belt]} shadow-lg scale-105 ring-4 ring-indigo-500/10`
                           : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-400 opacity-60 hover:opacity-100'
                       }`}
                     >
@@ -504,7 +494,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
               <FileText size={16} /> MEUS DOCUMENTOS
             </h3>
             {isEditing && (
-              <button 
+              <button
                 onClick={() => fileInputRef.current?.click()}
                 className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2"
               >
@@ -530,7 +520,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <button 
+                    <button
                       onClick={() => downloadFile(doc)}
                       className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 rounded-lg transition-all"
                       title="Ver / Baixar"
@@ -538,7 +528,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
                       <Download size={18} />
                     </button>
                     {isEditing && (
-                      <button 
+                      <button
                         onClick={() => deleteDocument(doc.id)}
                         className="p-2 text-slate-400 hover:text-red-500 hover:bg-white dark:hover:bg-slate-800 rounded-lg transition-all"
                       >
@@ -562,7 +552,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
           <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2">
             <Activity size={16} /> OBSERVAÇÕES DE SAÚDE
           </h3>
-          <textarea 
+          <textarea
             disabled={!isEditing}
             rows={4}
             value={editData.medicalNotes || ''}
@@ -580,7 +570,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
                 <CalendarClock size={16} /> HISTÓRICO DE GRADUAÇÃO
               </h3>
               {isEditing && (
-                <button 
+                <button
                   onClick={() => {
                     const newItem = {
                       id: 'hist_' + Math.random().toString(36).substr(2, 9),
@@ -619,7 +609,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
                       </div>
                     </div>
                     {isEditing && (
-                      <button 
+                      <button
                         onClick={() => {
                           const updated = (editData as Instructor).graduationHistory!.filter(h => h.id !== item.id);
                           setEditData({...editData, graduationHistory: updated} as Instructor);

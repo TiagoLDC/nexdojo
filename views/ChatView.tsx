@@ -1,9 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { User, ChatMessage, Academy } from '../types';
-import { StorageService } from '../services/storage';
-import { Send, User as UserIcon, MessageSquare, Clock, ShieldCheck, Award, Bell } from 'lucide-react';
-import { NotificationService } from '../services/NotificationService';
+import { chatService } from '@/features/chat/services/chatService';
+import { Send, MessageSquare, Clock, ShieldCheck, Bell } from 'lucide-react';
 
 interface ChatViewProps {
   academy: Academy;
@@ -17,14 +16,17 @@ const ChatView: React.FC<ChatViewProps> = ({ academy, user }) => {
 
   useEffect(() => {
     if (academy) {
-      const msgs = StorageService.getChatMessages(academy.id);
-      setMessages(msgs);
-      
-      // Marcar como lido
-      if (msgs.length > 0) {
-        const latestTimestamp = msgs[msgs.length - 1].timestamp;
-        localStorage.setItem(`oss_chat_last_read_${academy.id}`, latestTimestamp);
-      }
+      chatService.getMessages(academy.id)
+        .then(res => {
+          setMessages(res.data);
+
+          // Marcar como lido
+          if (res.data.length > 0) {
+            const latestTimestamp = res.data[res.data.length - 1].timestamp;
+            localStorage.setItem(`oss_chat_last_read_${academy.id}`, latestTimestamp);
+          }
+        })
+        .catch(() => {});
     }
   }, [academy]);
 
@@ -49,29 +51,26 @@ const ChatView: React.FC<ChatViewProps> = ({ academy, user }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
 
-    const message: ChatMessage = {
-      id: Math.random().toString(36).substr(2, 9),
-      academyId: academy.id,
-      senderId: user.id,
-      senderName: user.name,
-      senderRole: user.role,
-      content: newMessage.trim(),
-      timestamp: new Date().toISOString()
-    };
-
-    const updatedMessages = [...messages, message];
-    setMessages(updatedMessages);
-    StorageService.saveChatMessages(updatedMessages, academy.id);
-    localStorage.setItem(`oss_chat_last_read_${academy.id}`, message.timestamp);
-    
-    // Notificar por e-mail (simulação)
-    NotificationService.notifyNewMuralMessage(message, academy);
-    
+    const content = newMessage.trim();
     setNewMessage('');
+
+    try {
+      const message = await chatService.sendMessage(academy.id, {
+        content,
+        senderId: user.id,
+        senderName: user.name,
+        senderRole: user.role as 'admin' | 'instructor' | 'staff',
+      });
+
+      setMessages(prev => [...prev, message]);
+      localStorage.setItem(`oss_chat_last_read_${academy.id}`, message.timestamp);
+    } catch {
+      setNewMessage(content);
+    }
   };
 
   const formatTime = (isoDate: string) => {
@@ -134,14 +133,14 @@ const ChatView: React.FC<ChatViewProps> = ({ academy, user }) => {
             }
 
             return (
-              <div 
-                key={msg.id} 
+              <div
+                key={msg.id}
                 className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}
               >
                 <div className={`flex items-center gap-2 mb-1 px-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
                   <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${
-                    msg.senderRole === 'admin' 
-                      ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' 
+                    msg.senderRole === 'admin'
+                      ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
                       : msg.senderRole === 'instructor'
                         ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
                         : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400'
@@ -152,15 +151,15 @@ const ChatView: React.FC<ChatViewProps> = ({ academy, user }) => {
                     {msg.senderName}
                   </span>
                 </div>
-                
+
                 <div className={`max-w-[80%] p-4 rounded-3xl text-sm font-medium shadow-sm transition-all ${
-                  isMe 
-                    ? 'bg-indigo-600 text-white rounded-tr-none shadow-indigo-600/10' 
+                  isMe
+                    ? 'bg-indigo-600 text-white rounded-tr-none shadow-indigo-600/10'
                     : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700 rounded-tl-none'
                 }`}>
                   {msg.content}
                 </div>
-                
+
                 <div className={`flex items-center gap-1 mt-1 px-1 text-[9px] font-bold text-slate-400`}>
                   <Clock size={10} />
                   {formatTime(msg.timestamp)}
@@ -176,14 +175,14 @@ const ChatView: React.FC<ChatViewProps> = ({ academy, user }) => {
       {user.role !== 'student' ? (
         <footer className="p-4 md:p-6 bg-white dark:bg-slate-900 border-t border-slate-50 dark:border-slate-800 transition-colors shrink-0">
           <form onSubmit={handleSendMessage} className="flex items-center gap-2 md:gap-3 bg-slate-50 dark:bg-slate-800 rounded-3xl p-1.5 border border-slate-100 dark:border-slate-700 focus-within:ring-4 focus-within:ring-indigo-500/10 focus-within:border-indigo-500 transition-all">
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Digite um aviso..."
               className="flex-1 bg-transparent border-none px-4 py-2 outline-none font-medium text-sm text-slate-700 dark:text-white placeholder:text-slate-400"
             />
-            <button 
+            <button
               type="submit"
               disabled={!newMessage.trim()}
               className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white p-3 rounded-2xl shadow-lg shadow-indigo-600/20 transition-all active:scale-90 flex items-center justify-center shrink-0"

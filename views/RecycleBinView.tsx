@@ -1,17 +1,16 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { StorageService } from '../services/storage';
-import { RecycleBinItem, Student, Instructor, ClassTemplate, Academy, User } from '../types';
+import { RecycleBinItem, Academy, User } from '../types';
 import { useTranslation } from '../services/LanguageContext';
-import { 
-  Trash2, 
-  RotateCcw, 
-  Search, 
-  Users, 
-  Award, 
-  CalendarDays, 
-  X, 
-  CheckCircle2, 
+import { recycleBinService } from '@/features/recycleBin/services/recycleBinService';
+import {
+  Trash2,
+  RotateCcw,
+  Search,
+  Users,
+  Award,
+  CalendarDays,
+  X,
   AlertTriangle,
   Filter,
   Trash,
@@ -19,7 +18,6 @@ import {
   Square,
   Check
 } from 'lucide-react';
-import { BELT_COLORS } from '../constants';
 
 const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
   const { t, showNotification } = useTranslation();
@@ -27,11 +25,20 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('All');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(false);
+
+  const loadItems = () => {
+    if (academy) {
+      setLoading(true);
+      recycleBinService.getAll(academy.id)
+        .then(res => setItems(res.data))
+        .catch(() => showNotification('Erro ao carregar lixeira.', 'delete'))
+        .finally(() => setLoading(false));
+    }
+  };
 
   useEffect(() => {
-    if (academy) {
-      setItems(StorageService.getRecycleBin(academy.id));
-    }
+    loadItems();
   }, [academy?.id]);
 
   const filteredItems = useMemo(() => {
@@ -58,38 +65,26 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
     }
   };
 
-  const restoreMany = (itemsToRestore: RecycleBinItem[]) => {
-    const students = StorageService.getStudents(academy.id);
-    const instructors = StorageService.getInstructors(academy.id);
-    const templates = StorageService.getTemplates(academy.id);
-
-    const newStudents = [...students];
-    const newInstructors = [...instructors];
-    const newTemplates = [...templates];
-
-    itemsToRestore.forEach(item => {
-      if (item.type === 'student') newStudents.push(item.originalData);
-      else if (item.type === 'instructor') newInstructors.push(item.originalData);
-      else if (item.type === 'template') newTemplates.push(item.originalData);
-    });
-
-    StorageService.saveStudents(newStudents, academy.id);
-    StorageService.saveInstructors(newInstructors, academy.id);
-    StorageService.saveTemplates(newTemplates, academy.id);
-
-    const idsToKeep = items.filter(i => !itemsToRestore.find(r => r.id === i.id)).map(i => i);
-    setItems(idsToKeep);
-    StorageService.saveRecycleBin(idsToKeep, academy.id);
-    setSelectedIds(new Set());
-    showNotification(`${itemsToRestore.length} item(s) restaurado(s)!`);
+  const restoreMany = async (itemsToRestore: RecycleBinItem[]) => {
+    try {
+      await Promise.all(itemsToRestore.map(item => recycleBinService.restore(item.id)));
+      setItems(prev => prev.filter(i => !itemsToRestore.find(r => r.id === i.id)));
+      setSelectedIds(new Set());
+      showNotification(`${itemsToRestore.length} item(s) restaurado(s)!`);
+    } catch {
+      showNotification('Erro ao restaurar item(s).', 'delete');
+    }
   };
 
-  const deleteMany = (idsToDelete: string[]) => {
-    const updatedItems = items.filter(i => !idsToDelete.includes(i.id));
-    setItems(updatedItems);
-    StorageService.saveRecycleBin(updatedItems, academy.id);
-    setSelectedIds(new Set());
-    showNotification(`${idsToDelete.length} item(s) excluído(s) permanentemente.`, 'delete');
+  const deleteMany = async (idsToDelete: string[]) => {
+    try {
+      await Promise.all(idsToDelete.map(id => recycleBinService.deletePermanently(id)));
+      setItems(prev => prev.filter(i => !idsToDelete.includes(i.id)));
+      setSelectedIds(new Set());
+      showNotification(`${idsToDelete.length} item(s) excluído(s) permanentemente.`, 'delete');
+    } catch {
+      showNotification('Erro ao excluir item(s).', 'delete');
+    }
   };
 
   const handleBulkRestore = () => {
@@ -108,14 +103,7 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
   const handleEmptyBin = () => {
     if (items.length === 0) return;
     if (window.confirm("Deseja realmente esvaziar a lixeira? Todos os dados serão perdidos para sempre.")) {
-      const allBinItems = StorageService.getRecycleBin();
-      const otherAcademiesItems = allBinItems.filter(i => i.academyId !== academy.id);
-      // Aqui usamos uma string vazia ou um ID especial para "limpar" a lixeira da academia atual
-      // mas saveRecycleBin já filtra por academyId, então passar zero itens para a academia atual funciona.
-      StorageService.saveRecycleBin([], academy.id);
-      setItems([]);
-      setSelectedIds(new Set());
-      showNotification("Lixeira esvaziada.", 'delete');
+      deleteMany(items.map(i => i.id));
     }
   };
 
@@ -128,7 +116,7 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
         </div>
         <div className="flex gap-2">
           {items.length > 0 && (
-            <button 
+            <button
               onClick={handleEmptyBin}
               className="flex items-center gap-2 px-6 py-3 bg-red-50 text-red-600 dark:bg-red-950/20 dark:text-red-400 rounded-2xl font-bold hover:bg-red-100 transition-all border border-red-100 dark:border-red-900/30"
             >
@@ -144,7 +132,7 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
         {selectedIds.size > 0 ? (
           <div className="bg-indigo-600 p-4 rounded-[28px] shadow-xl flex items-center justify-between animate-in slide-in-from-top-4 duration-300">
             <div className="flex items-center gap-4 text-white">
-              <button 
+              <button
                 onClick={() => setSelectedIds(new Set())}
                 className="p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors"
               >
@@ -153,14 +141,14 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
               <span className="font-black text-sm uppercase tracking-widest">{selectedIds.size} selecionado(s)</span>
             </div>
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 onClick={handleBulkRestore}
                 className="flex items-center gap-2 bg-white text-indigo-600 px-5 py-2.5 rounded-2xl font-bold text-xs shadow-sm hover:bg-indigo-50 transition-all active:scale-95"
               >
                 <RotateCcw size={16} />
                 Restaurar
               </button>
-              <button 
+              <button
                 onClick={handleBulkDelete}
                 className="flex items-center gap-2 bg-red-500 text-white px-5 py-2.5 rounded-2xl font-bold text-xs shadow-sm hover:bg-red-600 transition-all active:scale-95 border border-red-400"
               >
@@ -173,8 +161,8 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Buscar na lixeira..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -184,7 +172,7 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 shadow-sm w-fit">
                 <Filter size={14} className="text-slate-400" />
-                <select 
+                <select
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
                   className="text-xs font-bold text-slate-700 dark:text-slate-300 outline-none bg-transparent"
@@ -196,7 +184,7 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                 </select>
               </div>
               {filteredItems.length > 0 && (
-                <button 
+                <button
                   onClick={toggleSelectAll}
                   className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:border-indigo-500 transition-all flex items-center gap-2"
                 >
@@ -210,15 +198,19 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
       </div>
 
       <div className="space-y-3">
-        {filteredItems.length > 0 ? filteredItems.map(item => {
+        {loading ? (
+          <div className="py-20 text-center text-slate-400">
+            <span className="text-sm font-bold">Carregando...</span>
+          </div>
+        ) : filteredItems.length > 0 ? filteredItems.map(item => {
           const isSelected = selectedIds.has(item.id);
           return (
-            <div 
-              key={item.id} 
+            <div
+              key={item.id}
               onClick={() => toggleSelect(item.id)}
               className={`bg-white dark:bg-slate-900 p-5 rounded-[32px] border flex items-center justify-between shadow-sm transition-all group cursor-pointer ${
-                isSelected 
-                  ? 'border-indigo-500 ring-2 ring-indigo-500/10 bg-indigo-50/10 dark:bg-indigo-900/5' 
+                isSelected
+                  ? 'border-indigo-500 ring-2 ring-indigo-500/10 bg-indigo-50/10 dark:bg-indigo-900/5'
                   : 'border-slate-100 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-900/50'
               }`}
             >
@@ -248,16 +240,16 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                <button 
+                <button
                   onClick={() => restoreMany([item])}
                   className="p-3 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-all"
                   title="Restaurar este item"
                 >
                   <RotateCcw size={18} />
                 </button>
-                <button 
+                <button
                   onClick={() => {
                     if(window.confirm("Excluir permanentemente?")) deleteMany([item.id]);
                   }}

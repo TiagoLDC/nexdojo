@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+﻿import { Router, Request, Response, NextFunction } from 'express';
 import pool from '../db';
 import { requireAuth } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
@@ -9,7 +9,7 @@ import { withTransaction } from '../utils/withTransaction';
 const router = Router();
 
 // GET /api/attendance
-router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
+router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -40,18 +40,18 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
        LEFT JOIN students s ON s.id = ar.student_id
        ${where}
        ORDER BY ar.date DESC, ar.created_at DESC
-       LIMIT ? OFFSET ?`,
-      [...params, limitNum, offset]
+       LIMIT ${limitNum} OFFSET ${offset}`,
+      params
     );
 
     res.json({ data: rows, total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) });
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 
 // POST /api/attendance
-router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), async (req: Request, res: Response): Promise<void> => {
+router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -97,7 +97,7 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
 
     res.status(201).json(record);
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 

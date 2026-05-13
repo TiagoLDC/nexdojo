@@ -9,7 +9,7 @@ export const academyService = {
     api.put<Academy>(`/academies/${academyId}`, data).then((r) => r.data),
 
   getAll: () =>
-    api.get<Academy[]>('/academies').then((r) => r.data),
+    api.get<{ data: Academy[]; total: number }>('/academies').then((r) => r.data.data),
 
   create: (data: Omit<Academy, 'id'>) =>
     api.post<Academy>('/academies', data).then((r) => r.data),

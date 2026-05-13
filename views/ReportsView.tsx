@@ -1,5 +1,6 @@
-import React, { useMemo, useState, useRef } from 'react';
-import { StorageService } from '../services/storage';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { studentService } from '@/features/students/services/studentService';
+import { attendanceService } from '@/features/attendance/services/attendanceService';
 import { 
   BarChart, 
   Bar, 
@@ -58,13 +59,24 @@ const PrintHeader: React.FC<{ title: string; academy: Academy }> = ({ title, aca
 const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
   const reportRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const attendance = useMemo(() => StorageService.getAttendance(academy.id), [academy?.id]);
-  const students = useMemo(() => {
-    const raw = StorageService.getStudents(academy.id);
-    // Deduplicate to avoid React key warnings (e.g. s4)
-    const unique = Array.from(new Map(raw.map(s => [s.id, s])).values());
-    return unique;
-  }, [academy?.id]) as Student[];
+  const [isLoading, setIsLoading] = useState(true);
+  const [attendance, setAttendance] = useState<any[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+
+  useEffect(() => {
+    if (!academy?.id) return;
+    setIsLoading(true);
+    Promise.all([
+      studentService.getAll(academy.id, { limit: 1000 }),
+      attendanceService.getRecords(academy.id, { limit: 1000 }),
+    ])
+      .then(([studentsRes, attendanceRes]) => {
+        setStudents(studentsRes.data);
+        setAttendance(attendanceRes.data);
+      })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, [academy?.id]);
   const [timeRange, setTimeRange] = useState('7');
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();

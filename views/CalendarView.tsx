@@ -1,17 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
-import { StorageService } from '../services/storage';
 import { Academy, User, CalendarEvent } from '../types';
 import { useTranslation } from '../services/LanguageContext';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Calendar as CalendarIcon, 
-  AlertCircle, 
-  Plus, 
-  Trash2, 
-  X, 
-  CheckCircle2 
+import { calendarService } from '@/features/calendar/services/calendarService';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Calendar as CalendarIcon,
+  AlertCircle,
+  Plus,
+  Trash2,
+  X
 } from 'lucide-react';
 
 const CalendarView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
@@ -22,10 +21,15 @@ const CalendarView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [reason, setReason] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (academy) {
-      setEvents(StorageService.getCalendarEvents(academy.id));
+      setLoading(true);
+      calendarService.getEvents(academy.id)
+        .then(res => setEvents(res.data))
+        .catch(() => showNotification(language === 'pt' ? 'Erro ao carregar calendário.' : 'Error loading calendar.', 'delete'))
+        .finally(() => setLoading(false));
     }
   }, [academy?.id]);
 
@@ -49,36 +53,33 @@ const CalendarView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
     setIsModalOpen(true);
   };
 
-  const saveEvent = () => {
+  const saveEvent = async () => {
     if (!reason) return;
-    
-    let updated: CalendarEvent[];
-    if (selectedEvent) {
-      updated = events.map(e => e.id === selectedEvent.id ? { ...e, reason } : e);
-      showNotification(language === 'pt' ? "Recesso atualizado!" : "Recess updated!");
-    } else {
-      const newEvent: CalendarEvent = {
-        id: Math.random().toString(36).substr(2, 9),
-        academyId: academy.id,
+
+    try {
+      const newEvent = await calendarService.createEvent(academy.id, {
         date: selectedDate,
         reason,
         type: 'no-class'
-      };
-      updated = [...events, newEvent];
+      });
+      setEvents(prev => [...prev, newEvent]);
       showNotification(language === 'pt' ? "Dia sem aula registrado!" : "No-class day registered!");
+    } catch {
+      showNotification(language === 'pt' ? 'Erro ao salvar evento.' : 'Error saving event.', 'delete');
     }
-    
-    setEvents(updated);
-    StorageService.saveCalendarEvents(updated, academy.id);
+
     setIsModalOpen(false);
     setReason('');
   };
 
-  const removeEvent = (id: string) => {
-    const updated = events.filter(e => e.id !== id);
-    setEvents(updated);
-    StorageService.saveCalendarEvents(updated, academy.id);
-    showNotification(language === 'pt' ? "Aula reativada para este dia." : "Class reactivated for this day.", 'delete');
+  const removeEvent = async (id: string) => {
+    try {
+      await calendarService.deleteEvent(id);
+      setEvents(prev => prev.filter(e => e.id !== id));
+      showNotification(language === 'pt' ? "Aula reativada para este dia." : "Class reactivated for this day.", 'delete');
+    } catch {
+      showNotification(language === 'pt' ? 'Erro ao remover evento.' : 'Error removing event.', 'delete');
+    }
   };
 
   const monthLocale = language === 'pt' ? 'pt-BR' : language === 'en' ? 'en-US' : 'es-ES';
@@ -103,8 +104,8 @@ const CalendarView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
     const isToday = new Date().toISOString().split('T')[0] === dateStr;
 
     days.push(
-      <div 
-        key={d} 
+      <div
+        key={d}
         onClick={() => {
           if (user.role === 'student') {
             if (event) handleEditEvent(event);
@@ -119,15 +120,15 @@ const CalendarView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
         className={`h-20 md:h-32 p-1.5 md:p-2 border rounded-2xl md:rounded-3xl transition-all relative overflow-hidden group ${
           (user.role !== 'student' || event) ? 'cursor-pointer hover:scale-[1.02]' : ''
         } ${
-          event 
-            ? 'bg-red-50 border-red-200 ring-2 ring-red-100' 
+          event
+            ? 'bg-red-50 border-red-200 ring-2 ring-red-100'
             : 'bg-white border-slate-100 hover:border-indigo-300 hover:shadow-md'
         } ${isToday ? 'ring-2 ring-indigo-500' : ''}`}
       >
         <span className={`text-xs md:text-sm font-black ${event ? 'text-red-600' : isToday ? 'text-indigo-600' : 'text-slate-400'}`}>
           {d}
         </span>
-        
+
         {event ? (
           <div className="mt-0.5 md:mt-1">
             <div className="bg-red-600 text-white text-[7px] md:text-[10px] font-black uppercase px-1.5 md:px-2 py-0.5 md:py-1 rounded-full flex items-center gap-1 w-fit">
@@ -138,7 +139,7 @@ const CalendarView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
             </p>
             {user.role !== 'student' && (
               <div className="absolute bottom-2 right-2 flex gap-1">
-                <button 
+                <button
                   onClick={(e) => { e.stopPropagation(); removeEvent(event.id); }}
                   className="p-1 md:p-1.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 opacity-0 group-hover:opacity-100 transition-opacity"
                   title="Reativar Aula"
@@ -184,9 +185,15 @@ const CalendarView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-2 md:gap-4">
-        {days}
-      </div>
+      {loading ? (
+        <div className="flex justify-center items-center py-20 text-slate-400">
+          <span className="text-sm font-bold">Carregando...</span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-7 gap-2 md:gap-4">
+          {days}
+        </div>
+      )}
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
@@ -211,8 +218,8 @@ const CalendarView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
             <div className="space-y-6">
               <div>
                 <label className="block text-xs font-black text-slate-400 uppercase mb-3 tracking-widest">{language === 'pt' ? 'Motivo do Recesso' : 'Recess Reason'}</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   autoFocus
@@ -223,7 +230,7 @@ const CalendarView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
               </div>
 
               {user.role === 'student' ? (
-                <button 
+                <button
                   onClick={() => setIsModalOpen(false)}
                   className="w-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-black py-4 rounded-3xl transition-all"
                 >
@@ -231,7 +238,7 @@ const CalendarView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                 </button>
               ) : selectedEvent ? (
                 <div className="space-y-3">
-                  <button 
+                  <button
                     onClick={() => {
                       removeEvent(selectedEvent.id);
                       setIsModalOpen(false);
@@ -241,7 +248,7 @@ const CalendarView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                     <Trash2 size={20} />
                     {language === 'pt' ? 'Cancelar Recesso (Reativar Aula)' : 'Cancel Recess (Reactivate Class)'}
                   </button>
-                  <button 
+                  <button
                     onClick={() => setIsModalOpen(false)}
                     className="w-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-black py-4 rounded-3xl transition-all"
                   >
@@ -249,7 +256,7 @@ const CalendarView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                   </button>
                 </div>
               ) : (
-                <button 
+                <button
                   onClick={saveEvent}
                   disabled={!reason}
                   className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-5 rounded-3xl shadow-xl shadow-red-600/20 transition-all disabled:opacity-50"

@@ -1,22 +1,22 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Student, Belt, StudentDocument, ClassTemplate, Academy, User, GraduationHistoryItem } from '../types';
-import { StorageService } from '../services/storage';
+import { studentService } from '@/features/students/services/studentService';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
 import { calculateAge, isReadyForGraduation, getNextRank, BELT_LIST } from '../services/graduation';
 import { useTranslation } from '../services/LanguageContext';
 import { PrivacyValue } from '../components/PrivacyValue';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Plus, 
-  UserPlus, 
-  Search, 
-  MoreVertical, 
-  X, 
-  Trash2, 
-  Save, 
-  GraduationCap, 
-  Minus, 
+import {
+  Plus,
+  UserPlus,
+  Search,
+  MoreVertical,
+  X,
+  Trash2,
+  Save,
+  GraduationCap,
+  Minus,
   Plus as PlusIcon,
   Phone,
   MessageCircle,
@@ -118,6 +118,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
   const { t, language, showNotification } = useTranslation();
   const [students, setStudents] = useState<Student[]>([]);
   const [templates, setTemplates] = useState<ClassTemplate[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const currentUser = user;
   const canEditTotalClasses = currentUser?.role === 'admin' || currentUser?.role === 'instructor';
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -125,10 +126,10 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [qrStudent, setQrStudent] = useState<Student | null>(null);
   const [search, setSearch] = useState('');
-  
+
   const [isGraduationCenterOpen, setIsGraduationCenterOpen] = useState(false);
   const [isPromoting, setIsPromoting] = useState(false);
-  
+
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [beltFilter, setBeltFilter] = useState<string>('All');
   const [readinessFilter, setReadinessFilter] = useState<string>('All');
@@ -136,7 +137,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editPhotoInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [showSensitive, setShowSensitive] = useState<{[key: string]: boolean}>({});
@@ -173,7 +174,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     let masked = clean;
     if (clean.length > 2) masked = clean.slice(0, 2) + '/' + clean.slice(2);
     if (clean.length > 4) masked = masked.slice(0, 5) + '/' + masked.slice(5);
-    
+
     setGradDateInput(masked);
 
     // If complete, update student
@@ -191,7 +192,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     let masked = clean;
     if (clean.length > 2) masked = clean.slice(0, 2) + '/' + clean.slice(2);
     if (clean.length > 4) masked = masked.slice(0, 5) + '/' + masked.slice(5);
-    
+
     setBirthDateInput(masked);
 
     // If complete, update student
@@ -199,7 +200,6 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
       const d = clean.slice(0, 2);
       const m = clean.slice(2, 4);
       const y = clean.slice(4, 8);
-      // Valid date check could be added here
       setEditingStudent(prev => prev ? {...prev, birthDate: `${y}-${m}-${d}`} : null);
     }
   };
@@ -210,14 +210,20 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
   useEffect(() => {
     if (academy?.id) {
-      setStudents(StorageService.getStudents(academy.id));
-      setTemplates(StorageService.getTemplates(academy.id));
+      setIsLoading(true);
+      studentService.getAll(academy.id, { limit: 1000 })
+        .then(res => setStudents(res.data))
+        .catch(err => {
+          console.error('Erro ao carregar alunos:', err);
+          showNotification(language === 'pt' ? 'Erro ao carregar alunos.' : 'Error loading students.', 'error');
+        })
+        .finally(() => setIsLoading(false));
     }
   }, [academy?.id]);
 
   const exportStudentsToCSV = () => {
     if (students.length === 0) return;
-    
+
     // Header for CSV
     const headers = [t.students.slice(0, -1), 'Email', t.phone, t.belt, 'Graus', t.status, t.birthDate, 'CPF', 'RG', 'CEP', t.address, 'Cidade', 'UF'];
     const csvRows = students.map(s => [
@@ -235,7 +241,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
       s.addressCity || '',
       s.addressState || ''
     ]);
-    
+
     const csvString = [
       headers.join(','),
       ...csvRows.map(row => row.map(val => {
@@ -243,8 +249,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
         return `"${escaped}"`;
       }).join(','))
     ].join('\n');
-    
-    const blob = new Blob(["\uFEFF" + csvString], { type: 'text/csv;charset=utf-8;' });
+
+    const blob = new Blob(["﻿" + csvString], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `alunos_${academy.name.replace(/\s+/g, '_').toLowerCase()}.csv`;
@@ -254,8 +260,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
   const handleOpenNewStudent = () => {
     const newStudent: Student = {
-      id: Math.random().toString(36).substr(2, 9),
-      academyId: academy.id, // Garantindo vínculo com a academia atual
+      id: '',
+      academyId: academy.id,
       name: '',
       photo: undefined,
       belt: Belt.WHITE,
@@ -294,13 +300,12 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     }
   };
 
-  const handleSaveStudent = () => {
+  const handleSaveStudent = async () => {
     if (!editingStudent) return;
 
     const age = calculateAge(editingStudent.birthDate);
     const isMinor = editingStudent.birthDate ? age < 18 : false;
 
-    // Campos obrigatórios base - Facilitar o cadastro
     const requiredFields = [
       { key: 'name', label: 'Nome Completo' },
       { key: 'birthDate', label: 'Data de Nascimento' },
@@ -313,82 +318,42 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
       }
     }
 
-    // Validação de Responsável para menores
     if (isMinor) {
       if (!editingStudent.guardianName || !editingStudent.guardianPhone || !editingStudent.guardianCpf) {
         showNotification(language === 'pt' ? "Para menores de idade, os dados do responsável são obrigatórios." : "For minors, guardian details are required.", 'error');
         return;
       }
     }
-    
+
     try {
-      const currentStudents = StorageService.getStudents();
-      const existingIndex = currentStudents.findIndex(s => s.id === editingStudent.id);
-      
-      let updated;
-      if (existingIndex >= 0) {
-        updated = currentStudents.map(s => s.id === editingStudent.id ? editingStudent : s);
-        showNotification(language === 'pt' ? "Ficha atualizada com sucesso!" : "Profile updated successfully!");
-      } else {
-        updated = [...currentStudents, editingStudent];
+      const isNew = !editingStudent.id;
+
+      if (isNew) {
+        const created = await studentService.create(academy.id, editingStudent as any);
+        setStudents(prev => [...prev, created]);
         showNotification(language === 'pt' ? "Atleta cadastrado com sucesso!" : "Athlete registered successfully!");
+      } else {
+        const updated = await studentService.update(editingStudent.id, editingStudent as any);
+        setStudents(prev => prev.map(s => s.id === updated.id ? updated : s));
+        showNotification(language === 'pt' ? "Ficha atualizada com sucesso!" : "Profile updated successfully!");
       }
 
-      StorageService.saveStudents(updated, academy.id);
-      
-      // Criar ou atualizar usuário de acesso
-      if (editingStudent.email) {
-        const currentUsers = StorageService.getUsers(academy.id);
-        const existingUser = currentUsers.find(u => u.email.toLowerCase() === editingStudent.email?.toLowerCase());
-        
-        if (!existingUser) {
-          const newUser: User = {
-            id: 'u_' + Math.random().toString(36).substr(2, 9),
-            academyId: academy.id,
-            role: 'student',
-            name: editingStudent.name,
-            email: editingStudent.email.toLowerCase(),
-            status: 'Active',
-            password: '' // Será definida via "Esqueci a senha"
-          };
-          StorageService.saveUsers([...currentUsers, newUser], academy.id);
-        } else if (existingUser.name !== editingStudent.name) {
-          // Atualiza nome se e-mail for o mesmo mas nome mudou
-          const updatedUsers = currentUsers.map(u => 
-            u.email.toLowerCase() === editingStudent.email?.toLowerCase() 
-              ? { ...u, name: editingStudent.name } 
-              : u
-          );
-          StorageService.saveUsers(updatedUsers, academy.id);
-        }
-      }
-      // Mantém no estado apenas os alunos da academia atual
-      setStudents(updated.filter(s => s.academyId === academy.id));
-      
       setIsEditModalOpen(false);
       setEditingStudent(null);
     } catch (e) {
       console.error(e);
-      showNotification(language === 'pt' ? "Limite de armazenamento excedido! Remova fotos ou documentos." : "Storage limit exceeded! Remove photos or documents.", 'error');
+      showNotification(language === 'pt' ? "Erro ao salvar atleta." : "Error saving athlete.", 'error');
     }
   };
 
-  const handleDeleteStudent = () => {
-    if (!editingStudent) return;
-    
+  const handleDeleteStudent = async () => {
+    if (!editingStudent?.id) return;
+
     try {
-      const id = editingStudent.id;
-      const currentStudents = StorageService.getStudents();
-      const studentToDelete = currentStudents.find(s => s.id === id);
-      
-      if (studentToDelete) {
-        StorageService.moveToBin('student', studentToDelete, academy.id);
-        const updated = currentStudents.filter(s => s.id !== id);
-        StorageService.saveStudents(updated, academy.id);
-        setStudents(updated.filter(s => s.academyId === academy.id));
-        showNotification("Atleta movido para a lixeira.", 'delete');
-      }
-      
+      await studentService.delete(editingStudent.id);
+      setStudents(prev => prev.filter(s => s.id !== editingStudent.id));
+      showNotification("Atleta removido com sucesso.", 'delete');
+
       setIsDeleteModalOpen(false);
       setIsEditModalOpen(false);
       setEditingStudent(null);
@@ -415,7 +380,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     const file = e.target.files?.[0];
     if (!file || !editingStudent) return;
 
-    if (file.size > 1000000) { 
+    if (file.size > 1000000) {
       alert("Arquivo muito grande. O limite para documentos é de 1MB.");
       return;
     }
@@ -483,66 +448,51 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     setIsQRModalOpen(true);
   };
 
-  const handlePromoteStudent = (student: Student, newBelt: Belt, newStripes: number, notes: string = '') => {
+  const handlePromoteStudent = async (student: Student, newBelt: Belt, newStripes: number, notes: string = '') => {
     try {
-      const historyItem: GraduationHistoryItem = {
-        id: Math.random().toString(36).substr(2, 9),
-        previousBelt: student.belt,
-        newBelt: newBelt,
-        previousStripes: student.stripes,
-        newStripes: newStripes,
-        date: new Date().toISOString(),
+      setIsPromoting(true);
+      const updated = await studentService.graduate(student.id, {
+        newBelt,
+        newStripes,
+        notes,
         instructorId: currentUser.id,
-        notes: notes
-      };
+        date: new Date().toISOString()
+      });
 
-      const updatedStudent: Student = {
-        ...student,
-        belt: newBelt,
-        stripes: newStripes,
-        lastGraduationDate: new Date().toISOString(),
-        totalClasses: 0,
-        graduationHistory: [...(student.graduationHistory || []), historyItem]
-      };
+      setStudents(prev => prev.map(s => s.id === updated.id ? updated : s));
 
-      const currentStudents = StorageService.getStudents();
-      const updated = currentStudents.map(s => s.id === updatedStudent.id ? updatedStudent : s);
-      StorageService.saveStudents(updated, academy.id);
-      setStudents(updated.filter(s => s.academyId === academy.id));
-      
       if (editingStudent?.id === student.id) {
-        setEditingStudent(updatedStudent);
+        setEditingStudent(updated);
       }
 
       showNotification(`Promoção realizada: ${student.name} agora é ${newBelt}${newStripes > 0 ? ` (${newStripes}º grau)` : ''}!`);
     } catch (e) {
       console.error(e);
       showNotification("Erro ao realizar promoção.", 'error');
+    } finally {
+      setIsPromoting(false);
     }
   };
 
   const getEffectiveAbsenceLimit = (student: Student) => {
     if (student.absenceLimit) return student.absenceLimit;
-    
+
     // Encontrar turmas que o aluno participa
-    const studentTemplates = templates.filter(t => t.assignedStudentIds.includes(student.id));
+    const studentTemplates = templates.filter(t => t.assignedStudentIds?.includes(student.id));
     const classLimits = studentTemplates
       .map(t => t.absenceLimit)
       .filter((limit): limit is number => limit !== undefined && limit !== null);
-    
+
     if (classLimits.length > 0) return Math.min(...classLimits);
-    
+
     return academy?.absenceLimit || 3;
   };
 
   const filtered = students.filter(s => {
-    // Garantir que estamos vendo apenas alunos desta academia
-    if (s.academyId !== academy.id) return false;
-    
     const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === 'All' ? s.status !== 'Inactive' : s.status === statusFilter;
     const matchesBelt = beltFilter === 'All' || s.belt === beltFilter;
-    
+
     let matchesReadiness = true;
     if (readinessFilter !== 'All') {
       const { readyForBelt, readyForStripe } = isReadyForGraduation(s);
@@ -562,33 +512,33 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
   const studentAge = editingStudent ? calculateAge(editingStudent.birthDate) : 0;
   const isMinor = editingStudent ? (editingStudent.birthDate ? studentAge < 18 : false) : false;
-  const isNewStudent = editingStudent && !students.find(s => s.id === editingStudent.id);
+  const isNewStudent = editingStudent && !editingStudent.id;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 relative">
       <PrintHeader title="Listagem Geral de Atletas" academy={academy} />
-      
+
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print px-1">
         <div>
           <h1 className="text-3xl font-black text-slate-800 dark:text-white uppercase italic tracking-tighter">{t.students}</h1>
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t.manageAccess}</p>
         </div>
         <div className="grid grid-cols-3 md:flex gap-2">
-          <button 
+          <button
             onClick={() => setIsGraduationCenterOpen(true)}
             className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-4 py-3.5 rounded-2xl font-black flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 text-xs uppercase tracking-widest border border-indigo-100 dark:border-indigo-800"
           >
             <Trophy size={18} />
             {t.graduationJourney.split(' ')[0]}
           </button>
-          <button 
+          <button
             onClick={exportStudentsToCSV}
             className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 px-4 py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 text-xs uppercase tracking-widest"
           >
             <Download size={18} className="text-emerald-500" />
             CSV
           </button>
-          <button 
+          <button
             onClick={() => {
               window.focus();
               setTimeout(() => window.print(), 300);
@@ -598,7 +548,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
             <Printer size={18} className="text-indigo-600" />
             {language === 'pt' ? 'Imprimir' : 'Print'}
           </button>
-          <button 
+          <button
             onClick={handleOpenNewStudent}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3.5 rounded-2xl font-black flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 transition-all active:scale-95 text-xs uppercase tracking-widest"
           >
@@ -611,8 +561,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
       <div className="space-y-4 no-print px-2">
         <div className="relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
-          <input 
-            type="text" 
+          <input
+            type="text"
             placeholder={`${t.search}...`}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -623,7 +573,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
         <div className="flex flex-wrap md:flex-nowrap items-center justify-center md:justify-start gap-2 no-print">
           <div className="flex items-center gap-2 flex-1 md:flex-none bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl px-4 py-3 shadow-sm min-w-0">
             <Filter size={14} className="text-slate-400" />
-            <select 
+            <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="text-xs font-black text-slate-700 dark:text-slate-300 outline-none bg-transparent uppercase tracking-tighter w-full"
@@ -638,7 +588,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
           <div className="flex items-center gap-2 flex-1 md:flex-none bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl px-4 py-3 shadow-sm min-w-0">
             <GraduationCap size={14} className="text-slate-400" />
-            <select 
+            <select
               value={beltFilter}
               onChange={(e) => setBeltFilter(e.target.value)}
               className="text-xs font-black text-slate-700 dark:text-slate-300 outline-none bg-transparent uppercase tracking-tighter w-full"
@@ -653,7 +603,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
           <div className="flex items-center justify-center gap-2 w-full md:w-auto">
             <div className="flex items-center gap-2 flex-1 md:flex-none bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl px-4 py-3 shadow-sm min-w-0">
               <Star size={14} className="text-amber-500" />
-              <select 
+              <select
                 value={readinessFilter}
                 onChange={(e) => setReadinessFilter(e.target.value)}
                 className="text-xs font-black text-slate-700 dark:text-slate-300 outline-none bg-transparent uppercase tracking-tighter w-full"
@@ -665,11 +615,11 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
               </select>
             </div>
 
-            <button 
+            <button
               onClick={() => setAbsenceFilter(!absenceFilter)}
               className={`flex items-center justify-center gap-2 border rounded-2xl px-4 py-3 shadow-sm transition-all flex-1 md:flex-none ${
-                absenceFilter 
-                  ? 'bg-red-500 border-red-500 text-white' 
+                absenceFilter
+                  ? 'bg-red-500 border-red-500 text-white'
                   : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-400'
               }`}
             >
@@ -680,7 +630,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
         </div>
 
         {(statusFilter !== 'All' || beltFilter !== 'All' || readinessFilter !== 'All' || search !== '' || absenceFilter) && (
-          <button 
+          <button
             onClick={() => { setStatusFilter('All'); setBeltFilter('All'); setReadinessFilter('All'); setSearch(''); setAbsenceFilter(false); }}
             className="w-full py-2 text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 text-center tracking-widest"
           >
@@ -692,15 +642,20 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
       <div className="bg-transparent md:bg-white md:rounded-3xl md:border md:border-slate-100 md:shadow-sm overflow-hidden">
         {/* Mobile Card View - REESTILIZADO PARA MODO MOBILE "APP-LIKE" */}
         <div className="md:hidden space-y-4 px-2 pb-24">
-          {filtered.length > 0 ? (
+          {isLoading ? (
+            <div className="py-12 text-center">
+              <Loader2 size={32} className="animate-spin text-indigo-500 mx-auto mb-4" />
+              <p className="text-slate-400 font-bold text-sm">Carregando alunos...</p>
+            </div>
+          ) : filtered.length > 0 ? (
             filtered.map(student => {
               const contactPhone = student.phone || student.guardianPhone;
               const { readyForBelt, readyForStripe } = isReadyForGraduation(student);
               const effectiveLimit = getEffectiveAbsenceLimit(student);
-              
+
               return (
-                <div 
-                  key={student.id} 
+                <div
+                  key={student.id}
                   className="bg-white dark:bg-slate-900 rounded-[32px] p-5 shadow-sm border border-slate-100 dark:border-slate-800 active:scale-[0.98] transition-all relative overflow-hidden"
                   onClick={() => handleOpenEdit(student)}
                 >
@@ -726,9 +681,9 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       <div className="flex flex-wrap items-center gap-2 mt-1">
                         <BeltBadge belt={student.belt} stripes={student.stripes} />
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter ${
-                          student.status === 'Active' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 
+                          student.status === 'Active' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
                           student.status === 'Pending' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 animate-pulse' :
-                          student.status === 'Inactive' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 
+                          student.status === 'Inactive' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
                           'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
                         }`}>
                           {student.status === 'Active' ? 'Ativo' : student.status === 'Pending' ? 'Pendente' : student.status === 'Inactive' ? 'Inativo' : 'Desistente'}
@@ -765,7 +720,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
                   {/* Ações Inferiores */}
                   <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         openQRModal(student);
@@ -777,8 +732,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     </button>
 
                     <div className="flex gap-2">
-                      <a 
-                        href={contactPhone ? `https://wa.me/55${contactPhone.replace(/\D/g, '')}` : '#'} 
+                      <a
+                        href={contactPhone ? `https://wa.me/55${contactPhone.replace(/\D/g, '')}` : '#'}
                         target={contactPhone ? "_blank" : "_self"}
                         rel="noopener noreferrer"
                         onClick={(e) => {
@@ -786,14 +741,14 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                           if (!contactPhone) e.preventDefault();
                         }}
                         className={`p-2.5 rounded-xl transition-all ${
-                          contactPhone 
-                            ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
+                          contactPhone
+                            ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
                             : 'bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed'
                         }`}
                       >
                         <MessageCircle size={18} fill={contactPhone ? "currentColor" : "none"} />
                       </a>
-                      <button 
+                      <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleOpenEdit(student);
@@ -832,7 +787,14 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-            {filtered.length > 0 ? (
+            {isLoading ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-10 text-center">
+                  <Loader2 size={24} className="animate-spin text-indigo-500 mx-auto mb-2" />
+                  <p className="text-slate-400 text-sm">Carregando alunos...</p>
+                </td>
+              </tr>
+            ) : filtered.length > 0 ? (
               filtered.map(student => {
                 const age = calculateAge(student.birthDate);
                 const contactPhone = student.phone || student.guardianPhone;
@@ -842,9 +804,9 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       <div className="flex items-center gap-4">
                         <div className="relative shrink-0 z-0 hover:z-50">
                           {student.photo ? (
-                            <img 
-                              src={student.photo} 
-                              alt={student.name} 
+                            <img
+                              src={student.photo}
+                              alt={student.name}
                               className="w-12 h-12 rounded-xl object-cover border-2 border-white shadow-sm transition-all duration-300 transform hover:scale-[2.5] hover:shadow-2xl hover:rounded-lg cursor-zoom-in relative"
                             />
                           ) : (
@@ -860,7 +822,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                               const { readyForBelt, readyForStripe } = isReadyForGraduation(student);
                               const effectiveLimit = getEffectiveAbsenceLimit(student);
                               const isAbsentee = student.absentCount >= effectiveLimit;
-                              
+
                               return (
                                 <>
                                   {readyForBelt && <Trophy size={14} className="text-indigo-600 animate-bounce" title="Pronto para trocar de faixa!" />}
@@ -895,7 +857,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`text-[10px] px-2 py-1 rounded-full font-black uppercase ${
-                        student.status === 'Active' ? 'bg-green-100 text-green-700' : 
+                        student.status === 'Active' ? 'bg-green-100 text-green-700' :
                         student.status === 'Pending' ? 'bg-indigo-100 text-indigo-700 animate-pulse' :
                         student.status === 'Inactive' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
                       }`}>
@@ -904,28 +866,28 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <a 
-                          href={contactPhone ? `https://wa.me/55${contactPhone.replace(/\D/g, '')}` : '#'} 
+                        <a
+                          href={contactPhone ? `https://wa.me/55${contactPhone.replace(/\D/g, '')}` : '#'}
                           target={contactPhone ? "_blank" : "_self"}
                           rel="noopener noreferrer"
                           onClick={(e) => !contactPhone && e.preventDefault()}
                           className={`p-2 rounded-xl transition-all shadow-sm ${
-                            contactPhone 
-                              ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-200 hover:scale-105 active:scale-95' 
+                            contactPhone
+                              ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-200 hover:scale-105 active:scale-95'
                               : 'bg-slate-100 text-slate-300 cursor-not-allowed opacity-50'
                           }`}
                           title={contactPhone ? `Chamar no WhatsApp (${contactPhone})` : "Nenhum telefone cadastrado"}
                         >
                           <MessageCircle size={18} fill={contactPhone ? "currentColor" : "none"} />
                         </a>
-                        <button 
+                        <button
                           onClick={() => openQRModal(student)}
                           className="text-slate-400 hover:text-indigo-600 p-2 hover:bg-indigo-50 rounded-lg transition-all"
                           title="Ver QR Code"
                         >
                           <QrCode size={18} />
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleOpenEdit(student)}
                           className="text-slate-400 hover:text-indigo-600 p-2 hover:bg-indigo-50 rounded-lg transition-all"
                           title="Editar Ficha"
@@ -951,21 +913,21 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
       {/* Modal QR Code / Carteirinha Digital */}
       {isQRModalOpen && qrStudent && (
-        <div 
+        <div
           className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[150] flex items-center justify-center p-4 cursor-pointer"
           onClick={() => setIsQRModalOpen(false)}
         >
-          <div 
+          <div
             className="bg-white w-full max-w-sm rounded-[40px] p-6 animate-in zoom-in duration-300 shadow-2xl overflow-hidden relative cursor-default"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="absolute top-0 left-0 w-full h-24 bg-slate-900 -z-10"></div>
-            
+
             <div className="flex flex-col items-center text-center">
               <div className="flex items-center justify-between w-full mb-6 text-white">
                 <span className="text-[10px] font-black uppercase tracking-widest">Carteirinha de Atleta</span>
-                <button 
-                  onClick={() => setIsQRModalOpen(false)} 
+                <button
+                  onClick={() => setIsQRModalOpen(false)}
                   className="bg-white/10 p-2 rounded-full hover:bg-white/20 transition-colors"
                 >
                   <X size={20} />
@@ -982,10 +944,10 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
               <h3 className="text-xl font-bold text-slate-800">{qrStudent.name}</h3>
               <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">{qrStudent.belt}</p>
-              
+
               <div className="my-4 p-2 bg-white rounded-3xl border-2 border-slate-100 flex items-center justify-center">
-                <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${qrStudent.id}`} 
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${qrStudent.id}`}
                   alt="QR Code do Aluno"
                   className="w-36 h-36 md:w-48 md:h-48"
                 />
@@ -997,21 +959,21 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
               <div className="grid grid-cols-1 gap-3 w-full">
                 <div className="grid grid-cols-2 gap-3">
-                  <button 
+                  <button
                     onClick={() => window.print()}
                     className="flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-2xl transition-all"
                   >
                     <Printer size={18} />
                     Imprimir
                   </button>
-                  <button 
+                  <button
                     className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-2xl transition-all shadow-lg shadow-indigo-600/20"
                   >
                     <Share2 size={18} />
                     Enviar
                   </button>
                 </div>
-                <button 
+                <button
                   onClick={() => setIsQRModalOpen(false)}
                   className="w-full bg-slate-800 text-white font-bold py-3 rounded-2xl hover:bg-slate-900 transition-all mt-1"
                 >
@@ -1042,14 +1004,14 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
               <div className="flex items-center gap-2">
                 {!isNewStudent && (
                   <>
-                    <button 
+                    <button
                       onClick={() => openQRModal(editingStudent)}
                       title="Ver Carteirinha Digital"
                       className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-full transition-all"
                     >
                       <QrCode size={20} />
                     </button>
-                    <button 
+                    <button
                       onClick={exportStudentData}
                       title="Exportar Dados (JSON)"
                       className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-full transition-all"
@@ -1063,7 +1025,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                 </button>
               </div>
             </div>
-            
+
             <div className="space-y-8 pb-10">
               <div className="space-y-4">
                 <h3 className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
@@ -1071,7 +1033,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                 </h3>
                 <div className="flex flex-col md:flex-row gap-8 items-start">
                     <div className="flex flex-col items-center gap-3 shrink-0">
-                      <div 
+                      <div
                         className="w-32 h-32 rounded-3xl bg-slate-100 border border-slate-200 overflow-hidden relative group shadow-sm"
                       >
                         {editingStudent.photo ? (
@@ -1083,7 +1045,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                           </div>
                         )}
                         <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white gap-2">
-                          <button 
+                          <button
                             onClick={() => editPhotoInputRef.current?.click()}
                             className="bg-indigo-600 p-2 rounded-full hover:bg-indigo-700 transition-all"
                             title="Escolher Foto ou Tirar Foto"
@@ -1093,7 +1055,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         </div>
                       </div>
                       <div className="flex flex-col gap-1 w-full">
-                        <button 
+                        <button
                           onClick={() => {
                             if (editPhotoInputRef.current) {
                               editPhotoInputRef.current.removeAttribute('capture');
@@ -1105,20 +1067,20 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                           <Upload size={12} /> Galeria / Camera
                         </button>
                       </div>
-                      <input 
-                        type="file" 
-                        ref={editPhotoInputRef} 
-                        accept="image/*" 
-                        className="hidden" 
-                        onChange={handlePhotoCapture} 
+                      <input
+                        type="file"
+                        ref={editPhotoInputRef}
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handlePhotoCapture}
                       />
                     </div>
-                  
+
                   <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
                     <div className="md:col-span-2">
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Nome Completo <span className="text-red-500">*</span></label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={editingStudent.name}
                         onChange={(e) => setEditingStudent({...editingStudent, name: e.target.value})}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
@@ -1126,8 +1088,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     </div>
                     <div className="md:col-span-2">
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">{t.studentLoginEmail} <span className="text-red-500">*</span></label>
-                      <input 
-                        type="email" 
+                      <input
+                        type="email"
                         value={editingStudent.email || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, email: e.target.value.toLowerCase()})}
                         placeholder="aluno@email.com"
@@ -1136,7 +1098,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Sexo <span className="text-red-500">*</span></label>
-                      <select 
+                      <select
                         value={editingStudent.gender || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, gender: e.target.value as any})}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-700"
@@ -1149,8 +1111,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Nascimento <span className="text-red-500">*</span></label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         inputMode="numeric"
                         placeholder="DD/MM/AAAA"
                         value={birthDateInput}
@@ -1166,8 +1128,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                           {showSensitive['cpf'] ? <EyeOff size={12} /> : <Eye size={12} />}
                         </button>
                       </label>
-                      <input 
-                        type={showSensitive['cpf'] ? "text" : "password"} 
+                      <input
+                        type={showSensitive['cpf'] ? "text" : "password"}
                         placeholder="000.000.000-00"
                         value={editingStudent.cpf || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, cpf: maskCPF(e.target.value)})}
@@ -1181,8 +1143,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                           {showSensitive['rg'] ? <EyeOff size={12} /> : <Eye size={12} />}
                         </button>
                       </label>
-                      <input 
-                        type={showSensitive['rg'] ? "text" : "password"} 
+                      <input
+                        type={showSensitive['rg'] ? "text" : "password"}
                         placeholder="00.000.000-0"
                         value={editingStudent.rg || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, rg: maskRG(e.target.value)})}
@@ -1191,8 +1153,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Peso (kg)</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="Ex: 80"
                         value={editingStudent.weight || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, weight: e.target.value})}
@@ -1201,8 +1163,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Altura (cm)</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="Ex: 180"
                         value={editingStudent.height || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, height: e.target.value})}
@@ -1211,8 +1173,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Tipo Sanguíneo</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="Ex: O+"
                         value={editingStudent.bloodType || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, bloodType: e.target.value})}
@@ -1230,8 +1192,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">WhatsApp <span className="text-red-500">*</span></label>
-                    <input 
-                      type="tel" 
+                    <input
+                      type="tel"
                       value={editingStudent.phone || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, phone: maskPhone(e.target.value)})}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
@@ -1243,8 +1205,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         CEP
                         {isLoadingCep && <Loader2 size={10} className="animate-spin text-indigo-500" />}
                       </label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={editingStudent.cep || ''}
                         onChange={handleCepChange}
                         placeholder="00000-000"
@@ -1253,8 +1215,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     </div>
                     <div className="md:col-span-2">
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Número</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={editingStudent.addressNumber || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, addressNumber: e.target.value})}
                         placeholder="Nº"
@@ -1263,8 +1225,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     </div>
                     <div className="md:col-span-6">
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Endereço Completo <span className="text-red-500">*</span></label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={editingStudent.address || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, address: e.target.value})}
                         placeholder="Rua, Bairro, Cidade - UF"
@@ -1282,8 +1244,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Contato de Emergência</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={editingStudent.emergencyContact || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, emergencyContact: e.target.value})}
                       placeholder="Nome do contato"
@@ -1292,8 +1254,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Telefone de Emergência</label>
-                    <input 
-                      type="tel" 
+                    <input
+                      type="tel"
                       value={editingStudent.emergencyPhone || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, emergencyPhone: maskPhone(e.target.value)})}
                       placeholder="(00) 00000-0000"
@@ -1310,8 +1272,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="md:col-span-2">
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Nome do Responsável <span className="text-red-500">*</span></label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={editingStudent.guardianName || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, guardianName: e.target.value})}
                       className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
@@ -1319,8 +1281,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Parentesco</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="Ex: Mãe"
                       value={editingStudent.guardianRelation || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, guardianRelation: e.target.value})}
@@ -1329,8 +1291,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">CPF do Responsável <span className="text-red-500">*</span></label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={editingStudent.guardianCpf || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, guardianCpf: maskCPF(e.target.value)})}
                       className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
@@ -1338,8 +1300,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">RG do Responsável</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={editingStudent.guardianRg || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, guardianRg: maskRG(e.target.value)})}
                       className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
@@ -1347,8 +1309,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">WhatsApp do Responsável <span className="text-red-500">*</span></label>
-                    <input 
-                      type="tel" 
+                    <input
+                      type="tel"
                       value={editingStudent.guardianPhone || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, guardianPhone: maskPhone(e.target.value)})}
                       className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
@@ -1356,8 +1318,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">E-mail do Responsável</label>
-                    <input 
-                      type="email" 
+                    <input
+                      type="email"
                       value={editingStudent.guardianEmail || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, guardianEmail: e.target.value})}
                       className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
@@ -1367,8 +1329,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Profissão</label>
                     <div className="relative">
                       <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={editingStudent.guardianProfession || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, guardianProfession: e.target.value})}
                         className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
@@ -1383,17 +1345,17 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   <h3 className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
                     <FileText size={14} /> Documentação e Anexos
                   </h3>
-                  <button 
+                  <button
                     onClick={() => fileInputRef.current?.click()}
                     className="flex items-center gap-2 text-[10px] font-black uppercase text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl hover:bg-indigo-100 transition-colors"
                   >
                     <Upload size={14} /> Anexar Documento
                   </button>
-                  <input 
-                    type="file" 
-                    ref={fileInputRef} 
-                    className="hidden" 
-                    onChange={handleFileUpload} 
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={handleFileUpload}
                   />
                 </div>
 
@@ -1413,14 +1375,14 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
-                          <button 
+                          <button
                             onClick={() => downloadFile(doc)}
                             className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-all"
                             title="Download Documento"
                           >
                             <Download size={18} />
                           </button>
-                          <button 
+                          <button
                             onClick={() => deleteDocument(doc.id)}
                             className="p-2 text-slate-400 hover:text-red-500 hover:bg-white rounded-lg transition-all"
                           >
@@ -1450,9 +1412,9 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         <button type="button" onClick={() => setEditingStudent({...editingStudent, stripes: Math.max(0, (editingStudent.stripes || 0) - 1)})} className="text-white/50 hover:scale-125 transition-all outline-none md:p-2"><Minus size={20} /></button>
                         <div className={`flex gap-1.5 p-1 rounded-md px-3 bg-opacity-90 ${editingStudent.belt === Belt.BLACK ? 'bg-red-600' : 'bg-zinc-900 shadow-lg'}`}>
                           {[...Array(editingStudent.belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
-                            <div 
-                              key={i} 
-                              className={`w-2.5 h-7 rounded-sm transition-all ${i < (editingStudent.stripes || 0) ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-y-110' : 'bg-white/10'}`} 
+                            <div
+                              key={i}
+                              className={`w-2.5 h-7 rounded-sm transition-all ${i < (editingStudent.stripes || 0) ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-y-110' : 'bg-white/10'}`}
                             />
                           ))}
                         </div>
@@ -1467,8 +1429,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       <label className="block text-[10px] font-bold text-slate-400 uppercase ml-1 mb-2 flex items-center gap-1">
                         <CalendarClock size={12} /> Data da Última Graduação
                       </label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         inputMode="numeric"
                         placeholder="DD/MM/AAAA"
                         value={gradDateInput}
@@ -1483,15 +1445,15 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         <Activity size={12} /> Total de Aulas na Faixa
                       </label>
                       <div className="flex gap-2">
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
                           min="0"
                           disabled={!canEditTotalClasses}
                           value={editingStudent.totalClasses}
                           onChange={(e) => setEditingStudent({...editingStudent, totalClasses: parseInt(e.target.value) || 0})}
                           className={`flex-1 border rounded-xl px-4 py-3 outline-none font-bold ${
-                            canEditTotalClasses 
-                              ? "bg-slate-50 border-slate-200 focus:ring-2 focus:ring-indigo-500 text-slate-700" 
+                            canEditTotalClasses
+                              ? "bg-slate-50 border-slate-200 focus:ring-2 focus:ring-indigo-500 text-slate-700"
                               : "bg-slate-100 border-slate-100 text-slate-400 cursor-not-allowed"
                           }`}
                         />
@@ -1500,11 +1462,12 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                            if (readyForBelt || readyForStripe) {
                              const { nextBelt, nextStripes } = getNextRank(editingStudent.belt, editingStudent.stripes);
                              return (
-                               <button 
+                               <button
                                  onClick={() => handlePromoteStudent(editingStudent, nextBelt, nextStripes)}
-                                 className="bg-amber-500 text-slate-900 px-4 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
+                                 disabled={isPromoting}
+                                 className="bg-amber-500 text-slate-900 px-4 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-500/20 active:scale-95 transition-all disabled:opacity-60"
                                >
-                                 Promover
+                                 {isPromoting ? <Loader2 size={14} className="animate-spin" /> : 'Promover'}
                                </button>
                              );
                            }
@@ -1512,7 +1475,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         })()}
                       </div>
                       <p className="text-[9px] text-slate-400 mt-1 ml-1 font-medium italic">
-                        {canEditTotalClasses 
+                        {canEditTotalClasses
                           ? "* Este número é usado para calcular a prontidão para graduação."
                           : "* Somente administradores e professores podem alterar este valor."}
                       </p>
@@ -1556,8 +1519,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                           type="button"
                           onClick={() => setEditingStudent({...editingStudent, belt})}
                           className={`px-2 py-3 rounded-2xl border-2 text-[8px] font-black uppercase tracking-widest transition-all ${
-                            editingStudent.belt === belt 
-                              ? `${BELT_COLORS[belt]} shadow-lg shadow-indigo-500/10 scale-105 ring-4 ring-indigo-500/10` 
+                            editingStudent.belt === belt
+                              ? `${BELT_COLORS[belt]} shadow-lg shadow-indigo-500/10 scale-105 ring-4 ring-indigo-500/10`
                               : 'bg-white dark:bg-slate-900 text-slate-400 border-slate-100 dark:border-slate-800 opacity-60 hover:opacity-100'
                           }`}
                         >
@@ -1576,7 +1539,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Status de Matrícula</label>
-                    <select 
+                    <select
                       value={editingStudent.status}
                       onChange={(e) => setEditingStudent({...editingStudent, status: e.target.value as any})}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700"
@@ -1588,7 +1551,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Plano de Matrícula</label>
-                    <select 
+                    <select
                       value={editingStudent.planId || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, planId: e.target.value})}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700"
@@ -1603,8 +1566,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Próximo Vencimento</label>
-                    <input 
-                      type="date" 
+                    <input
+                      type="date"
                       value={editingStudent.nextPaymentDate || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, nextPaymentDate: e.target.value})}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700"
@@ -1612,8 +1575,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Limite de Faltas Personalizado</label>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       min="0"
                       placeholder="Usar padrão da academia"
                       value={editingStudent.absenceLimit || ''}
@@ -1625,7 +1588,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     </p>
                   </div>
                 </div>
-                <textarea 
+                <textarea
                   rows={3}
                   placeholder="Informações de saúde relevantes para o treino..."
                   value={editingStudent.medicalNotes || ''}
@@ -1637,7 +1600,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
               <div className="flex flex-col md:flex-row gap-3 pt-8 border-t border-slate-100 md:sticky md:bottom-0 bg-white z-[200] pb-24 md:pb-6 px-4 -mx-6 md:mx-0">
                 <div className="flex gap-3 w-full px-2 md:px-0">
                   {!isNewStudent && (
-                    <button 
+                    <button
                       type="button"
                       onClick={(e) => {
                         e.preventDefault();
@@ -1650,7 +1613,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       Excluir
                     </button>
                   )}
-                  <button 
+                  <button
                     onClick={handleSaveStudent}
                     className={`${isNewStudent ? 'w-full' : 'flex-[2]'} bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95 uppercase tracking-widest`}
                   >
@@ -1664,7 +1627,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
         </div>
       )}
 
-      {/* Modal de Confirmação de Exclusão de Aluno (Mantido original) */}
+      {/* Modal de Confirmação de Exclusão de Aluno */}
       {isDeleteModalOpen && editingStudent && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-sm rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl text-center">
@@ -1673,17 +1636,16 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
             </div>
             <h2 className="text-2xl font-black text-slate-800 mb-2 tracking-tight">Excluir Atleta?</h2>
             <p className="text-sm text-slate-500 font-medium mb-8 leading-relaxed">
-              Deseja realmente mover <span className="text-slate-900 font-bold">{editingStudent.name}</span> para a lixeira? 
-              Você poderá restaurá-lo mais tarde na página da Lixeira.
+              Deseja realmente excluir <span className="text-slate-900 font-bold">{editingStudent.name}</span>? Esta ação não pode ser desfeita.
             </p>
             <div className="flex flex-col gap-3">
-              <button 
+              <button
                 onClick={handleDeleteStudent}
                 className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-5 rounded-3xl shadow-xl shadow-red-600/20 transition-all active:scale-95"
               >
-                Sim, Remover Atleta
+                Sim, Excluir Atleta
               </button>
-              <button 
+              <button
                 onClick={() => setIsDeleteModalOpen(false)}
                 className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-5 rounded-3xl transition-all active:scale-95"
               >
@@ -1694,10 +1656,10 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
         </div>
       )}
 
-      {/* NOVO: CENTRAL DE GRADUAÇÃO (CONTROLE DE ADM) */}
+      {/* CENTRAL DE GRADUAÇÃO */}
       <AnimatePresence>
         {isGraduationCenterOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1764,7 +1726,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       <p className="text-[10px] font-black text-white/40 uppercase tracking-widest leading-none mt-1">Alunos recomendados para graduação</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <button 
+                      <button
                         onClick={() => {
                           const ready = students.filter(s => {
                             const { readyForBelt, readyForStripe } = isReadyForGraduation(s);
@@ -1778,7 +1740,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       >
                         <Clipboard size={12} /> Copiar Todos
                       </button>
-                      <button 
+                      <button
                         onClick={() => {
                           const ready = students.filter(s => isReadyForGraduation(s).readyForBelt);
                           const names = ready.map(s => s.name).join('\n');
@@ -1789,7 +1751,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       >
                         Faixas
                       </button>
-                      <button 
+                      <button
                         onClick={() => {
                           const ready = students.filter(s => isReadyForGraduation(s).readyForStripe);
                           const names = ready.map(s => s.name).join('\n');
@@ -1802,7 +1764,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       </button>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {students
                       .filter(s => {
@@ -1815,7 +1777,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         const { nextBelt, nextStripes } = getNextRank(student.belt, student.stripes);
 
                         return (
-                          <motion.div 
+                          <motion.div
                             key={student.id}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -1837,7 +1799,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 <h4 className="font-black text-white text-base md:text-lg truncate uppercase italic">{student.name}</h4>
-                                <button 
+                                <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     navigator.clipboard.writeText(student.name);
@@ -1859,18 +1821,19 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                                   <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Treinos Atuais</p>
                                   <p className="text-sm font-black text-white">{student.totalClasses} aulas</p>
                                 </div>
-                                <button 
+                                <button
                                   onClick={() => handlePromoteStudent(student, nextBelt, nextStripes)}
-                                  className="bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 md:px-6 py-2.5 rounded-xl font-black text-[10px] md:text-xs uppercase tracking-widest shadow-lg shadow-amber-500/20 active:scale-95 transition-all text-center"
+                                  disabled={isPromoting}
+                                  className="bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 md:px-6 py-2.5 rounded-xl font-black text-[10px] md:text-xs uppercase tracking-widest shadow-lg shadow-amber-500/20 active:scale-95 transition-all text-center disabled:opacity-60"
                                 >
-                                  Promover
+                                  {isPromoting ? <Loader2 size={14} className="animate-spin" /> : 'Promover'}
                                 </button>
                               </div>
                             </div>
                           </motion.div>
                         );
                       })}
-                    
+
                     {students.filter(s => {
                       const { readyForBelt, readyForStripe } = isReadyForGraduation(s);
                       return readyForBelt || readyForStripe;
@@ -1891,7 +1854,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   <h3 className="text-sm font-black text-white uppercase italic tracking-widest mb-6 flex items-center gap-2">
                     <Activity size={16} className="text-emerald-500" /> Últimas Promoções (Academia)
                   </h3>
-                  
+
                   <div className="space-y-3">
                     {students
                       .filter(s => s.graduationHistory && s.graduationHistory.length > 0)
@@ -1922,7 +1885,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                           </div>
                         </div>
                       ))}
-                    
+
                     {students.every(s => !s.graduationHistory || s.graduationHistory.length === 0) && (
                       <p className="text-center py-10 text-slate-600 text-sm italic">Nenhum histórico de graduação registrado recentemente.</p>
                     )}
@@ -1930,9 +1893,9 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                 </div>
               </div>
             </div>
-            
+
             <div className="p-6 border-t border-white/10 bg-slate-950 shrink-0">
-               <button 
+               <button
                 onClick={() => setIsGraduationCenterOpen(false)}
                 className="w-full bg-white text-slate-900 font-black py-4 rounded-2xl hover:bg-slate-100 transition-all active:scale-[0.98] uppercase tracking-widest shadow-xl"
                >

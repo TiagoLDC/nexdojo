@@ -1,44 +1,33 @@
 
 import React, { useState, useRef } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { User, Academy, Student, Instructor, Staff, Belt, ChatMessage } from '../types';
-import { StorageService } from '../services/storage';
+import { User, Academy, Student, Instructor, Staff, Belt } from '../types';
 import { useTranslation } from '../services/LanguageContext';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
+import { authService } from '@/features/auth/services/authService';
+import { academyService } from '@/features/settings/services/academyService';
+import { api } from '@/lib/api';
 import {
-  MOCK_ACADEMY, MOCK_USER, MOCK_SUPERUSER, MOCK_INSTRUCTOR_USER, MOCK_STAFF_USER, MOCK_STUDENT_USER,
-  MOCK_STUDENTS, MOCK_CLASSES, MOCK_TEMPLATES, MOCK_ATTENDANCE,
-  MOCK_INSTRUCTORS, MOCK_STAFF, MOCK_FINANCES, MOCK_CALENDAR, MOCK_CHAT, MOCK_PRODUCTS,
-  MOCK_ACADEMY_2, MOCK_USERS_A2, MOCK_STUDENTS_A2, MOCK_INSTRUCTORS_A2, MOCK_STAFF_A2,
-  MOCK_TEMPLATES_A2, MOCK_CLASSES_A2, MOCK_ATTENDANCE_A2, MOCK_FINANCES_A2, MOCK_CALENDAR_A2, MOCK_CHAT_A2, MOCK_PRODUCTS_A2,
-  MOCK_ACADEMY_3, MOCK_USERS_A3, MOCK_STUDENTS_A3, MOCK_INSTRUCTORS_A3, MOCK_STAFF_A3,
-  MOCK_TEMPLATES_A3, MOCK_CLASSES_A3, MOCK_ATTENDANCE_A3, MOCK_FINANCES_A3, MOCK_CALENDAR_A3, MOCK_CHAT_A3, MOCK_PRODUCTS_A3,
-} from '../services/mockData';
-import { 
-  Trophy, 
-  Mail, 
-  Lock, 
-  ArrowRight, 
-  Info, 
-  Users, 
-  Award, 
-  ChevronLeft, 
-  Camera, 
+  Trophy,
+  Mail,
+  Lock,
+  ArrowRight,
+  Info,
+  Users,
+  Award,
+  ChevronLeft,
+  Camera,
   User as UserIcon,
-  Save,
   X,
   Plus,
   Minus,
   ArrowLeft,
   MapPin,
   Phone,
-  Briefcase,
   Activity,
   GraduationCap,
   CalendarClock,
   Heart,
-  Send,
-  UserCheck,
   Eye,
   EyeOff,
   CheckCircle2,
@@ -47,8 +36,6 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { BELT_COLORS } from '../constants';
-
-// Funções de máscara removidas e unificadas em services/cep.ts
 
 const calculateAge = (birthDate: string) => {
   if (!birthDate) return 0;
@@ -81,7 +68,7 @@ const compressImage = (base64Str: string): Promise<string> => {
 };
 
 interface LoginViewProps {
-  onLogin: (user: User, academy: Academy) => void;
+  onLogin: (user: User, token: string, academy: Academy | null) => void;
 }
 
 type AuthView = 'login' | 'choice' | 'signup-academy' | 'signup-student' | 'signup-instructor' | 'forgot-password';
@@ -112,14 +99,15 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     };
     navigate(paths[v]);
   };
+
   const [email, setEmail] = useState('admin@oss.com');
   const [password, setPassword] = useState('oss123');
   const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotStep, setForgotStep] = useState(1);
-  const [newPassword, setNewPassword] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoadingCep, setIsLoadingCep] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFromSharedLink, setIsFromSharedLink] = useState(false);
   const [linkedAcademy, setLinkedAcademy] = useState<Academy | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -132,74 +120,54 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     }
   }, [view]);
 
-  // Detecção de academia via alias de rota OU query param legado ?academyId=
+  // Detecção de academia via alias de rota
   React.useEffect(() => {
-    // Inicializa academias mock para garantir que existam no localStorage
-    StorageService.getAcademies();
+    if (!alias) return;
 
-    let found: Academy | null = null;
-    let redirectToChoice = false;
-
-    if (alias) {
-      // Rota /login/:alias — mostra branding da academia mas fica no login
-      found = StorageService.getAcademyByAlias(alias) || StorageService.getAcademyById(alias);
-    }
-
-    if (!found) {
-      // Suporte legado a ?academyId= — redireciona para cadastro
-      const params = new URLSearchParams(window.location.search);
-      const academyIdFromUrl = params.get('academyId');
-      if (academyIdFromUrl) {
-        found = StorageService.getAcademyById(academyIdFromUrl);
-        redirectToChoice = true;
-      }
-    }
-
-    if (found) {
-      setLinkedAcademy(found);
-      setIsFromSharedLink(true);
-      setStudentData(prev => ({ ...prev, academyId: found!.id }));
-      setInstructorData(prev => ({ ...prev, academyId: found!.id }));
-      setStaffData(prev => ({ ...prev, academyId: found!.id }));
-      if (redirectToChoice && view === 'login') {
-        const slug = found!.alias || found!.id;
-        navigate(`/login/${slug}/cadastro`, { replace: true });
-      }
-    }
+    api.get<Academy>(`/academies/by-alias/${alias}`)
+      .then(r => {
+        const found = r.data;
+        setLinkedAcademy(found);
+        setIsFromSharedLink(true);
+        setStudentData(prev => ({ ...prev, academyId: found.id }));
+        setInstructorData(prev => ({ ...prev, academyId: found.id }));
+        setStaffData(prev => ({ ...prev, academyId: found.id }));
+      })
+      .catch(() => {
+        // alias não encontrado — sem branding
+      });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [alias]);
 
-  // Estados para cadastros públicos completos
-  const academies = StorageService.getAcademies();
-  const [academyData, setAcademyData] = useState({ 
-    name: '', 
-    logo: 'https://images.unsplash.com/photo-1511884642898-4c92249e20b6?q=80&w=400&h=400&auto=format&fit=crop', 
-    owner: '', 
-    email: '', 
-    password: '', 
-    cep: '', 
-    address: '', 
-    addressNumber: '', 
-    phone: '' 
+  const [academyData, setAcademyData] = useState({
+    name: '',
+    logo: 'https://images.unsplash.com/photo-1511884642898-4c92249e20b6?q=80&w=400&h=400&auto=format&fit=crop',
+    owner: '',
+    email: '',
+    password: '',
+    cep: '',
+    address: '',
+    addressNumber: '',
+    phone: ''
   });
-  const [studentData, setStudentData] = useState<Partial<Student>>({ 
-    name: '', belt: Belt.WHITE, stripes: 0, birthDate: '', status: 'Pending', 
-    academyId: '', // Adicionado campo de academyId
-    joinDate: new Date().toISOString(), totalClasses: 0, totalHours: 0, 
+  const [studentData, setStudentData] = useState<Partial<Student>>({
+    name: '', belt: Belt.WHITE, stripes: 0, birthDate: '', status: 'Pending',
+    academyId: '',
+    joinDate: new Date().toISOString(), totalClasses: 0, totalHours: 0,
     absentCount: 0, hasLoanedKimono: false, gender: 'M', weight: '', height: '',
     bloodType: '', emergencyContact: '', emergencyPhone: '', lastGraduationDate: '',
     cep: '', address: '', addressNumber: ''
   });
-  const [instructorData, setInstructorData] = useState<Partial<Instructor>>({ 
-    name: '', belt: Belt.BLACK, stripes: 0, birthDate: '', status: 'Pending', 
-    academyId: '', // Adicionado campo de academyId
+  const [instructorData, setInstructorData] = useState<Partial<Instructor>>({
+    name: '', belt: Belt.BLACK, stripes: 0, birthDate: '', status: 'Pending',
+    academyId: '',
     joinDate: new Date().toISOString(), gender: 'M', cpf: '', rg: '',
     maritalStatus: 'Solteiro', lastGraduationDate: '', specialties: '',
     cep: '', address: '', addressNumber: ''
   });
   const [staffData, setStaffData] = useState<Partial<Staff>>({
     name: '', birthDate: '', status: 'Pending', joinDate: new Date().toISOString(),
-    academyId: '', // Adicionado campo de academyId
+    academyId: '',
     gender: 'M', cpf: '', rg: '', maritalStatus: 'Solteiro',
     emergencyContact: '', emergencyPhone: '', position: '',
     cep: '', address: '', addressNumber: ''
@@ -207,311 +175,117 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
   const photoRef = useRef<HTMLInputElement>(null);
 
-  const notifyAdmins = (type: 'student' | 'instructor' | 'staff', name: string, details: string, academyId: string) => {
-    // 1. Enviar Notificação ao Mural Interno
-    const systemMsg: ChatMessage = {
-      id: 'sys_' + Math.random().toString(36).substr(2, 9),
-      academyId,
-      senderId: 'system',
-      senderName: 'SISTEMA OSS',
-      senderRole: 'admin',
-      content: `🔔 NOVO CADASTRO: Um novo ${type === 'student' ? 'aluno' : type === 'instructor' ? 'instrutor' : 'colaborador'} (${name}) acaba de realizar a matrícula pelo portal público. Detalhes: ${details}. Verifique no painel administrativo.`,
-      timestamp: new Date().toISOString()
-    };
-    const messages = StorageService.getChatMessages(academyId);
-    StorageService.saveChatMessages([...messages, systemMsg], academyId);
-
-    // 2. Tentar disparar e-mail via mailto
-    const academyEmail = StorageService.getAcademyById(academyId)?.email || 'contato@ct.com';
-    const typeLabel = type === 'student' ? 'Aluno' : type === 'instructor' ? 'Instrutor' : 'Colaborador';
-    const subject = encodeURIComponent(`[OSS] Novo Cadastro de ${typeLabel}`);
-    const body = encodeURIComponent(`Olá Instrutor/Adm,\n\nUm novo cadastro foi realizado no sistema ${MOCK_ACADEMY.name}:\n\nNome: ${name}\nTipo: ${typeLabel.toUpperCase()}\nData: ${new Date().toLocaleDateString()}\n\nAcesse o sistema para validar a ficha.\n\nOSS!`);
-    
-    window.open(`mailto:${academyEmail}?subject=${subject}&body=${body}`, '_blank');
-  };
-
-  // Inicializa dados mockados de uma academia se ainda não existirem no localStorage
-  const initAcademyData = (
-    academyId: string,
-    students: any[], instructors: any[], staff: any[], users: any[],
-    templates: any[], classes: any[], attendance: any[],
-    finances: any[], calendar: any[], chat: any[], products: any[],
-  ) => {
-    if (StorageService.getStudents(academyId).length === 0)
-      StorageService.saveStudents(students, academyId);
-    if (StorageService.getInstructors(academyId).length === 0)
-      StorageService.saveInstructors(instructors, academyId);
-    if (StorageService.getStaff(academyId).length === 0)
-      StorageService.saveStaff(staff, academyId);
-    if (StorageService.getUsers(academyId).length === 0)
-      StorageService.saveUsers(users, academyId);
-    if (StorageService.getTemplates(academyId).length === 0)
-      StorageService.saveTemplates(templates, academyId);
-    if (StorageService.getClasses(academyId).length === 0)
-      StorageService.saveClasses(classes, academyId);
-    if (StorageService.getAttendance(academyId).length === 0)
-      StorageService.saveAttendance(attendance, academyId);
-    if (StorageService.getFinances(academyId).length === 0)
-      StorageService.saveFinances(finances, academyId);
-    if (StorageService.getCalendarEvents(academyId).length === 0)
-      StorageService.saveCalendarEvents(calendar, academyId);
-    if (StorageService.getChatMessages(academyId).length === 0)
-      StorageService.saveChatMessages(chat, academyId);
-    if (StorageService.getProducts(academyId).length === 0)
-      StorageService.saveProducts(products, academyId);
-  };
-
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Assegura que as 3 academias existem na lista
-    StorageService.getAcademies();
-
-    // Inicializa dados de TODAS as academias em qualquer login (necessário para o superuser)
-    initAcademyData(
-      MOCK_ACADEMY.id,
-      MOCK_STUDENTS, MOCK_INSTRUCTORS, MOCK_STAFF,
-      [MOCK_USER, MOCK_INSTRUCTOR_USER, MOCK_STAFF_USER, MOCK_STUDENT_USER],
-      MOCK_TEMPLATES, MOCK_CLASSES, MOCK_ATTENDANCE,
-      MOCK_FINANCES, MOCK_CALENDAR, MOCK_CHAT, MOCK_PRODUCTS,
-    );
-    initAcademyData(
-      MOCK_ACADEMY_2.id,
-      MOCK_STUDENTS_A2, MOCK_INSTRUCTORS_A2, MOCK_STAFF_A2, MOCK_USERS_A2,
-      MOCK_TEMPLATES_A2, MOCK_CLASSES_A2, MOCK_ATTENDANCE_A2,
-      MOCK_FINANCES_A2, MOCK_CALENDAR_A2, MOCK_CHAT_A2, MOCK_PRODUCTS_A2,
-    );
-    initAcademyData(
-      MOCK_ACADEMY_3.id,
-      MOCK_STUDENTS_A3, MOCK_INSTRUCTORS_A3, MOCK_STAFF_A3, MOCK_USERS_A3,
-      MOCK_TEMPLATES_A3, MOCK_CLASSES_A3, MOCK_ATTENDANCE_A3,
-      MOCK_FINANCES_A3, MOCK_CALENDAR_A3, MOCK_CHAT_A3, MOCK_PRODUCTS_A3,
-    );
-
-    const users = StorageService.getUsers();
-    let foundUser = users.find(u => u.email === email && u.password === password);
-
-    // Permitir sempre o acesso do superuser de demonstração
-    if (!foundUser && email === 'super@oss.com' && password === 'super') {
-      foundUser = MOCK_SUPERUSER;
+    if (isLoggingIn) return;
+    setIsLoggingIn(true);
+    try {
+      const { token, user } = await authService.login({ email, password });
+      let academy: Academy | null = null;
+      if (user.academyId) {
+        try {
+          academy = await academyService.get(user.academyId);
+        } catch {
+          // academia não encontrada — prosseguir sem branding
+        }
+      }
+      onLogin(user as unknown as User, token, academy);
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || 'E-mail ou senha incorretos.';
+      showNotification(msg, 'error');
+    } finally {
+      setIsLoggingIn(false);
     }
-
-    // Permitir acesso do instrutor de demonstração
-    if (!foundUser && email === 'instru@oss.com' && password === 'oss123') {
-      foundUser = MOCK_INSTRUCTOR_USER;
-    }
-
-    // Permitir acesso do colaborador de demonstração
-    if (!foundUser && email === 'colab@oss.com' && password === 'oss123') {
-      foundUser = MOCK_STAFF_USER;
-    }
-
-    // Permitir acesso do aluno de demonstração
-    if (!foundUser && email === 'aluno@oss.com' && password === 'oss123') {
-      foundUser = MOCK_STUDENT_USER;
-    }
-
-    // ── Academia 1: admin de demonstração ──
-    if (!foundUser && email === 'admin@oss.com' && password === 'oss123') {
-      initAcademyData(
-        MOCK_ACADEMY.id,
-        MOCK_STUDENTS, MOCK_INSTRUCTORS, MOCK_STAFF,
-        [MOCK_USER, MOCK_INSTRUCTOR_USER, MOCK_STAFF_USER, MOCK_STUDENT_USER],
-        MOCK_TEMPLATES, MOCK_CLASSES, MOCK_ATTENDANCE,
-        MOCK_FINANCES, MOCK_CALENDAR, MOCK_CHAT, MOCK_PRODUCTS,
-      );
-      foundUser = MOCK_USER;
-    }
-
-    // ── Academia 2: Samurai BJJ ──
-    if (!foundUser && email === 'admin@samurai.com' && password === 'sam123') {
-      initAcademyData(
-        MOCK_ACADEMY_2.id,
-        MOCK_STUDENTS_A2, MOCK_INSTRUCTORS_A2, MOCK_STAFF_A2, MOCK_USERS_A2,
-        MOCK_TEMPLATES_A2, MOCK_CLASSES_A2, MOCK_ATTENDANCE_A2,
-        MOCK_FINANCES_A2, MOCK_CALENDAR_A2, MOCK_CHAT_A2, MOCK_PRODUCTS_A2,
-      );
-      foundUser = MOCK_USERS_A2.find((u: any) => u.role === 'admin') as any;
-    }
-    if (!foundUser && email === 'kenji@samurai.com' && password === 'sam123') {
-      initAcademyData(
-        MOCK_ACADEMY_2.id,
-        MOCK_STUDENTS_A2, MOCK_INSTRUCTORS_A2, MOCK_STAFF_A2, MOCK_USERS_A2,
-        MOCK_TEMPLATES_A2, MOCK_CLASSES_A2, MOCK_ATTENDANCE_A2,
-        MOCK_FINANCES_A2, MOCK_CALENDAR_A2, MOCK_CHAT_A2, MOCK_PRODUCTS_A2,
-      );
-      foundUser = MOCK_USERS_A2.find((u: any) => u.id === 'a2_instr_1') as any;
-    }
-    if (!foundUser && email === 'camila@samurai.com' && password === 'sam123') {
-      initAcademyData(
-        MOCK_ACADEMY_2.id,
-        MOCK_STUDENTS_A2, MOCK_INSTRUCTORS_A2, MOCK_STAFF_A2, MOCK_USERS_A2,
-        MOCK_TEMPLATES_A2, MOCK_CLASSES_A2, MOCK_ATTENDANCE_A2,
-        MOCK_FINANCES_A2, MOCK_CALENDAR_A2, MOCK_CHAT_A2, MOCK_PRODUCTS_A2,
-      );
-      foundUser = MOCK_USERS_A2.find((u: any) => u.id === 'a2_instr_2') as any;
-    }
-    if (!foundUser && email === 'sec@samurai.com' && password === 'sam123') {
-      initAcademyData(
-        MOCK_ACADEMY_2.id,
-        MOCK_STUDENTS_A2, MOCK_INSTRUCTORS_A2, MOCK_STAFF_A2, MOCK_USERS_A2,
-        MOCK_TEMPLATES_A2, MOCK_CLASSES_A2, MOCK_ATTENDANCE_A2,
-        MOCK_FINANCES_A2, MOCK_CALENDAR_A2, MOCK_CHAT_A2, MOCK_PRODUCTS_A2,
-      );
-      foundUser = MOCK_USERS_A2.find((u: any) => u.id === 'a2_staff_1') as any;
-    }
-    if (!foundUser && email === 'aluno@samurai.com' && password === 'sam123') {
-      initAcademyData(
-        MOCK_ACADEMY_2.id,
-        MOCK_STUDENTS_A2, MOCK_INSTRUCTORS_A2, MOCK_STAFF_A2, MOCK_USERS_A2,
-        MOCK_TEMPLATES_A2, MOCK_CLASSES_A2, MOCK_ATTENDANCE_A2,
-        MOCK_FINANCES_A2, MOCK_CALENDAR_A2, MOCK_CHAT_A2, MOCK_PRODUCTS_A2,
-      );
-      foundUser = MOCK_USERS_A2.find((u: any) => u.id === 'a2_student_user_1') as any;
-    }
-
-    // ── Academia 3: Dragão Fight ──
-    if (!foundUser && email === 'admin@dragao.com' && password === 'drg123') {
-      initAcademyData(
-        MOCK_ACADEMY_3.id,
-        MOCK_STUDENTS_A3, MOCK_INSTRUCTORS_A3, MOCK_STAFF_A3, MOCK_USERS_A3,
-        MOCK_TEMPLATES_A3, MOCK_CLASSES_A3, MOCK_ATTENDANCE_A3,
-        MOCK_FINANCES_A3, MOCK_CALENDAR_A3, MOCK_CHAT_A3, MOCK_PRODUCTS_A3,
-      );
-      foundUser = MOCK_USERS_A3.find((u: any) => u.role === 'admin') as any;
-    }
-    if (!foundUser && email === 'diego@dragao.com' && password === 'drg123') {
-      initAcademyData(
-        MOCK_ACADEMY_3.id,
-        MOCK_STUDENTS_A3, MOCK_INSTRUCTORS_A3, MOCK_STAFF_A3, MOCK_USERS_A3,
-        MOCK_TEMPLATES_A3, MOCK_CLASSES_A3, MOCK_ATTENDANCE_A3,
-        MOCK_FINANCES_A3, MOCK_CALENDAR_A3, MOCK_CHAT_A3, MOCK_PRODUCTS_A3,
-      );
-      foundUser = MOCK_USERS_A3.find((u: any) => u.id === 'a3_instr_1') as any;
-    }
-    if (!foundUser && email === 'leticia@dragao.com' && password === 'drg123') {
-      initAcademyData(
-        MOCK_ACADEMY_3.id,
-        MOCK_STUDENTS_A3, MOCK_INSTRUCTORS_A3, MOCK_STAFF_A3, MOCK_USERS_A3,
-        MOCK_TEMPLATES_A3, MOCK_CLASSES_A3, MOCK_ATTENDANCE_A3,
-        MOCK_FINANCES_A3, MOCK_CALENDAR_A3, MOCK_CHAT_A3, MOCK_PRODUCTS_A3,
-      );
-      foundUser = MOCK_USERS_A3.find((u: any) => u.id === 'a3_instr_2') as any;
-    }
-    if (!foundUser && email === 'atend@dragao.com' && password === 'drg123') {
-      initAcademyData(
-        MOCK_ACADEMY_3.id,
-        MOCK_STUDENTS_A3, MOCK_INSTRUCTORS_A3, MOCK_STAFF_A3, MOCK_USERS_A3,
-        MOCK_TEMPLATES_A3, MOCK_CLASSES_A3, MOCK_ATTENDANCE_A3,
-        MOCK_FINANCES_A3, MOCK_CALENDAR_A3, MOCK_CHAT_A3, MOCK_PRODUCTS_A3,
-      );
-      foundUser = MOCK_USERS_A3.find((u: any) => u.id === 'a3_staff_1') as any;
-    }
-    if (!foundUser && email === 'aluno@dragao.com' && password === 'drg123') {
-      initAcademyData(
-        MOCK_ACADEMY_3.id,
-        MOCK_STUDENTS_A3, MOCK_INSTRUCTORS_A3, MOCK_STAFF_A3, MOCK_USERS_A3,
-        MOCK_TEMPLATES_A3, MOCK_CLASSES_A3, MOCK_ATTENDANCE_A3,
-        MOCK_FINANCES_A3, MOCK_CALENDAR_A3, MOCK_CHAT_A3, MOCK_PRODUCTS_A3,
-      );
-      foundUser = MOCK_USERS_A3.find((u: any) => u.id === 'a3_student_user_1') as any;
-    }
-
-    if (!foundUser) {
-      showNotification("E-mail ou senha incorretos.", 'error');
-      return;
-    }
-
-    if (foundUser.status === 'Pending' && foundUser.role !== 'admin' && foundUser.role !== 'superuser') {
-      showNotification("Seu acesso ainda está pendente de aprovação. OSS!", 'error');
-      return;
-    }
-
-    if (foundUser.status === 'Blocked') {
-      showNotification("Seu acesso foi bloqueado. Entre em contato com a administração.", 'error');
-      return;
-    }
-
-    const academy = StorageService.getAcademyById(foundUser.academyId) || StorageService.getAcademy();
-    onLogin(foundUser, academy || MOCK_ACADEMY);
   };
 
-  const handleRegisterAcademy = (e: React.FormEvent) => {
+  const handleRegisterAcademy = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!academyData.password) {
       showNotification("Defina uma senha para o administrador.", 'error');
       return;
     }
-    
+    if (academyData.password !== confirmPassword) {
+      showNotification("As senhas não coincidem.", 'error');
+      return;
+    }
     if (!acceptedTerms) {
       showNotification("Você precisa aceitar os Termos de Responsabilidade.", 'error');
       return;
     }
-    
-    const academyId = 'acad_' + Math.random().toString(36).substr(2, 5);
-    const userId = 'user_' + Math.random().toString(36).substr(2, 5);
-    const academy: Academy = { 
-      id: academyId, 
-      name: academyData.name, 
-      logo: academyData.logo,
-      ownerName: academyData.owner, 
-      email: academyData.email,
-      cep: academyData.cep,
-      address: academyData.address,
-      addressNumber: academyData.addressNumber,
-      phone: academyData.phone
-    };
-    const user: User = { 
-      id: userId, 
-      academyId, 
-      role: 'admin', 
-      name: academyData.owner, 
-      email: academyData.email, 
-      password: academyData.password,
-      status: 'Active' // O criador da academia já nasce ativo
-    };
-    
-    StorageService.saveAcademy(academy);
-    StorageService.saveUsers([user], academyId);
-    onLogin(user, academy);
+
+    setIsSubmitting(true);
+    try {
+      await api.post('/auth/register/academy', {
+        name: academyData.name,
+        ownerName: academyData.owner,
+        email: academyData.email,
+        password: academyData.password,
+        logo: academyData.logo,
+        cep: academyData.cep,
+        address: academyData.address,
+        addressNumber: academyData.addressNumber,
+        phone: academyData.phone,
+      });
+      showNotification("Academia criada com sucesso! Acesse com suas credenciais. OSS!");
+      setView('login');
+      setEmail(academyData.email);
+    } catch (err: any) {
+      showNotification(err?.response?.data?.error || 'Erro ao criar academia.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleRegisterStudent = () => {
+  const handleRegisterStudent = async () => {
     if (!acceptedTerms) {
       showNotification("Você precisa aceitar os Termos de Responsabilidade.", 'error');
       return;
     }
-
     if (!studentData.name || !studentData.birthDate || !studentData.email || !regPassword || !studentData.academyId) {
       showNotification("Preencha todos os campos obrigatórios (*).", 'error');
       return;
     }
-
     if (regPassword !== confirmPassword) {
       showNotification("As senhas não coincidem.", 'error');
       return;
     }
-    
-    const newStudent = { ...studentData, id: 's_pub_' + Math.random().toString(36).substr(2, 7) } as Student;
-    const newUser: User = {
-      id: 'u_s_' + Math.random().toString(36).substr(2, 7),
-      academyId: studentData.academyId,
-      role: 'student', // Papel padrão para alunos
-      name: newStudent.name,
-      email: newStudent.email!,
-      password: regPassword,
-      status: 'Pending'
-    };
 
-    const currentStudents = StorageService.getStudents(studentData.academyId);
-    StorageService.saveStudents([...currentStudents, newStudent], studentData.academyId);
-    
-    const currentUsers = StorageService.getUsers(studentData.academyId);
-    StorageService.saveUsers([...currentUsers, newUser], studentData.academyId);
-
-    notifyAdmins('student', newStudent.name, `Unidade: ${StorageService.getAcademyById(studentData.academyId!)?.name || 'N/A'}, Faixa ${newStudent.belt}`, studentData.academyId!);
-    showNotification("Matrícula realizada com sucesso! Aguarde aprovação. OSS!");
-    setView('login');
+    setIsSubmitting(true);
+    try {
+      await api.post('/auth/register/student', {
+        academyId: studentData.academyId,
+        name: studentData.name,
+        email: studentData.email,
+        password: regPassword,
+        belt: studentData.belt,
+        stripes: studentData.stripes,
+        birthDate: studentData.birthDate,
+        gender: studentData.gender,
+        phone: studentData.phone,
+        cpf: studentData.cpf,
+        rg: studentData.rg,
+        weight: studentData.weight,
+        height: studentData.height,
+        bloodType: studentData.bloodType,
+        emergencyContact: studentData.emergencyContact,
+        emergencyPhone: studentData.emergencyPhone,
+        cep: studentData.cep,
+        address: studentData.address,
+        addressNumber: studentData.addressNumber,
+        guardianName: studentData.guardianName,
+        guardianPhone: studentData.guardianPhone,
+        guardianRelation: studentData.guardianRelation,
+        guardianCpf: studentData.guardianCpf,
+        medicalNotes: studentData.medicalNotes,
+        photo: studentData.photo,
+      });
+      showNotification("Matrícula realizada com sucesso! Aguarde aprovação. OSS!");
+      setView('login');
+    } catch (err: any) {
+      showNotification(err?.response?.data?.error || 'Erro ao realizar matrícula.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCepLookup = async (cep: string, setter: (cep: string, address: string) => void) => {
@@ -530,80 +304,49 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     }
   };
 
-  const handleRegisterInstructor = () => {
+  const handleRegisterInstructor = async () => {
     if (!acceptedTerms) {
       showNotification("Você precisa aceitar os Termos de Responsabilidade.", 'error');
       return;
     }
-
     if (!instructorData.name || !instructorData.birthDate || !instructorData.email || !regPassword || !instructorData.academyId) {
       showNotification("Preencha todos os campos obrigatórios (*).", 'error');
       return;
     }
-
     if (regPassword !== confirmPassword) {
       showNotification("As senhas não coincidem.", 'error');
       return;
     }
-    
-    const newInst = { ...instructorData, id: 'i_pub_' + Math.random().toString(36).substr(2, 7) } as Instructor;
-    const newUser: User = {
-      id: 'u_i_' + Math.random().toString(36).substr(2, 7),
-      academyId: instructorData.academyId,
-      role: 'instructor',
-      name: newInst.name,
-      email: newInst.email!,
-      password: regPassword,
-      status: 'Pending'
-    };
 
-    const currentInstructors = StorageService.getInstructors(instructorData.academyId);
-    StorageService.saveInstructors([...currentInstructors, newInst], instructorData.academyId);
-    
-    const currentUsers = StorageService.getUsers(instructorData.academyId);
-    StorageService.saveUsers([...currentUsers, newUser], instructorData.academyId);
-
-    notifyAdmins('instructor', newInst.name, `Unidade: ${StorageService.getAcademyById(instructorData.academyId!)?.name || 'N/A'}, Especialidade: ${newInst.specialties || 'Geral'}`, instructorData.academyId!);
-    showNotification("Ficha Técnica enviada! Aguarde aprovação. OSS!");
-    setView('login');
-  };
-
-  const handleRegisterStaff = () => {
-    if (!acceptedTerms) {
-      showNotification("Você precisa aceitar os Termos de Responsabilidade.", 'error');
-      return;
+    setIsSubmitting(true);
+    try {
+      await api.post('/auth/register/instructor', {
+        academyId: instructorData.academyId,
+        name: instructorData.name,
+        email: instructorData.email,
+        password: regPassword,
+        belt: instructorData.belt,
+        stripes: instructorData.stripes,
+        birthDate: instructorData.birthDate,
+        gender: instructorData.gender,
+        cpf: instructorData.cpf,
+        rg: instructorData.rg,
+        maritalStatus: instructorData.maritalStatus,
+        lastGraduationDate: instructorData.lastGraduationDate,
+        specialties: instructorData.specialties,
+        cep: instructorData.cep,
+        address: instructorData.address,
+        addressNumber: instructorData.addressNumber,
+        phone: instructorData.phone,
+        photo: instructorData.photo,
+      });
+      showNotification("Ficha Técnica enviada! Aguarde aprovação. OSS!");
+      setView('login');
+    } catch (err: any) {
+      showNotification(err?.response?.data?.error || 'Erro ao enviar ficha.', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    if (!staffData.name || !staffData.birthDate || !staffData.email || !regPassword || !staffData.academyId) {
-      showNotification("Preencha todos os campos obrigatórios (*).", 'error');
-      return;
-    }
-
-    if (regPassword !== confirmPassword) {
-      showNotification("As senhas não coincidem.", 'error');
-      return;
-    }
-    
-    const newStaff = { ...staffData, id: 'st_pub_' + Math.random().toString(36).substr(2, 7) } as Staff;
-    const newUser: User = {
-      id: 'u_st_' + Math.random().toString(36).substr(2, 7),
-      academyId: staffData.academyId,
-      role: 'staff',
-      name: newStaff.name,
-      email: newStaff.email!,
-      password: regPassword,
-      status: 'Pending'
-    };
-
-    const currentStaff = StorageService.getStaff(staffData.academyId);
-    StorageService.saveStaff([...currentStaff, newStaff], staffData.academyId);
-    
-    const currentUsers = StorageService.getUsers(staffData.academyId);
-    StorageService.saveUsers([...currentUsers, newUser], staffData.academyId);
-
-    notifyAdmins('staff', newStaff.name, `Unidade: ${StorageService.getAcademyById(staffData.academyId!)?.name || 'N/A'}, Cargo: ${newStaff.position || 'Geral'}`, staffData.academyId!);
-    showNotification("Ficha de Colaborador enviada! Aguarde aprovação. OSS!");
-    setView('login');
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'student' | 'instructor' | 'staff') => {
@@ -713,8 +456,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                 {/* Password field */}
                 <LoginPasswordField value={password} onChange={setPassword} />
 
-                <button type="submit" className="login-btn-primary">
-                  {t.enterMat} <ArrowRight size={18} />
+                <button type="submit" className="login-btn-primary" disabled={isLoggingIn}>
+                  {isLoggingIn ? <Loader2 size={18} className="animate-spin" /> : <>{t.enterMat} <ArrowRight size={18} /></>}
                 </button>
               </form>
 
@@ -774,114 +517,40 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         {/* VIEW: FORGOT PASSWORD */}
         {view === 'forgot-password' && (
           <div className="max-w-md mx-auto space-y-6 animate-in fade-in zoom-in duration-300">
-            <button onClick={() => { setView('login'); setForgotStep(1); }} className="text-white flex items-center gap-2 mb-4 hover:text-indigo-400 transition-colors font-bold text-xs uppercase tracking-[0.2em]">
+            <button onClick={() => setView('login')} className="text-white flex items-center gap-2 mb-4 hover:text-indigo-400 transition-colors font-bold text-xs uppercase tracking-[0.2em]">
               <ChevronLeft size={18} /> {t.backToLogin}
             </button>
-            
+
             <div className="bg-white dark:bg-slate-900 rounded-[40px] p-8 md:p-10 shadow-2xl space-y-6">
-              {forgotStep === 1 ? (
-                <>
-                  <div className="text-center space-y-2">
-                    <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">{t.createOrRecoverPassword}</h2>
-                    <p className="text-sm text-slate-400 font-medium leading-relaxed">{t.enterRegisteredEmail}</p>
-                  </div>
+              <div className="text-center space-y-2">
+                <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">{t.createOrRecoverPassword}</h2>
+                <p className="text-sm text-slate-400 font-medium leading-relaxed">Para redefinir sua senha, entre em contato com o administrador da sua academia.</p>
+              </div>
 
-                  <div className="space-y-4">
-                    <Input 
-                      label="E-mail Cadastrado" 
-                      type="email" 
-                      value={forgotEmail} 
-                      onChange={setForgotEmail} 
-                      placeholder="seu@email.com" 
-                      icon={<Mail size={18} />} 
-                    />
-                  </div>
+              <div className="space-y-4">
+                <Input
+                  label="E-mail Cadastrado"
+                  type="email"
+                  value={forgotEmail}
+                  onChange={setForgotEmail}
+                  placeholder="seu@email.com"
+                  icon={<Mail size={18} />}
+                />
+              </div>
 
-                  <button 
-                    onClick={() => {
-                      if (!forgotEmail) {
-                        showNotification(t.enterEmailPlease, 'error');
-                        return;
-                      }
+              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-2xl p-4 flex items-start gap-3">
+                <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={18} />
+                <p className="text-sm text-amber-800 dark:text-amber-400 font-medium">
+                  Solicite ao administrador da academia que redefina sua senha no painel de gestão. OSS!
+                </p>
+              </div>
 
-                      const allUsers = StorageService.getUsers();
-                      const user = allUsers.find(u => u.email.toLowerCase() === forgotEmail.toLowerCase());
-
-                      if (!user) {
-                        showNotification(t.emailNotFound, 'error');
-                        return;
-                      }
-
-                      setForgotStep(2);
-                      showNotification(t.emailValidated);
-                    }} 
-                    className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95"
-                  >
-                    {t.validateEmail} <ArrowRight size={20} />
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="text-center space-y-2">
-                    <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">{t.setPasswordTitle}</h2>
-                    <p className="text-sm text-slate-400 font-medium leading-relaxed">{t.createStrongPassword}</p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <Input 
-                      label="Nova Senha" 
-                      type="password" 
-                      value={newPassword} 
-                      onChange={setNewPassword} 
-                      placeholder="••••••••" 
-                      icon={<Lock size={18} />} 
-                    />
-                    <Input 
-                      label="Confirmar Senha" 
-                      type="password" 
-                      value={confirmPassword} 
-                      onChange={setConfirmPassword} 
-                      placeholder="••••••••" 
-                      icon={<CheckCircle2 size={18} />} 
-                    />
-                  </div>
-
-                  <button 
-                    onClick={() => {
-                      if (newPassword.length < 4) {
-                        showNotification(t.passwordTooShort, 'error');
-                        return;
-                      }
-                      if (newPassword !== confirmPassword) {
-                        showNotification(t.passwordsMismatch, 'error');
-                        return;
-                      }
-
-                      const allUsers = StorageService.getUsers();
-                      const updatedUsers = allUsers.map(u => 
-                        u.email.toLowerCase() === forgotEmail.toLowerCase() 
-                          ? { ...u, password: newPassword } 
-                          : u
-                      );
-                      
-                      // Salvar em todas as academias (mock generalizado) ou na específica
-                      const user = allUsers.find(u => u.email.toLowerCase() === forgotEmail.toLowerCase());
-                      if (user) {
-                        StorageService.saveUsers(updatedUsers, user.academyId);
-                      }
-                      
-                      showNotification(t.passwordSetSuccess);
-                      setView('login');
-                      setForgotStep(1);
-                      setEmail(forgotEmail);
-                      setPassword(newPassword);
-                    }} 
-                    className="w-full py-5 bg-green-600 hover:bg-green-500 text-white font-black rounded-2xl shadow-xl shadow-green-600/20 transition-all flex items-center justify-center gap-2 active:scale-95"
-                  >
-                    {t.saveAndEnter} <Trophy size={20} />
-                  </button>
-                </>
-              )}
+              <button
+                onClick={() => { setView('login'); setEmail(forgotEmail); }}
+                className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95"
+              >
+                Voltar ao Login <ArrowRight size={20} />
+              </button>
             </div>
           </div>
         )}
@@ -909,8 +578,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             </div>
               <div className="space-y-4">
                 <div className="flex flex-col items-center gap-3 mb-6">
-                  <div 
-                    onClick={() => photoRef.current?.click()} 
+                  <div
+                    onClick={() => photoRef.current?.click()}
                     className="w-32 h-32 bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-[32px] overflow-hidden flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500 transition-all shadow-inner group relative"
                   >
                     {academyData.logo ? (
@@ -925,11 +594,11 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                       <span className="text-[10px] font-black uppercase italic bg-white dark:bg-slate-900 px-4 py-2 rounded-2xl shadow-sm border border-indigo-100 dark:border-indigo-800">Alterar</span>
                     </div>
                   </div>
-                  <input 
-                    type="file" 
-                    ref={photoRef} 
-                    className="hidden" 
-                    accept="image/*" 
+                  <input
+                    type="file"
+                    ref={photoRef}
+                    className="hidden"
+                    accept="image/*"
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (file) {
@@ -940,7 +609,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                         };
                         reader.readAsDataURL(file);
                       }
-                    }} 
+                    }}
                   />
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Logo da sua Academia</p>
                 </div>
@@ -949,27 +618,27 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                 <Input label="E-mail de Contato" type="email" value={academyData.email} onChange={v => setAcademyData({...academyData, email: v})} placeholder="ct@oss.com" />
                 <Input label="WhatsApp / Telefone" value={academyData.phone} onChange={v => setAcademyData({...academyData, phone: maskPhone(v)})} placeholder="(00) 00000-0000" icon={<Phone size={16} />} inputMode="numeric" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input 
-                    label="CEP" 
-                    value={academyData.cep || ''} 
-                    onChange={v => handleCepLookup(v, (c, a) => setAcademyData({...academyData, cep: c, address: a}))} 
+                  <Input
+                    label="CEP"
+                    value={academyData.cep || ''}
+                    onChange={v => handleCepLookup(v, (c, a) => setAcademyData({...academyData, cep: c, address: a}))}
                     placeholder="00000-000"
                     icon={isLoadingCep ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} />}
                     inputMode="numeric"
                   />
-                  <Input 
-                    label="Número" 
-                    value={academyData.addressNumber || ''} 
-                    onChange={v => setAcademyData({...academyData, addressNumber: v})} 
-                    placeholder="Ex: 123" 
+                  <Input
+                    label="Número"
+                    value={academyData.addressNumber || ''}
+                    onChange={v => setAcademyData({...academyData, addressNumber: v})}
+                    placeholder="Ex: 123"
                     inputMode="numeric"
                   />
                 </div>
-                <Input 
-                  label="Endereço (Auto)" 
-                  value={academyData.address || ''} 
-                  onChange={v => setAcademyData({...academyData, address: v})} 
-                  placeholder="Rua, Bairro, Cidade..." 
+                <Input
+                  label="Endereço (Auto)"
+                  value={academyData.address || ''}
+                  onChange={v => setAcademyData({...academyData, address: v})}
+                  placeholder="Rua, Bairro, Cidade..."
                 />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input label="Definir Senha Admin" type="password" value={academyData.password} onChange={v => setAcademyData({...academyData, password: v})} placeholder="••••••••" icon={<Lock size={18} />} />
@@ -979,9 +648,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
               <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 space-y-4">
                 <div className="flex items-start gap-3">
-                  <input 
-                    type="checkbox" 
-                    id="terms" 
+                  <input
+                    type="checkbox"
+                    id="terms"
                     checked={acceptedTerms}
                     onChange={e => setAcceptedTerms(e.target.checked)}
                     className="mt-1 w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
@@ -992,7 +661,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                 </div>
               </div>
 
-            <button type="submit" className="w-full py-5 bg-indigo-600 text-white font-black rounded-2xl shadow-xl active:scale-95 transition-transform">Finalizar Cadastro</button>
+            <button type="submit" disabled={isSubmitting} className="w-full py-5 bg-indigo-600 text-white font-black rounded-2xl shadow-xl active:scale-95 transition-transform flex items-center justify-center gap-2">
+              {isSubmitting ? <Loader2 size={20} className="animate-spin" /> : 'Finalizar Cadastro'}
+            </button>
           </form>
         )}
 
@@ -1024,15 +695,15 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               <div className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/50 p-4 rounded-2xl flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center shadow-sm">
-                    {StorageService.getAcademyById(studentData.academyId!)?.logo ? (
-                      <img src={StorageService.getAcademyById(studentData.academyId!)?.logo} className="w-full h-full object-contain p-1.5" />
+                    {linkedAcademy?.logo ? (
+                      <img src={linkedAcademy.logo} className="w-full h-full object-contain p-1.5" />
                     ) : (
                       <Award size={20} className="text-indigo-600" />
                     )}
                   </div>
                   <div>
                     <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-1">Você está se matriculando na:</p>
-                    <p className="text-sm font-black text-indigo-600 uppercase italic tracking-tight">{StorageService.getAcademyById(studentData.academyId!)?.name || 'Academia Selecionada'}</p>
+                    <p className="text-sm font-black text-indigo-600 uppercase italic tracking-tight">{linkedAcademy?.name || 'Academia Selecionada'}</p>
                   </div>
                 </div>
                 <div className="bg-indigo-600 text-white p-1 rounded-full px-2 text-[8px] font-black uppercase tracking-tighter shadow-sm">Ativo</div>
@@ -1057,8 +728,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   </div>
                   <div>
                     <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 mb-1">Sexo <span className="text-red-500">*</span></label>
-                    <select 
-                      value={studentData.gender || 'M'} 
+                    <select
+                      value={studentData.gender || 'M'}
                       onChange={e => setStudentData({...studentData, gender: e.target.value as any})}
                       className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-slate-800 dark:text-white transition-all font-bold text-sm"
                     >
@@ -1082,28 +753,28 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   <Input label="Altura (cm)" value={studentData.height || ''} onChange={v => setStudentData({...studentData, height: v})} placeholder="Ex: 180" />
                   <Input label="Tipo Sanguíneo" value={studentData.bloodType || ''} onChange={v => setStudentData({...studentData, bloodType: v})} placeholder="Ex: O+" />
                   <div className="md:col-span-1">
-                    <Input 
-                      label="CEP" 
-                      value={studentData.cep || ''} 
-                      onChange={v => handleCepLookup(v, (c, a) => setStudentData({...studentData, cep: c, address: a}))} 
+                    <Input
+                      label="CEP"
+                      value={studentData.cep || ''}
+                      onChange={v => handleCepLookup(v, (c, a) => setStudentData({...studentData, cep: c, address: a}))}
                       placeholder="00000-000"
                       icon={isLoadingCep ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} />}
                     />
                   </div>
                   <div className="md:col-span-1">
-                    <Input 
-                      label="Número" 
-                      value={studentData.addressNumber || ''} 
-                      onChange={v => setStudentData({...studentData, addressNumber: v})} 
-                      placeholder="Nº" 
+                    <Input
+                      label="Número"
+                      value={studentData.addressNumber || ''}
+                      onChange={v => setStudentData({...studentData, addressNumber: v})}
+                      placeholder="Nº"
                     />
                   </div>
                   <div className="md:col-span-3">
-                    <Input 
-                      label="Endereço Completo (Auto)" 
-                      value={studentData.address || ''} 
-                      onChange={v => setStudentData({...studentData, address: v})} 
-                      placeholder="Rua, Bairro, Cidade..." 
+                    <Input
+                      label="Endereço Completo (Auto)"
+                      value={studentData.address || ''}
+                      onChange={v => setStudentData({...studentData, address: v})}
+                      placeholder="Rua, Bairro, Cidade..."
                     />
                   </div>
                 </div>
@@ -1145,9 +816,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                       <button type="button" onClick={() => setStudentData({...studentData, stripes: Math.max(0, (studentData.stripes || 0) - 1)})} className="text-white/50 hover:scale-125 transition-all outline-none md:p-2"><Minus size={20} /></button>
                       <div className={`flex gap-1.5 p-1 rounded-md px-3 bg-opacity-90 ${studentData.belt === Belt.BLACK ? 'bg-red-600' : 'bg-zinc-900 shadow-lg'}`}>
                         {[...Array(studentData.belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
-                          <div 
-                            key={i} 
-                            className={`w-3 h-8 rounded-sm border transition-all ${i < (studentData.stripes || 0) ? 'bg-white border-white/20 shadow-md' : 'bg-white/10 border-transparent'}`} 
+                          <div
+                            key={i}
+                            className={`w-3 h-8 rounded-sm border transition-all ${i < (studentData.stripes || 0) ? 'bg-white border-white/20 shadow-md' : 'bg-white/10 border-transparent'}`}
                           />
                         ))}
                       </div>
@@ -1167,9 +838,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
               <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 space-y-4">
                 <div className="flex items-start gap-3">
-                  <input 
-                    type="checkbox" 
-                    id="terms-student" 
+                  <input
+                    type="checkbox"
+                    id="terms-student"
                     checked={acceptedTerms}
                     onChange={e => setAcceptedTerms(e.target.checked)}
                     className="mt-1 w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
@@ -1180,7 +851,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                 </div>
               </div>
 
-              <button onClick={handleRegisterStudent} className="w-full py-6 bg-indigo-600 text-white font-black rounded-3xl shadow-2xl shadow-indigo-600/30 text-xl active:scale-95 transition-transform">CONCLUIR MATRÍCULA OSS!</button>
+              <button onClick={handleRegisterStudent} disabled={isSubmitting} className="w-full py-6 bg-indigo-600 text-white font-black rounded-3xl shadow-2xl shadow-indigo-600/30 text-xl active:scale-95 transition-transform flex items-center justify-center gap-3">
+                {isSubmitting ? <Loader2 size={24} className="animate-spin" /> : 'CONCLUIR MATRÍCULA OSS!'}
+              </button>
             </div>
           </div>
         )}
@@ -1213,15 +886,15 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               <div className="bg-slate-900 dark:bg-slate-800 border border-slate-700 p-4 rounded-2xl flex items-center justify-between text-white">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center shadow-sm">
-                    {StorageService.getAcademyById(instructorData.academyId!)?.logo ? (
-                      <img src={StorageService.getAcademyById(instructorData.academyId!)?.logo} className="w-full h-full object-contain p-1.5" />
+                    {linkedAcademy?.logo ? (
+                      <img src={linkedAcademy.logo} className="w-full h-full object-contain p-1.5" />
                     ) : (
                       <Trophy size={20} className="text-white" />
                     )}
                   </div>
                   <div>
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Vínculo Profissional com:</p>
-                    <p className="text-sm font-black text-white uppercase italic tracking-tight">{StorageService.getAcademyById(instructorData.academyId!)?.name || 'Academia Selecionada'}</p>
+                    <p className="text-sm font-black text-white uppercase italic tracking-tight">{linkedAcademy?.name || 'Academia Selecionada'}</p>
                   </div>
                 </div>
                 <div className="bg-emerald-500 text-white p-1 rounded-full px-2 text-[8px] font-black uppercase tracking-tighter shadow-sm">Confirmado</div>
@@ -1244,8 +917,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   </div>
                   <div>
                     <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 mb-1">Sexo <span className="text-red-500">*</span></label>
-                    <select 
-                      value={instructorData.gender || 'M'} 
+                    <select
+                      value={instructorData.gender || 'M'}
                       onChange={e => setInstructorData({...instructorData, gender: e.target.value as any})}
                       className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-slate-800 dark:text-white transition-all font-bold text-sm"
                     >
@@ -1266,8 +939,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   <Input label="RG" value={instructorData.rg || ''} onChange={v => setInstructorData({...instructorData, rg: maskRG(v)})} placeholder="00.000.000-0" />
                   <div>
                     <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 mb-1">Estado Civil</label>
-                    <select 
-                      value={instructorData.maritalStatus || 'Solteiro'} 
+                    <select
+                      value={instructorData.maritalStatus || 'Solteiro'}
                       onChange={e => setInstructorData({...instructorData, maritalStatus: e.target.value as any})}
                       className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-slate-800 dark:text-white transition-all font-bold text-sm"
                     >
@@ -1279,28 +952,28 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   </div>
                   <Input label="WhatsApp" value={instructorData.phone || ''} onChange={v => setInstructorData({...instructorData, phone: maskPhone(v)})} />
                   <div className="md:col-span-1">
-                    <Input 
-                      label="CEP" 
-                      value={instructorData.cep || ''} 
-                      onChange={v => handleCepLookup(v, (c, a) => setInstructorData({...instructorData, cep: c, address: a}))} 
+                    <Input
+                      label="CEP"
+                      value={instructorData.cep || ''}
+                      onChange={v => handleCepLookup(v, (c, a) => setInstructorData({...instructorData, cep: c, address: a}))}
                       placeholder="00000-000"
                       icon={isLoadingCep ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} />}
                     />
                   </div>
                   <div className="md:col-span-1">
-                    <Input 
-                      label="Número" 
-                      value={instructorData.addressNumber || ''} 
-                      onChange={v => setInstructorData({...instructorData, addressNumber: v})} 
-                      placeholder="Nº" 
+                    <Input
+                      label="Número"
+                      value={instructorData.addressNumber || ''}
+                      onChange={v => setInstructorData({...instructorData, addressNumber: v})}
+                      placeholder="Nº"
                     />
                   </div>
                   <div className="md:col-span-3">
-                    <Input 
-                      label="Endereço Residencial (Auto)" 
-                      value={instructorData.address || ''} 
-                      onChange={v => setInstructorData({...instructorData, address: v})} 
-                      placeholder="Rua, Bairro, Cidade - UF" 
+                    <Input
+                      label="Endereço Residencial (Auto)"
+                      value={instructorData.address || ''}
+                      onChange={v => setInstructorData({...instructorData, address: v})}
+                      placeholder="Rua, Bairro, Cidade - UF"
                     />
                   </div>
                 </div>
@@ -1323,9 +996,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                         <button type="button" onClick={() => setInstructorData({...instructorData, stripes: Math.max(0, (instructorData.stripes || 0) - 1)})} className="text-white/50 hover:scale-125 transition-all outline-none"><Minus size={20} /></button>
                         <div className={`flex gap-1.5 p-1 rounded-md px-3 bg-opacity-90 ${instructorData.belt === Belt.BLACK ? 'bg-red-600' : 'bg-zinc-900 shadow-lg'}`}>
                           {[...Array(instructorData.belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
-                            <div 
-                              key={i} 
-                              className={`w-3 h-8 rounded-sm border transition-all ${i < (instructorData.stripes || 0) ? 'bg-white border-white/20 shadow-md' : 'bg-black/10 border-transparent'}`} 
+                            <div
+                              key={i}
+                              className={`w-3 h-8 rounded-sm border transition-all ${i < (instructorData.stripes || 0) ? 'bg-white border-white/20 shadow-md' : 'bg-black/10 border-transparent'}`}
                             />
                           ))}
                         </div>
@@ -1342,9 +1015,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
               <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 space-y-4">
                 <div className="flex items-start gap-3">
-                  <input 
-                    type="checkbox" 
-                    id="terms-instructor" 
+                  <input
+                    type="checkbox"
+                    id="terms-instructor"
                     checked={acceptedTerms}
                     onChange={e => setAcceptedTerms(e.target.checked)}
                     className="mt-1 w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
@@ -1355,7 +1028,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                 </div>
               </div>
 
-              <button onClick={handleRegisterInstructor} className="w-full py-6 bg-slate-900 dark:bg-slate-800 text-white font-black rounded-3xl shadow-2xl text-xl active:scale-95 transition-transform border border-slate-700">ENVIAR FICHA TÉCNICA OSS!</button>
+              <button onClick={handleRegisterInstructor} disabled={isSubmitting} className="w-full py-6 bg-slate-900 dark:bg-slate-800 text-white font-black rounded-3xl shadow-2xl text-xl active:scale-95 transition-transform border border-slate-700 flex items-center justify-center gap-3">
+                {isSubmitting ? <Loader2 size={24} className="animate-spin" /> : 'ENVIAR FICHA TÉCNICA OSS!'}
+              </button>
             </div>
           </div>
         )}
@@ -1375,13 +1050,13 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   <X size={24} />
                 </button>
               </div>
-              
+
               <div className="p-8 overflow-y-auto custom-scrollbar prose dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 text-sm leading-relaxed space-y-6">
                 <div>
                   <h4 className="font-black text-slate-800 dark:text-white uppercase text-xs tracking-widest mb-2 italic">1. Riscos da Atividade</h4>
                   <p>Compreendo que a prática de artes marciais (BJJ, Muay Thai, etc.) envolve contato físico intenso e riscos inerentes de lesões. Declaro estar em perfeitas condições físicas e mentais, não possuindo impedimento médico para tais atividades.</p>
                 </div>
-                
+
                 <div>
                   <h4 className="font-black text-slate-800 dark:text-white uppercase text-xs tracking-widest mb-2 italic">2. Conduta e Respeito</h4>
                   <p>Comprometo-me a seguir as regras de etiqueta e conduta do tatame, respeitando superiores, colegas e as instalações da academia. Atitudes desrespeitosas podem resultar em suspensão do acesso.</p>
@@ -1408,7 +1083,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               </div>
 
               <div className="p-8 bg-slate-50 dark:bg-slate-800/50 border-t dark:border-slate-800">
-                <button 
+                <button
                   onClick={() => {
                     setAcceptedTerms(true);
                     setShowTermsModal(false);
@@ -1455,16 +1130,16 @@ const Input: React.FC<{ label: string; value: string; onChange: (v: string) => v
       </label>
       <div className="relative">
         {icon && <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">{icon}</div>}
-        <input 
-          type={inputType} 
-          value={value} 
-          onChange={e => onChange(e.target.value)} 
-          placeholder={placeholder} 
+        <input
+          type={inputType}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
           inputMode={inputMode}
           className={`w-full ${icon ? 'pl-12' : 'px-5'} ${isPassword ? 'pr-12' : 'pr-5'} py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-slate-800 dark:text-white transition-all font-bold text-sm`}
         />
         {isPassword && (
-          <button 
+          <button
             type="button"
             onClick={() => setShow(!show)}
             className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-500 transition-colors"

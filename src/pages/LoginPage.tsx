@@ -8,8 +8,8 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuthStore();
 
-  const handleLogin = (user: any, academy: any) => {
-    login(user, 'demo-token', academy);
+  const handleLogin = (user: any, token: string, academy: any) => {
+    login(user, token, academy);
     navigate('/', { replace: true });
   };
 

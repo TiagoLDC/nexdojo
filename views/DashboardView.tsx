@@ -1,10 +1,18 @@
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Academy, Student, Belt, CalendarEvent, User, Instructor, Staff, ClassTemplate, SystemPlan, SystemConfig } from '../types';
-import { StorageService } from '../services/storage';
 import { useTranslation } from '../services/LanguageContext';
+import { studentService } from '@/features/students/services/studentService';
+import { instructorService } from '@/features/instructors/services/instructorService';
+import { staffService } from '@/features/staff/services/staffService';
+import { templateService } from '@/features/schedules/services/templateService';
+import { attendanceService } from '@/features/attendance/services/attendanceService';
+import { financeService } from '@/features/finances/services/financeService';
+import { calendarService } from '@/features/calendar/services/calendarService';
+import { chatService } from '@/features/chat/services/chatService';
+import { academyService } from '@/features/settings/services/academyService';
 import { PrivacyValue } from '../components/PrivacyValue';
 import { calculateAge, isReadyForGraduation } from '../services/graduation';
 import { 
@@ -59,38 +67,70 @@ import { BELT_COLORS } from '../constants';
 
 const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAcademy?: (a: Academy) => void }> = ({ academy, user, onSwitchAcademy }) => {
   const { t, language, showNotification } = useTranslation();
-  const [students, setStudents] = React.useState<Student[]>(academy ? StorageService.getStudents(academy.id) : []);
-  const [instructors, setInstructors] = React.useState<Instructor[]>(academy ? StorageService.getInstructors(academy.id) : []);
-  const [staff, setStaff] = React.useState<Staff[]>(academy ? StorageService.getStaff(academy.id) : []);
-  const [users, setUsers] = React.useState<User[]>(
-    user.role === 'superuser' 
-      ? StorageService.getUsers() // Superuser vê todos
-      : (academy ? StorageService.getUsers(academy.id) : [])
-  );
-  const [templates, setTemplates] = React.useState<ClassTemplate[]>(academy ? StorageService.getTemplates(academy.id) : []);
+  const [students, setStudents] = React.useState<Student[]>([]);
+  const [instructors, setInstructors] = React.useState<Instructor[]>([]);
+  const [staff, setStaff] = React.useState<Staff[]>([]);
+  const [users, setUsers] = React.useState<User[]>([]);
+  const [templates, setTemplates] = React.useState<ClassTemplate[]>([]);
+  const [attendance, setAttendance] = React.useState<any[]>([]);
+  const [finances, setFinances] = React.useState<any[]>([]);
+  const [calendarEvents, setCalendarEvents] = React.useState<CalendarEvent[]>([]);
+  const [chatMessages, setChatMessages] = React.useState<any[]>([]);
+  const [allAcademies, setAllAcademies] = React.useState<Academy[]>([]);
+  const [sessions, setSessions] = React.useState<any[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
   const [selectedPending, setSelectedPending] = React.useState<{ user: User; details: any } | null>(null);
   const [lastReadChat, setLastReadChat] = React.useState<string>(academy ? localStorage.getItem(`oss_chat_last_read_${academy.id}`) || '' : '');
 
   React.useEffect(() => {
-    if (academy) {
-      setStudents(StorageService.getStudents(academy.id));
-      setInstructors(StorageService.getInstructors(academy.id));
-      setStaff(StorageService.getStaff(academy.id));
-      
-      const allAcademyUsers = StorageService.getUsers(academy.id);
-      if (user.role === 'superuser') {
-        const allUsers = StorageService.getUsers();
-        setUsers(allUsers);
-      } else {
-        setUsers(allAcademyUsers);
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        if (academy) {
+          const [
+            studentsRes,
+            instructorsRes,
+            staffRes,
+            templatesRes,
+            attendanceRes,
+            financesRes,
+            calendarRes,
+            chatRes,
+            sessionsRes,
+          ] = await Promise.all([
+            studentService.getAll(academy.id, { limit: 1000 }),
+            instructorService.getAll(academy.id, { limit: 1000 }),
+            staffService.getAll(academy.id, { limit: 1000 }),
+            templateService.getAll(academy.id, { limit: 1000 }),
+            attendanceService.getRecords(academy.id, { limit: 1000 }),
+            financeService.getAll(academy.id, { limit: 1000 }),
+            calendarService.getEvents(academy.id, { limit: 1000 }),
+            chatService.getMessages(academy.id, { limit: 100 }),
+            attendanceService.getSessions(academy.id, { limit: 100 }),
+          ]);
+          setStudents(studentsRes.data);
+          setInstructors(instructorsRes.data);
+          setStaff(staffRes.data);
+          setTemplates(templatesRes.data);
+          setAttendance(attendanceRes.data);
+          setFinances(financesRes.data);
+          setCalendarEvents(calendarRes.data);
+          setChatMessages(chatRes.data);
+          setSessions(sessionsRes.data);
+          setLastReadChat(localStorage.getItem(`oss_chat_last_read_${academy.id}`) || '');
+        }
+        if (user.role === 'superuser') {
+          const academiesRes = await academyService.getAll();
+          setAllAcademies(Array.isArray(academiesRes) ? academiesRes : []);
+        }
+      } catch (err) {
+        console.error('Erro ao carregar dados do dashboard:', err);
+      } finally {
+        setIsLoading(false);
       }
-      
-      setTemplates(StorageService.getTemplates(academy.id));
-      setLastReadChat(localStorage.getItem(`oss_chat_last_read_${academy.id}`) || '');
-    }
+    };
+    loadData();
   }, [academy?.id, user.role]);
-
-  const chatMessages = useMemo(() => academy ? StorageService.getChatMessages(academy.id) : [], [academy?.id]);
   
   const hasNewMessages = useMemo(() => {
     if (chatMessages.length === 0) return false;
@@ -132,10 +172,6 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     }
   };
 
-  const attendance = useMemo(() => academy ? StorageService.getAttendance(academy.id) : [], [academy?.id]);
-  const calendarEvents = useMemo(() => academy ? StorageService.getCalendarEvents(academy.id) : [], [academy?.id]);
-  const finances = useMemo(() => academy ? StorageService.getFinances(academy.id) : [], [academy?.id]);
-
   const pendingUsers = useMemo(() => users.filter(u => u.status === 'Pending'), [users]);
 
   const planExpiration = useMemo(() => {
@@ -147,57 +183,55 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     return { days, date: academy.planExpirationDate };
   }, [academy?.planExpirationDate]);
 
-  const handleApprove = (pendingUser: User) => {
-    const targetAcademyId = pendingUser.academyId || academy?.id || '';
-    // 1. Ativar o Usuário (Acesso ao Sistema)
+  const handleApprove = async (pendingUser: User) => {
+    // Optimistic UI update — activate user/profile in local state
     const updatedUsersState = users.map(u => u.id === pendingUser.id ? { ...u, status: 'Active' as const } : u);
     setUsers(updatedUsersState);
-    
-    // Filtra apenas os usuários da academia alvo para salvar corretamente
-    const targetAcademyUsers = updatedUsersState.filter(u => u.academyId === targetAcademyId);
-    StorageService.saveUsers(targetAcademyUsers, targetAcademyId);
 
-    // 2. Ativar o Perfil Correspondente (Ficha Técnica)
     if (pendingUser.role === 'instructor') {
-      const updated = instructors.map(i => i.email === pendingUser.email ? { ...i, status: 'Active' as const } : i);
-      setInstructors(updated);
-      StorageService.saveInstructors(updated, targetAcademyId);
+      const found = instructors.find(i => i.email === pendingUser.email);
+      if (found) {
+        try { await instructorService.update(found.id, { status: 'Active' } as any); } catch {}
+        setInstructors(prev => prev.map(i => i.email === pendingUser.email ? { ...i, status: 'Active' as const } : i));
+      }
     } else if (pendingUser.role === 'student') {
-      // Ativar perfil de aluno - CRITICAL: Busca por email
-      const updatedStudents = students.map(s => s.email === pendingUser.email ? { ...s, status: 'Active' as const } : s);
-      setStudents(updatedStudents);
-      StorageService.saveStudents(updatedStudents, targetAcademyId);
+      const found = students.find(s => s.email === pendingUser.email);
+      if (found) {
+        try { await studentService.update(found.id, { status: 'Active' } as any); } catch {}
+        setStudents(prev => prev.map(s => s.email === pendingUser.email ? { ...s, status: 'Active' as const } : s));
+      }
     } else if (pendingUser.role === 'staff') {
-      // Ativar perfil de staff
-      const updatedStaff = staff.map(st => st.email === pendingUser.email ? { ...st, status: 'Active' as const } : st);
-      setStaff(updatedStaff);
-      StorageService.saveStaff(updatedStaff, targetAcademyId);
+      const found = staff.find(st => st.email === pendingUser.email);
+      if (found) {
+        try { await staffService.update(found.id, { status: 'Active' } as any); } catch {}
+        setStaff(prev => prev.map(st => st.email === pendingUser.email ? { ...st, status: 'Active' as const } : st));
+      }
     }
   };
 
-  const handleReject = (pendingUser: User) => {
-    const targetAcademyId = pendingUser.academyId || academy?.id || '';
-    // Remover usuário e perfil
-    const updatedUsersState = users.filter(u => u.id !== pendingUser.id);
-    setUsers(updatedUsersState);
-    
-    const targetAcademyUsers = updatedUsersState.filter(u => u.academyId === targetAcademyId);
-    StorageService.saveUsers(targetAcademyUsers, targetAcademyId);
+  const handleReject = async (pendingUser: User) => {
+    setUsers(prev => prev.filter(u => u.id !== pendingUser.id));
 
     if (pendingUser.role === 'instructor') {
-      const updated = instructors.filter(i => i.email !== pendingUser.email);
-      setInstructors(updated);
-      StorageService.saveInstructors(updated, targetAcademyId);
-    } else {
-      const updatedStudents = students.filter(s => s.email !== pendingUser.email);
-      setStudents(updatedStudents);
-      StorageService.saveStudents(updatedStudents, targetAcademyId);
-
-      const updatedStaff = staff.filter(st => st.email !== pendingUser.email);
-      setStaff(updatedStaff);
-      StorageService.saveStaff(updatedStaff, targetAcademyId);
+      const found = instructors.find(i => i.email === pendingUser.email);
+      if (found) {
+        try { await instructorService.delete(found.id); } catch {}
+        setInstructors(prev => prev.filter(i => i.email !== pendingUser.email));
+      }
+    } else if (pendingUser.role === 'student') {
+      const found = students.find(s => s.email === pendingUser.email);
+      if (found) {
+        try { await studentService.delete(found.id); } catch {}
+        setStudents(prev => prev.filter(s => s.email !== pendingUser.email));
+      }
+    } else if (pendingUser.role === 'staff') {
+      const found = staff.find(st => st.email === pendingUser.email);
+      if (found) {
+        try { await staffService.delete(found.id); } catch {}
+        setStaff(prev => prev.filter(st => st.email !== pendingUser.email));
+      }
     }
-    
+
     if (selectedPending?.user.id === pendingUser.id) setSelectedPending(null);
   };
 
@@ -272,17 +306,17 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   }, [students]);
 
   const stats = useMemo(() => {
-    const todayClasses = StorageService.getClasses(academy?.id || '').filter(c => c.date.startsWith(todayStr));
-    const onMatCount = todayClasses.filter(c => c.status === 'In Progress').reduce((acc, c) => acc + (c.attendanceIds?.length || 0), 0);
-    
+    const todaySessions = sessions.filter((c: any) => c.date && c.date.startsWith(todayStr));
+    const onMatCount = todaySessions.filter((c: any) => c.status === 'In Progress').reduce((acc: number, c: any) => acc + (c.attendanceIds?.length || 0), 0);
+
     return {
       total: students.length,
       active: students.filter(s => s.status === 'Active').length,
-      todayAttendance: attendance.filter(a => a.date.startsWith(todayStr)).length,
+      todayAttendance: attendance.filter((a: any) => a.date && a.date.startsWith(todayStr)).length,
       onMat: onMatCount,
       alerts: students.filter(s => s.absentCount >= getEffectiveAbsenceLimit(s)).length
     };
-  }, [students, attendance, todayStr, academy?.id, templates]);
+  }, [students, attendance, sessions, todayStr, templates]);
 
   const [refreshKey, setRefreshKey] = useState(0);
   const triggerRefresh = () => setRefreshKey(prev => prev + 1);
@@ -308,12 +342,8 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
 
   const globalStats = useMemo(() => {
     if (user.role !== 'superuser') return null;
-    const allAcademies = StorageService.getAcademies();
-    const allStudents = StorageService.getStudents();
-    const allAttendance = StorageService.getAttendance();
-    const allTransactions = StorageService.getFinances();
-    
-    // Contagem por plano
+
+    // Contagem por plano usando academias carregadas
     const plansCount = allAcademies.reduce((acc, a) => {
       const plan = a.currentPlan || 'Free';
       acc[plan] = (acc[plan] || 0) + 1;
@@ -322,24 +352,33 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
 
     return {
       academiesCount: allAcademies.length,
-      studentsCount: allStudents.length,
-      activeStudentsCount: allStudents.filter(s => s.status === 'Active').length,
-      todayAttendanceCount: allAttendance.filter(a => a.date.startsWith(todayStr)).length,
-      totalIncome: allTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0),
-      totalMensalidades: allTransactions.filter(t => t.type === 'income' && (t.category === 'Mensalidade' || t.description.toLowerCase().includes('mensalidade'))).reduce((acc, t) => acc + t.amount, 0),
-      totalExpense: allTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0),
+      studentsCount: students.length,
+      activeStudentsCount: students.filter(s => s.status === 'Active').length,
+      todayAttendanceCount: attendance.filter((a: any) => a.date && a.date.startsWith(todayStr)).length,
+      totalIncome: finances.filter((t: any) => t.type === 'income').reduce((acc: number, t: any) => acc + t.amount, 0),
+      totalMensalidades: finances.filter((t: any) => t.type === 'income' && (t.category === 'Mensalidade' || (t.description && t.description.toLowerCase().includes('mensalidade')))).reduce((acc: number, t: any) => acc + t.amount, 0),
+      totalExpense: finances.filter((t: any) => t.type === 'expense').reduce((acc: number, t: any) => acc + t.amount, 0),
       plansCount,
       allAcademies
     };
-  }, [user.role, todayStr, refreshKey]);
+  }, [user.role, todayStr, refreshKey, allAcademies, students, attendance, finances]);
 
   const [selectedAcademy, setSelectedAcademy] = React.useState<Academy | null>(null);
   const [isManageModalOpen, setIsManageModalOpen] = React.useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [aliasError, setAliasError] = useState('');
   const [academySearch, setAcademySearch] = React.useState('');
+  const [isPlanEditModalOpen, setIsPlanEditModalOpen] = React.useState(false);
+  const [editingPlan, setEditingPlan] = React.useState<SystemPlan | null>(null);
   
-  const [systemConfig, setSystemConfig] = React.useState(StorageService.getSystemConfig());
+  const [systemConfig, setSystemConfig] = React.useState<SystemConfig>({
+    plans: [
+      { id: 'free', name: 'Free', price: 0, description: 'Grátis para sempre', features: ['Gestão Básica'], color: 'bg-slate-100 text-slate-600' },
+      { id: 'silver', name: 'Silver', price: 49.90, description: 'Ideal para academias pequenas', features: ['Alunos Ilimitados', 'Chamada Digital'], color: 'bg-slate-400 text-white' },
+      { id: 'gold', name: 'Gold', price: 99.90, description: 'Para academias em crescimento', features: ['Financeiro Completo', 'Relatórios Avançados'], color: 'bg-yellow-400 text-slate-900' },
+      { id: 'blackbelt', name: 'Black Belt', price: 199.90, description: 'Para redes de academias', features: ['Multi-unidades', 'White-label'], color: 'bg-slate-950 text-white' },
+    ]
+  } as any);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -354,8 +393,89 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     visible: { y: 0, opacity: 1, transition: { type: 'spring', stiffness: 100 } }
   };
 
+  const graduationAlerts = useMemo(() => {
+    return students.filter(s => {
+      const { readyForBelt, readyForStripe } = isReadyForGraduation(s);
+      return readyForBelt || readyForStripe;
+    }).map(s => {
+      const { readyForBelt, readyForStripe } = isReadyForGraduation(s);
+      let type: 'STRIPE' | 'BELT' = readyForBelt ? 'BELT' : 'STRIPE';
+      let message = readyForBelt ? 'Elegível para Próxima Faixa' : 'Elegível para Próximo Grau';
+      return { ...s, alertType: type, alertMessage: message };
+    }).sort((a, b) => a.name.localeCompare(b.name));
+  }, [students]);
+
+  const birthdaysToday = useMemo(() => {
+    const today = new Date();
+    const currentMonthDay = `${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    return students.filter(s => s.birthDate && s.birthDate.substring(5) === currentMonthDay);
+  }, [students]);
+
+  const financialSummary = useMemo(() => {
+    const income = finances.filter(f => f.type === 'income').reduce((acc, f) => acc + f.amount, 0);
+    const expense = finances.filter(f => f.type === 'expense').reduce((acc, f) => acc + f.amount, 0);
+    const pendingIncome = finances.filter(f => f.type === 'income' && f.status === 'pending').reduce((acc, f) => acc + f.amount, 0);
+    return { income, expense, balance: income - expense, pendingIncome };
+  }, [finances]);
+
+  const absenceAlerts = useMemo(() => {
+    return students
+      .filter(s => s.status === 'Active' && s.absentCount > 0)
+      .map(s => ({
+        ...s,
+        effectiveLimit: getEffectiveAbsenceLimit(s)
+      }))
+      .sort((a, b) => b.absentCount - a.absentCount);
+  }, [students, templates, academy?.id]);
+
+  const recentActivity = useMemo(() => {
+    return attendance
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, 5)
+      .map(att => {
+        const student = students.find(s => s.id === att.studentId);
+        return {
+          ...att,
+          studentName: student?.name || 'Desconhecido',
+          studentPhoto: student?.photo,
+          studentBelt: student?.belt || Belt.WHITE
+        };
+      });
+  }, [attendance, students]);
+
+  const studentProfile = useMemo(() => {
+    if (user.role === 'student') {
+      return students.find(s => s.email === user.email);
+    }
+    return null;
+  }, [user, students]);
+
+  const monthlyClasses = useMemo(() => {
+    if (!studentProfile) return 0;
+    const firstDayOfMonth = new Date();
+    firstDayOfMonth.setDate(1);
+    firstDayOfMonth.setHours(0, 0, 0, 0);
+    return attendance.filter(a =>
+      a.studentId === studentProfile.id &&
+      new Date(a.date) >= firstDayOfMonth
+    ).length;
+  }, [attendance, studentProfile]);
+
+  const instructorProfile = useMemo(() => {
+    if (user.role === 'instructor') {
+      return instructors.find(i => i.email === user.email);
+    }
+    return null;
+  }, [user, instructors]);
+
+  const staffProfile = useMemo(() => {
+    if (user.role === 'staff') {
+      return staff.find(s => s.email === user.email);
+    }
+    return null;
+  }, [user, staff]);
+
   if (!academy && user.role === 'superuser') {
-    const allAcademies = StorageService.getAcademies();
     const sortedAcademies = [...allAcademies].sort((a, b) => a.name.localeCompare(b.name));
     
     return (
@@ -443,15 +563,13 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   }
 
   if (!academy) return null;
-  const [isPlanEditModalOpen, setIsPlanEditModalOpen] = React.useState(false);
-  const [editingPlan, setEditingPlan] = React.useState<SystemPlan | null>(null);
 
   const handleUpdatePlan = (updates: Partial<SystemPlan>) => {
+
     if (!editingPlan) return;
-    const updatedPlans = systemConfig.plans.map(p => p.id === editingPlan.id ? { ...p, ...updates } : p);
+    const updatedPlans = (systemConfig as any).plans.map((p: SystemPlan) => p.id === editingPlan.id ? { ...p, ...updates } : p);
     const newConfig = { ...systemConfig, plans: updatedPlans };
-    setSystemConfig(newConfig);
-    StorageService.saveSystemConfig(newConfig);
+    setSystemConfig(newConfig as any);
     setEditingPlan(null);
     setIsPlanEditModalOpen(false);
   };
@@ -462,114 +580,39 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     if (cleaned.length > 0 && cleaned.length < 3) {
       setAliasError('Mínimo 3 caracteres');
     } else if (cleaned.length >= 3) {
-      const all = StorageService.getAcademies();
-      const conflict = all.find(a => a.alias?.toLowerCase() === cleaned && a.id !== selectedAcademy?.id);
+      const conflict = allAcademies.find(a => a.alias?.toLowerCase() === cleaned && a.id !== selectedAcademy?.id);
       setAliasError(conflict ? 'Este alias já está em uso por outra academia' : '');
     } else {
       setAliasError('');
     }
   };
 
-  const handleUpdateAcademyStatus = (academyId: string, updates: Partial<Academy>) => {
-    const all = StorageService.getAcademies();
-    const updated = all.map(a => a.id === academyId ? { ...a, ...updates } : a);
-    StorageService.saveAcademies(updated);
+  const handleUpdateAcademyStatus = async (academyId: string, updates: Partial<Academy>) => {
+    try {
+      await academyService.update(academyId, updates as any);
+      setAllAcademies(prev => prev.map(a => a.id === academyId ? { ...a, ...updates } : a));
+    } catch (err) {
+      console.error('Erro ao atualizar academia:', err);
+    }
     setIsManageModalOpen(false);
     setSelectedAcademy(null);
     setAliasError('');
     triggerRefresh();
   };
 
-  const handleDeleteAcademy = (academyId: string) => {
-    StorageService.deleteAcademy(academyId);
+  const handleDeleteAcademy = async (academyId: string) => {
+    try {
+      await academyService.delete(academyId);
+      setAllAcademies(prev => prev.filter(a => a.id !== academyId));
+    } catch (err) {
+      console.error('Erro ao excluir academia:', err);
+    }
     setIsConfirmingDelete(false);
     setIsManageModalOpen(false);
     setSelectedAcademy(null);
     triggerRefresh();
   };
 
-  const graduationAlerts = useMemo(() => {
-    return students.filter(s => {
-      const { readyForBelt, readyForStripe } = isReadyForGraduation(s);
-      return readyForBelt || readyForStripe;
-    }).map(s => {
-      const { readyForBelt, readyForStripe } = isReadyForGraduation(s);
-      let type: 'STRIPE' | 'BELT' = readyForBelt ? 'BELT' : 'STRIPE';
-      let message = readyForBelt ? 'Elegível para Próxima Faixa' : 'Elegível para Próximo Grau';
-      return { ...s, alertType: type, alertMessage: message };
-    }).sort((a, b) => a.name.localeCompare(b.name));
-  }, [students]);
-
-  const birthdaysToday = useMemo(() => {
-    const today = new Date();
-    const currentMonthDay = `${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    return students.filter(s => s.birthDate && s.birthDate.substring(5) === currentMonthDay);
-  }, [students]);
-
-  const financialSummary = useMemo(() => {
-    const income = finances.filter(f => f.type === 'income').reduce((acc, f) => acc + f.amount, 0);
-    const expense = finances.filter(f => f.type === 'expense').reduce((acc, f) => acc + f.amount, 0);
-    const pendingIncome = finances.filter(f => f.type === 'income' && f.status === 'pending').reduce((acc, f) => acc + f.amount, 0);
-    return { income, expense, balance: income - expense, pendingIncome };
-  }, [finances]);
-
-  const absenceAlerts = useMemo(() => {
-    return students
-      .filter(s => s.status === 'Active' && s.absentCount > 0)
-      .map(s => ({
-        ...s,
-        effectiveLimit: getEffectiveAbsenceLimit(s)
-      }))
-      .sort((a, b) => b.absentCount - a.absentCount);
-  }, [students, templates, academy?.id]);
-
-  const recentActivity = useMemo(() => {
-    return attendance
-      .sort((a, b) => b.date.localeCompare(a.date))
-      .slice(0, 5)
-      .map(att => {
-        const student = students.find(s => s.id === att.studentId);
-        return { 
-          ...att, 
-          studentName: student?.name || 'Desconhecido', 
-          studentPhoto: student?.photo, 
-          studentBelt: student?.belt || Belt.WHITE 
-        };
-      });
-  }, [attendance, students]);
-
-  const studentProfile = useMemo(() => {
-      if (user.role === 'student') {
-        return students.find(s => s.email === user.email);
-      }
-      return null;
-    }, [user, students]);
-
-    const monthlyClasses = useMemo(() => {
-      if (!studentProfile) return 0;
-      const firstDayOfMonth = new Date();
-      firstDayOfMonth.setDate(1);
-      firstDayOfMonth.setHours(0,0,0,0);
-      
-      return attendance.filter(a => 
-        a.studentId === studentProfile.id && 
-        new Date(a.date) >= firstDayOfMonth
-      ).length;
-    }, [attendance, studentProfile]);
-
-    const instructorProfile = useMemo(() => {
-    if (user.role === 'instructor') {
-      return instructors.find(i => i.email === user.email);
-    }
-    return null;
-  }, [user, instructors]);
-
-  const staffProfile = useMemo(() => {
-    if (user.role === 'staff') {
-      return staff.find(s => s.email === user.email);
-    }
-    return null;
-  }, [user, staff]);
 
   if (user.role === 'student') {
     // Busca o perfil do aluno logado
@@ -1797,7 +1840,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
             <div className="bg-white dark:bg-slate-900 p-6 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Próximas Aulas de Hoje</p>
                 <div className="space-y-3">
-                   {academy && StorageService.getTemplates(academy.id)
+                   {templates
                      .filter(t => t.schedules && t.schedules.some(s => s.dayOfWeek === new Date().getDay()))
                      .map(template => (
                        <div key={template.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
@@ -1815,7 +1858,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                           <Users size={14} className="text-slate-300" />
                        </div>
                    ))}
-                   {(!academy || StorageService.getTemplates(academy.id).filter(t => t.schedules && t.schedules.some(s => s.dayOfWeek === new Date().getDay())).length === 0) && (
+                   {templates.filter(t => t.schedules && t.schedules.some(s => s.dayOfWeek === new Date().getDay())).length === 0 && (
                      <p className="text-[10px] font-bold text-slate-400 uppercase italic text-center py-4">Nenhuma aula para hoje</p>
                    )}
                 </div>

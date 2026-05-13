@@ -1,18 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { Academy, ClassTemplate, User } from '../types';
-import { StorageService } from '../services/storage';
-import { Clock, Calendar, ChevronLeft, ChevronRight, Users, Info } from 'lucide-react';
+import { templateService } from '@/features/schedules/services/templateService';
+import { Clock, Users, Info } from 'lucide-react';
 
 const DAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
-const HOURS = Array.from({ length: 17 }, (_, i) => i + 6); // 06:00 to 22:00
 
 const SchedulesView: React.FC<{ academy: Academy | null; user: User }> = ({ academy }) => {
   const [templates, setTemplates] = useState<ClassTemplate[]>([]);
 
   useEffect(() => {
     if (academy) {
-      setTemplates(StorageService.getTemplates(academy.id));
+      templateService.getAll(academy.id)
+        .then(res => setTemplates(res.data))
+        .catch(() => setTemplates([]));
     } else {
       setTemplates([]);
     }
@@ -64,7 +65,7 @@ const SchedulesView: React.FC<{ academy: Academy | null; user: User }> = ({ acad
                 {DAYS[dayIdx]}
               </h3>
             </div>
-            
+
             <div className="space-y-3">
               {(scheduleMap[dayIdx] || []).map((item, idx) => (
                 <div key={idx} className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm hover:border-indigo-300 transition-all group relative overflow-hidden">

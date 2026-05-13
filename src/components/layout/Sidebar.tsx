@@ -253,7 +253,7 @@ export const Sidebar: React.FC = () => {
         {/* Version tag */}
         {!collapsed && (
           <p className="text-[7px] font-bold text-slate-600 uppercase tracking-widest text-center py-1">
-            VERSÃO QAS 12/05/2026 14:23:47
+            VERSÃO QAS 13/05/2026 14:16:23
           </p>
         )}
 

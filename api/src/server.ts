@@ -7,6 +7,13 @@ import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
 
+process.on('unhandledRejection', (reason) => {
+  console.error('UnhandledRejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('UncaughtException:', err);
+});
+
 const app = express();
 const PORT = process.env.PORT || 3005;
 
@@ -26,7 +33,7 @@ async function start() {
     console.log('✓ Conectado ao MySQL');
   } catch (err) {
     console.error('✗ Erro ao conectar ao MySQL:', err);
-    process.exit(1);
+    // Continua mesmo com falha inicial — o pool reconecta automaticamente
   }
 
   app.listen(PORT, () => {

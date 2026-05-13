@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+﻿import { Router, Request, Response, NextFunction } from 'express';
 import pool from '../db';
 import { requireAuth } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
@@ -24,7 +24,7 @@ async function attachRelations(templates: any[]): Promise<void> {
 }
 
 // GET /api/templates
-router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
+router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -36,12 +36,12 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
     await attachRelations(templates as any[]);
     res.json({ data: templates, total: (templates as any[]).length });
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 
 // POST /api/templates
-router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response): Promise<void> => {
+router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -86,12 +86,12 @@ router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Req
 
     res.status(201).json(result);
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 
 // PUT /api/templates/:id
-router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response): Promise<void> => {
+router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -154,12 +154,12 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
 
     res.json(result);
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 
 // DELETE /api/templates/:id — move para lixeira
-router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response): Promise<void> => {
+router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -194,7 +194,7 @@ router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), async (req
     await pool.execute('DELETE FROM class_templates WHERE id = ?', [req.params.id]);
     res.json({ message: 'Template movido para a lixeira' });
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 

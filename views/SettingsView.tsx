@@ -1,11 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Academy, User, Student, Instructor, Staff, AcademyPlan, Language } from '../types';
 import { Settings, Bell, Shield, LogOut, ChevronRight, User as UserIcon, Palette, MapPin, Moon, Sun, X, CreditCard, Wallet, Loader2, Save, Phone, Mail, Eye, EyeOff, CheckCircle2, Crown, Zap, Star as StarIcon, Award, Trophy, Book, Users, Clock, Plus, Trash2, Calendar, Globe, AlertTriangle, Smartphone, Check, Briefcase } from 'lucide-react';
 import { fetchAddressByCep, maskCEP, maskPhone } from '../services/cep';
 import { PrivacyValue } from '../components/PrivacyValue';
-import { StorageService } from '../services/storage';
+import { studentService } from '@/features/students/services/studentService';
+import { instructorService } from '@/features/instructors/services/instructorService';
+import { staffService } from '@/features/staff/services/staffService';
 import { useTranslation } from '../services/LanguageContext';
 
 /**
@@ -77,6 +79,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   const [isAddingAcademyPlan, setIsAddingAcademyPlan] = useState(false);
   const [editingPlan, setEditingPlan] = useState<Partial<AcademyPlan> | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState<string | null>(null);
+  const [additionalUsers, setAdditionalUsers] = useState<{ instructors: Instructor[]; staff: Staff[] }>({ instructors: [], staff: [] });
   const [showPlanNotification, setShowPlanNotification] = useState(false);
   const [editAcademy, setEditAcademy] = React.useState<Academy>(academy);
   const logoInputRef = React.useRef<HTMLInputElement>(null);
@@ -97,14 +100,34 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   const [isLoadingCep, setIsLoadingCep] = useState(false);
 
   // Perfil do usuário logado
-  const [userProfile, setUserProfile] = useState<Student | Instructor | Staff | null>(() => {
-    if (user.role === 'student') return StorageService.getStudents(academy.id).find(s => s.email === user.email) || null;
-    if (user.role === 'instructor') return StorageService.getInstructors(academy.id).find(i => i.email === user.email) || null;
-    if (user.role === 'staff') return StorageService.getStaff(academy.id).find(s => s.email === user.email) || null;
-    return null;
-  });
+  const [userProfile, setUserProfile] = useState<Student | Instructor | Staff | null>(null);
+  const [editProfile, setEditProfile] = useState<Student | Instructor | Staff | null>(null);
 
-  const [editProfile, setEditProfile] = useState<Student | Instructor | Staff | null>(userProfile);
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      try {
+        if (user.role === 'student') {
+          const res = await studentService.getAll(academy.id, { limit: 1000 });
+          const found = res.data.find((s: Student) => s.email === user.email) || null;
+          setUserProfile(found);
+          setEditProfile(found);
+        } else if (user.role === 'instructor') {
+          const res = await instructorService.getAll(academy.id, { limit: 1000 });
+          const found = res.data.find((i: Instructor) => i.email === user.email) || null;
+          setUserProfile(found);
+          setEditProfile(found);
+        } else if (user.role === 'staff') {
+          const res = await staffService.getAll(academy.id, { limit: 1000 });
+          const found = res.data.find((s: Staff) => s.email === user.email) || null;
+          setUserProfile(found);
+          setEditProfile(found);
+        }
+      } catch (err) {
+        console.error('Erro ao carregar perfil do usuário:', err);
+      }
+    };
+    loadUserProfile();
+  }, [academy.id, user.email, user.role]);
 
   const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>, isAcademy: boolean) => {
     const value = maskCEP(e.target.value);
@@ -137,26 +160,29 @@ const SettingsView: React.FC<SettingsViewProps> = ({
     showNotification("Configurações salvas com sucesso!");
   };
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     if (!editProfile) return;
-    
-    if (user.role === 'student') {
-      const students = StorageService.getStudents(academy.id);
-      const updated = students.map(s => s.id === editProfile.id ? (editProfile as Student) : s);
-      StorageService.saveStudents(updated, academy.id);
-    } else if (user.role === 'instructor') {
-      const instructors = StorageService.getInstructors(academy.id);
-      const updated = instructors.map(i => i.id === editProfile.id ? (editProfile as Instructor) : i);
-      StorageService.saveInstructors(updated, academy.id);
-    } else if (user.role === 'staff') {
-      const staff = StorageService.getStaff(academy.id);
-      const updated = staff.map(s => s.id === editProfile.id ? (editProfile as Staff) : s);
-      StorageService.saveStaff(updated, academy.id);
-    }
 
-    setUserProfile(editProfile);
-    setIsEditingProfile(false);
-    showNotification("Perfil atualizado com sucesso!");
+    try {
+      if (user.role === 'student') {
+        const updated = await studentService.update(editProfile.id, editProfile as Student);
+        setUserProfile(updated);
+        setEditProfile(updated);
+      } else if (user.role === 'instructor') {
+        const updated = await instructorService.update(editProfile.id, editProfile as Instructor);
+        setUserProfile(updated);
+        setEditProfile(updated);
+      } else if (user.role === 'staff') {
+        const updated = await staffService.update(editProfile.id, editProfile as Staff);
+        setUserProfile(updated);
+        setEditProfile(updated);
+      }
+      setIsEditingProfile(false);
+      showNotification("Perfil atualizado com sucesso!");
+    } catch (err) {
+      console.error('Erro ao atualizar perfil:', err);
+      showNotification("Erro ao atualizar perfil.", 'error' as any);
+    }
   };
 
   const handleSaveAcademyPlans = (updatedPlans: AcademyPlan[]) => {
@@ -212,11 +238,22 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                 setIsEditingAcademy(true);
               }}
             />
-            <SettingItem 
-              icon={<Shield className="text-green-500" />} 
-              title={t.additionalUsers} 
-              subtitle={t.manageAccess} 
-              onClick={() => setIsManagingAdditionalUsers(true)}
+            <SettingItem
+              icon={<Shield className="text-green-500" />}
+              title={t.additionalUsers}
+              subtitle={t.manageAccess}
+              onClick={async () => {
+                setIsManagingAdditionalUsers(true);
+                try {
+                  const [iRes, sRes] = await Promise.all([
+                    instructorService.getAll(academy.id, { limit: 1000 }),
+                    staffService.getAll(academy.id, { limit: 1000 }),
+                  ]);
+                  setAdditionalUsers({ instructors: iRes.data, staff: sRes.data });
+                } catch (err) {
+                  console.error('Erro ao carregar equipe:', err);
+                }
+              }}
             />
           </div>
         </section>
@@ -799,7 +836,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                 
                 <div className="space-y-2">
                   {/* Mestres */}
-                  {StorageService.getInstructors(academy.id).map(instructor => (
+                  {additionalUsers.instructors.map(instructor => (
                     <div key={instructor.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl group">
                       <div className="flex items-center gap-3">
                         <div className="bg-indigo-100 dark:bg-indigo-900/30 w-10 h-10 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400">
@@ -815,7 +852,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                   ))}
 
                   {/* Staff */}
-                  {StorageService.getStaff(academy.id).map(staffMember => (
+                  {additionalUsers.staff.map(staffMember => (
                     <div key={staffMember.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl">
                       <div className="flex items-center gap-3">
                         <div className="bg-slate-200 dark:bg-slate-700 w-10 h-10 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-400">
@@ -830,7 +867,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
                   ))}
 
-                  {StorageService.getInstructors(academy.id).length === 0 && StorageService.getStaff(academy.id).length === 0 && (
+                  {additionalUsers.instructors.length === 0 && additionalUsers.staff.length === 0 && (
                     <div className="text-center py-10 opacity-40">
                       <Users size={40} className="mx-auto mb-2" />
                       <p className="text-xs font-bold uppercase tracking-widest italic">Nenhum membro da equipe cadastrado</p>

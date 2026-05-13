@@ -1,17 +1,18 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { StorageService } from '../services/storage';
+import { financeService } from '@/features/finances/services/financeService';
+import { studentService } from '@/features/students/services/studentService';
 import { useTranslation } from '../services/LanguageContext';
 import { FinanceTransaction, TransactionType, Student, Academy, User } from '../types';
-import { 
-  Plus, 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  Calendar, 
-  Search, 
-  X, 
-  CheckCircle2, 
+import {
+  Plus,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Calendar,
+  Search,
+  X,
+  CheckCircle2,
   AlertCircle,
   Filter,
   ArrowUpRight,
@@ -31,13 +32,13 @@ import {
   Printer,
   FileText
 } from 'lucide-react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   Cell
 } from 'recharts';
@@ -79,10 +80,10 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<FinanceTransaction | null>(null);
-  
+
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('All');
-  
+
   // Form State
   const [formData, setFormData] = useState<Partial<FinanceTransaction>>({
     type: 'income',
@@ -97,8 +98,17 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
 
   useEffect(() => {
     if (academy) {
-      setTransactions(StorageService.getFinances(academy.id));
-      setStudents(StorageService.getStudents(academy.id));
+      financeService.getAll(academy.id).then((res) => {
+        setTransactions(Array.isArray(res.data) ? res.data : []);
+      }).catch(() => {
+        setTransactions([]);
+      });
+
+      studentService.getAll(academy.id).then((res) => {
+        setStudents(Array.isArray(res.data) ? res.data : []);
+      }).catch(() => {
+        setStudents([]);
+      });
     }
   }, [academy]);
 
@@ -116,14 +126,14 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
       acc[t.category] = (acc[t.category] || 0) + Number(t.amount);
       return acc;
     }, {});
-    
+
     return Object.entries(grouped).map(([name, value]) => ({ name, value }));
   }, [transactions]);
 
   const filteredTransactions = useMemo(() => {
     return transactions
       .filter(t => {
-        const matchesSearch = t.description.toLowerCase().includes(search.toLowerCase()) || 
+        const matchesSearch = t.description.toLowerCase().includes(search.toLowerCase()) ||
                              t.category.toLowerCase().includes(search.toLowerCase());
         const matchesType = typeFilter === 'All' || t.type === typeFilter;
         return matchesSearch && matchesType;
@@ -131,54 +141,59 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, search, typeFilter]);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.amount || !formData.description) return;
 
-    const newTransaction: FinanceTransaction = {
-      id: Math.random().toString(36).substr(2, 9),
-      academyId: academy.id,
-      ...formData as FinanceTransaction
-    };
+    try {
+      const created = await financeService.create(academy.id, {
+        type: formData.type as TransactionType,
+        amount: formData.amount,
+        description: formData.description,
+        category: formData.category || 'Mensalidade',
+        date: formData.date || new Date().toISOString().split('T')[0],
+        paymentMethod: formData.paymentMethod || 'Pix',
+        status: formData.status || 'paid',
+        studentId: formData.studentId,
+      });
 
-    setTransactions(prev => {
-      const updated = [newTransaction, ...prev];
-      StorageService.saveFinances(updated, academy.id);
-      return updated;
-    });
+      setTransactions(prev => [created, ...prev]);
 
-    // Atualizar próxima mensalidade do aluno se for o caso
-    if (newTransaction.type === 'income' && (newTransaction.category === 'Mensalidade' || newTransaction.description.toLowerCase().includes('mensalidade')) && newTransaction.studentId) {
-      const allStudents = StorageService.getStudents(academy.id);
-      const student = allStudents.find(s => s.id === newTransaction.studentId);
-      if (student) {
-        // Pula 30 dias a partir da data do pagamento ou do vencimento atual (o que for maior ou apenas da data atual)
-        const baseDate = student.nextPaymentDate ? new Date(student.nextPaymentDate + 'T12:00:00') : new Date();
-        const today = new Date();
-        const referenceValue = baseDate.getTime() > today.getTime() ? baseDate : today;
-        
-        referenceValue.setDate(referenceValue.getDate() + 30);
-        const nextDate = referenceValue.toISOString().split('T')[0];
-        
-        const updatedStudents = allStudents.map(s => s.id === student.id ? { ...s, nextPaymentDate: nextDate } : s);
-        StorageService.saveStudents(updatedStudents, academy.id);
-        setStudents(updatedStudents.filter(s => s.academyId === academy.id));
+      // Atualizar próxima mensalidade do aluno se for o caso
+      if (created.type === 'income' && (created.category === 'Mensalidade' || created.description.toLowerCase().includes('mensalidade')) && created.studentId) {
+        const student = students.find(s => s.id === created.studentId);
+        if (student) {
+          const baseDate = student.nextPaymentDate ? new Date(student.nextPaymentDate + 'T12:00:00') : new Date();
+          const today = new Date();
+          const referenceValue = baseDate.getTime() > today.getTime() ? baseDate : today;
+          referenceValue.setDate(referenceValue.getDate() + 30);
+          const nextDate = referenceValue.toISOString().split('T')[0];
+
+          try {
+            const updatedStudent = await studentService.update(student.id, { nextPaymentDate: nextDate });
+            setStudents(prev => prev.map(s => s.id === updatedStudent.id ? updatedStudent : s));
+          } catch {
+            // Non-critical, continue
+          }
+        }
       }
-    }
 
-    setIsModalOpen(false);
-    showNotification("Registrado com sucesso!");
-    
-    setFormData({
-      type: 'income',
-      amount: 0,
-      description: '',
-      category: 'Mensalidade',
-      date: new Date().toISOString().split('T')[0],
-      paymentMethod: 'Pix',
-      status: 'paid',
-      studentId: undefined
-    });
+      setIsModalOpen(false);
+      showNotification("Registrado com sucesso!");
+
+      setFormData({
+        type: 'income',
+        amount: 0,
+        description: '',
+        category: 'Mensalidade',
+        date: new Date().toISOString().split('T')[0],
+        paymentMethod: 'Pix',
+        status: 'paid',
+        studentId: undefined
+      });
+    } catch {
+      showNotification("Erro ao registrar lançamento.", 'error');
+    }
   };
 
   const handleCopyPix = () => {
@@ -198,27 +213,27 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
     setIsDeleteModalOpen(true);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!transactionToDelete) return;
 
-    setTransactions(prev => {
-      const updated = prev.filter(t => t.id !== transactionToDelete.id);
-      StorageService.saveFinances(updated, academy.id);
-      return updated;
-    });
-
-    setIsDeleteModalOpen(false);
-    setTransactionToDelete(null);
-    showNotification("Lançamento removido.", 'delete');
+    try {
+      await financeService.delete(transactionToDelete.id);
+      setTransactions(prev => prev.filter(t => t.id !== transactionToDelete.id));
+      setIsDeleteModalOpen(false);
+      setTransactionToDelete(null);
+      showNotification("Lançamento removido.", 'delete');
+    } catch {
+      showNotification("Erro ao remover lançamento.", 'error');
+    }
   };
 
   const handleExportPDF = async () => {
     if (!financeRef.current) return;
-    
+
     setIsExporting(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       const canvas = await html2canvas(financeRef.current, {
         scale: 2,
         useCORS: true,
@@ -226,7 +241,7 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
         backgroundColor: '#ffffff',
         onclone: (clonedDoc) => {
           // Fix for html2canvas oklch/oklab parsing error (Tailwind v4)
-          
+
           // 1. Sanitize all style tags and inline styles via regex on the innerHTML
           // This is aggressive but ensures no color function leaks into the parser
           const rootElement = clonedDoc.documentElement;
@@ -247,7 +262,7 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
               --color-indigo-800: #3730a3 !important;
               --color-indigo-900: #1e1b4b !important;
               --color-indigo-950: #0f172a !important;
-              
+
               --color-slate-50: #f8fafc !important;
               --color-slate-100: #f1f5f9 !important;
               --color-slate-200: #e2e8f0 !important;
@@ -259,13 +274,13 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
               --color-slate-800: #1e293b !important;
               --color-slate-900: #0f172a !important;
               --color-slate-950: #020617 !important;
-              
+
               --color-green-600: #16a34a !important;
               --color-red-600: #dc2626 !important;
-              
+
               --color-emerald-50: #ecfdf5 !important;
               --color-emerald-600: #059669 !important;
-              
+
               --color-amber-50: #fffbeb !important;
               --color-amber-500: #f59e0b !important;
             }
@@ -276,18 +291,18 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
           return element.classList.contains('no-print');
         }
       });
-      
+
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
-      
+
       const imgProps = pdf.getImageProperties(imgData);
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      
+
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`financeiro_${academy.name.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (error) {
@@ -309,14 +324,14 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
             <p className="text-slate-500 dark:text-slate-400">{t.financeControl}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button 
+            <button
               onClick={() => setIsModalOpen(true)}
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-4 rounded-3xl font-bold flex items-center justify-center gap-2 shadow-xl shadow-indigo-600/20 transition-all active:scale-95"
             >
               <Plus size={20} />
               {t.new}
             </button>
-            <button 
+            <button
               onClick={handleExportPDF}
               disabled={isExporting}
               className="bg-white dark:bg-slate-900 text-slate-800 dark:text-white px-6 py-4 rounded-3xl font-bold flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-800 shadow-sm transition-all active:scale-95 disabled:opacity-50"
@@ -324,7 +339,7 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
               {isExporting ? <Loader2 size={20} className="animate-spin" /> : <FileText size={20} className="text-indigo-500" />}
               {isExporting ? t.processing : t.financeReportLabel}
             </button>
-            <button 
+            <button
               onClick={() => setIsPaymentModalOpen(true)}
               className="hidden lg:flex bg-white dark:bg-slate-900 text-slate-800 dark:text-white px-6 py-4 rounded-3xl font-bold items-center justify-center gap-2 border border-slate-200 dark:border-slate-800 shadow-sm transition-all active:scale-95"
             >
@@ -336,23 +351,23 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
 
         {/* Resumo Financeiro */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <FinanceCard 
-          label={t.totalBalance} 
-          value={totals.income - totals.expense} 
-          icon={<Wallet size={24} />} 
-          variant="blue" 
+        <FinanceCard
+          label={t.totalBalance}
+          value={totals.income - totals.expense}
+          icon={<Wallet size={24} />}
+          variant="blue"
         />
-        <FinanceCard 
-          label={t.totalIncome} 
-          value={totals.income} 
-          icon={<ArrowUpRight size={24} />} 
-          variant="green" 
+        <FinanceCard
+          label={t.totalIncome}
+          value={totals.income}
+          icon={<ArrowUpRight size={24} />}
+          variant="green"
         />
-        <FinanceCard 
-          label={t.totalExpenses} 
-          value={totals.expense} 
-          icon={<ArrowDownRight size={24} />} 
-          variant="red" 
+        <FinanceCard
+          label={t.totalExpenses}
+          value={totals.expense}
+          icon={<ArrowDownRight size={24} />}
+          variant="red"
         />
         {/* Projeção do Mês baseada em alunos ativos */}
         <div className="bg-slate-900 dark:bg-slate-800 text-white p-6 rounded-[40px] shadow-xl relative overflow-hidden group border border-slate-700">
@@ -380,7 +395,7 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   cursor={{ fill: '#f8fafc' }}
                 />
@@ -401,8 +416,8 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
             <div className="space-y-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input 
-                   type="text" 
+                <input
+                   type="text"
                    placeholder={t.searchTransaction}
                    value={search}
                    onChange={(e) => setSearch(e.target.value)}
@@ -436,8 +451,8 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                   <p className="font-bold text-slate-800 dark:text-white text-sm leading-tight">{t.description}</p>
                   <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">{t.paymentMethod} • {t.category}</p>
                 </div>
-                <button 
-                  onClick={() => confirmDelete(t)} 
+                <button
+                  onClick={() => confirmDelete(t)}
                   className="p-2 text-slate-300 hover:text-red-500 rounded-lg transition-all"
                 >
                   <Trash2 size={18} />
@@ -479,8 +494,8 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                     {t.type === 'income' ? '+' : '-'} {new Intl.NumberFormat(language === 'pt' ? 'pt-BR' : language === 'es' ? 'es-ES' : 'en-US', { style: 'currency', currency: language === 'pt' ? 'BRL' : 'USD' }).format(t.amount)}
                   </td>
                   <td className="px-8 py-5 text-right">
-                    <button 
-                      onClick={() => confirmDelete(t)} 
+                    <button
+                      onClick={() => confirmDelete(t)}
                       className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-all active:scale-90"
                       title="Excluir Lançamento"
                     >
@@ -527,14 +542,14 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                 )}
 
                 <div className="flex flex-col gap-3 pt-2">
-                  <button 
+                  <button
                     onClick={handleCopyPix}
                     className="w-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all text-sm"
                   >
                     <Copy size={20} />
                     Copiar Chave
                   </button>
-                  <button 
+                  <button
                     onClick={handleSharePayment}
                     className="w-full bg-green-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-green-600/20 active:scale-95 transition-all uppercase tracking-widest text-sm"
                   >
@@ -549,7 +564,7 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                   <AlertCircle size={32} />
                 </div>
                 <p className="text-sm text-slate-500 font-medium mb-6 leading-relaxed">Você ainda não configurou seus dados de recebimento nas configurações.</p>
-                <button 
+                <button
                   onClick={() => setIsPaymentModalOpen(false)}
                   className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-xs"
                 >
@@ -580,14 +595,14 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
 
             <form onSubmit={handleSave} className="space-y-6 overflow-y-auto pr-2 custom-scrollbar pb-10">
               <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
-                <button 
+                <button
                   type="button"
                   onClick={() => setFormData({...formData, type: 'income', category: categories.income[0]})}
                   className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${formData.type === 'income' ? 'bg-white dark:bg-slate-700 text-green-600 shadow-sm' : 'text-slate-400'}`}
                 >
                   Entrada
                 </button>
-                <button 
+                <button
                   type="button"
                   onClick={() => setFormData({...formData, type: 'expense', category: categories.expense[0]})}
                   className={`flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${formData.type === 'expense' ? 'bg-white dark:bg-slate-700 text-red-600 shadow-sm' : 'text-slate-400'}`}
@@ -599,8 +614,8 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Valor (R$)</label>
-                  <input 
-                    type="number" 
+                  <input
+                    type="number"
                     step="0.01"
                     required
                     value={formData.amount || ''}
@@ -610,8 +625,8 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Data</label>
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     required
                     value={formData.date}
                     onChange={(e) => setFormData({...formData, date: e.target.value})}
@@ -622,8 +637,8 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
 
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Descrição</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   required
                   placeholder="Ex: Mensalidade João Silva"
                   value={formData.description}
@@ -635,7 +650,7 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
               {formData.type === 'income' && (formData.category === 'Mensalidade' || formData.description?.toLowerCase().includes('mensalidade')) && (
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Vincular Aluno (Opcional)</label>
-                  <select 
+                  <select
                     value={formData.studentId || ''}
                     onChange={(e) => {
                       const studentId = e.target.value;
@@ -660,12 +675,12 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Categoria</label>
-                  <select 
+                  <select
                     value={formData.category}
                     onChange={(e) => setFormData({...formData, category: e.target.value})}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none font-bold text-slate-700 dark:text-slate-300 appearance-none"
                   >
-                    {formData.type === 'income' 
+                    {formData.type === 'income'
                       ? categories.income.map(c => <option key={c} value={c}>{c}</option>)
                       : categories.expense.map(c => <option key={c} value={c}>{c}</option>)
                     }
@@ -673,7 +688,7 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Pagamento</label>
-                  <select 
+                  <select
                     value={formData.paymentMethod}
                     onChange={(e) => setFormData({...formData, paymentMethod: e.target.value})}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none font-bold text-slate-700 dark:text-slate-300 appearance-none"
@@ -683,7 +698,7 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                 </div>
               </div>
 
-              <button 
+              <button
                 type="submit"
                 className={`w-full py-6 rounded-3xl font-black text-xl text-white shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 ${formData.type === 'income' ? 'bg-green-600 shadow-green-600/20' : 'bg-red-600 shadow-red-600/20'}`}
               >
@@ -704,17 +719,17 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
             </div>
             <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-2 tracking-tight">Excluir Lançamento?</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-8 leading-relaxed">
-              Deseja realmente remover o lançamento <span className="text-slate-900 dark:text-white font-bold italic">"{transactionToDelete.description}"</span>? 
+              Deseja realmente remover o lançamento <span className="text-slate-900 dark:text-white font-bold italic">"{transactionToDelete.description}"</span>?
               Esta ação não poderá ser desfeita.
             </p>
             <div className="flex flex-col gap-3">
-              <button 
+              <button
                 onClick={handleDelete}
                 className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-5 rounded-3xl shadow-xl shadow-red-600/20 transition-all active:scale-95 flex items-center justify-center gap-2"
               >
                 Sim, Remover Agora
               </button>
-              <button 
+              <button
                 onClick={() => {
                   setIsDeleteModalOpen(false);
                   setTransactionToDelete(null);
@@ -754,7 +769,7 @@ const FinanceCard: React.FC<{ label: string; value: number; icon: React.ReactNod
 };
 
 const FilterButton: React.FC<{ label: string; active: boolean; onClick: () => void }> = ({ label, active, onClick }) => (
-  <button 
+  <button
     onClick={onClick}
     className={`flex-1 py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
       active ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400'

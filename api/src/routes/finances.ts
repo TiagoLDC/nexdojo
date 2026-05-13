@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+﻿import { Router, Request, Response, NextFunction } from 'express';
 import pool from '../db';
 import { requireAuth } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
@@ -8,7 +8,7 @@ import { validate } from '../utils/validate';
 const router = Router();
 
 // GET /api/transactions
-router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
+router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -34,18 +34,18 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
     const total = (countRows[0] as any).total;
 
     const [rows] = await pool.execute<any[]>(
-      `SELECT * FROM finance_transactions ${where} ORDER BY date DESC, created_at DESC LIMIT ? OFFSET ?`,
-      [...params, limitNum, offset]
+      `SELECT * FROM finance_transactions ${where} ORDER BY date DESC, created_at DESC LIMIT ${limitNum} OFFSET ${offset}`,
+      params
     );
 
     res.json({ data: rows, total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) });
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 
 // POST /api/transactions
-router.post('/', requireAuth, requireRole('admin', 'superuser', 'staff'), async (req: Request, res: Response): Promise<void> => {
+router.post('/', requireAuth, requireRole('admin', 'superuser', 'staff'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -73,12 +73,12 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'staff'), async 
     const [rows] = await pool.execute<any[]>('SELECT * FROM finance_transactions WHERE id = ?', [id]);
     res.status(201).json(rows[0]);
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 
 // PUT /api/transactions/:id
-router.put('/:id', requireAuth, requireRole('admin', 'superuser', 'staff'), async (req: Request, res: Response): Promise<void> => {
+router.put('/:id', requireAuth, requireRole('admin', 'superuser', 'staff'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -113,12 +113,12 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser', 'staff'), asyn
     const [rows] = await pool.execute<any[]>('SELECT * FROM finance_transactions WHERE id = ?', [req.params.id]);
     res.json(rows[0]);
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 
 // DELETE /api/transactions/:id — permanente (sem lixeira)
-router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response): Promise<void> => {
+router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -132,7 +132,7 @@ router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), async (req
     await pool.execute('DELETE FROM finance_transactions WHERE id = ?', [req.params.id]);
     res.json({ message: 'Transação removida' });
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 

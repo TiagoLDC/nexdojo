@@ -16,8 +16,8 @@
 | 4 | API: Rotas de autenticação | ✅ Concluída |
 | 5 | API: Rotas CRUD — Students, Instructors, Staff | ✅ Concluída |
 | 6 | API: Rotas CRUD — Templates, Attendance, Finances | ✅ Concluída |
-| 7 | API: Rotas CRUD — Calendar, Chat, Inventory, Academies, Recycle Bin | ⬜ Pendente |
-| 8 | Frontend: Desligar MSW e remover mocks | ⬜ Pendente |
+| 7 | API: Rotas CRUD — Calendar, Chat, Inventory, Academies, Recycle Bin | ✅ Concluída |
+| 8 | Frontend: Desligar MSW e remover mocks | ✅ Concluída |
 
 ---
 

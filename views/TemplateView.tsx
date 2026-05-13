@@ -1,19 +1,20 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Student, ClassTemplate, Academy, User } from '../types';
-import { StorageService } from '../services/storage';
 import { calculateAge } from '../services/graduation';
 import { useTranslation } from '../services/LanguageContext';
 import { BeltBadge } from '../components/BeltBadge';
-import { 
-  Plus, 
-  Users, 
-  X, 
-  Search, 
-  Clock, 
-  Check, 
-  Calendar, 
-  Bell, 
+import { templateService } from '@/features/schedules/services/templateService';
+import { studentService } from '@/features/students/services/studentService';
+import {
+  Plus,
+  Users,
+  X,
+  Search,
+  Clock,
+  Check,
+  Calendar,
+  Bell,
   Send,
   CheckCircle2,
   Info,
@@ -28,17 +29,18 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
   const { t, language, showNotification } = useTranslation();
   const [templates, setTemplates] = useState<ClassTemplate[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
-  
+  const [isLoading, setIsLoading] = useState(true);
+
   // Modais
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
-  
+
   const [notifyingTemplate, setNotifyingTemplate] = useState<ClassTemplate | null>(null);
   const [templateToDelete, setTemplateToDelete] = useState<ClassTemplate | null>(null);
   const [templateToRename, setTemplateToRename] = useState<ClassTemplate | null>(null);
-  
+
   // Estado do Formulário (Criação/Edição)
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -46,7 +48,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
   const [absenceLimit, setAbsenceLimit] = useState<number | undefined>(undefined);
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [schedules, setSchedules] = useState<{ dayOfWeek: number; startTime: string; endTime: string }[]>([]);
-  
+
   const [search, setSearch] = useState('');
   const [notificationMsg, setNotificationMsg] = useState('');
 
@@ -54,10 +56,25 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
 
   useEffect(() => {
     if (academy) {
-      setTemplates(StorageService.getTemplates(academy.id));
-      setStudents(StorageService.getStudents(academy.id));
+      loadData();
     }
   }, [academy]);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [templatesRes, studentsRes] = await Promise.all([
+        templateService.getAll(academy.id, { limit: 1000 }),
+        studentService.getAll(academy.id, { limit: 1000 }),
+      ]);
+      setTemplates(templatesRes.data);
+      setStudents(studentsRes.data);
+    } catch (err) {
+      console.error('Erro ao carregar turmas/alunos:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredStudents = useMemo(() => {
     return students
@@ -105,7 +122,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
     const date = new Date();
     date.setHours(h, m + duration, 0);
     const endTime = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-    
+
     setSchedules([...schedules, { dayOfWeek: 1, startTime: start, endTime }]);
   };
 
@@ -116,7 +133,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
   const updateSchedule = (index: number, field: 'dayOfWeek' | 'startTime' | 'endTime', value: any) => {
     const next = [...schedules];
     next[index] = { ...next[index], [field]: value };
-    
+
     // Sincroniza a duração se mudar o horário de início ou término do primeiro item (opcional, para conveniência)
     if (field === 'startTime' || field === 'endTime') {
       const [sh, sm] = next[index].startTime.split(':').map(Number);
@@ -126,53 +143,60 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
         setDuration(diff);
       }
     }
-    
+
     setSchedules(next);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (editingTemplateId) {
-      const updated = templates.map(t => 
-        t.id === editingTemplateId 
-          ? { ...t, name, durationMinutes: duration, assignedStudentIds: Array.from(selectedStudents), absenceLimit, schedules }
-          : t
-      );
-      setTemplates(updated);
-      StorageService.saveTemplates(updated, academy.id);
-      showNotification("Configurações da turma salvas!");
+      try {
+        const updated = await templateService.update(editingTemplateId, {
+          name,
+          durationMinutes: duration,
+          assignedStudentIds: Array.from(selectedStudents),
+          absenceLimit,
+          schedules,
+        });
+        setTemplates(prev => prev.map(t => t.id === editingTemplateId ? updated : t));
+        showNotification("Configurações da turma salvas!");
+      } catch (err) {
+        console.error('Erro ao salvar turma:', err);
+        showNotification("Erro ao salvar turma.", 'error' as any);
+      }
     } else {
-      const newTemplate: ClassTemplate = {
-        id: 'temp_' + Math.random().toString(36).substr(2, 9),
-        academyId: academy.id,
-        name,
-        durationMinutes: duration,
-        assignedStudentIds: Array.from(selectedStudents),
-        absenceLimit,
-        schedules
-      };
-      const updated = [...templates, newTemplate];
-      setTemplates(updated);
-      StorageService.saveTemplates(updated, academy.id);
-      showNotification("Nova turma criada com sucesso!");
+      try {
+        const newTemplate = await templateService.create(academy.id, {
+          name,
+          durationMinutes: duration,
+          assignedStudentIds: Array.from(selectedStudents),
+          absenceLimit,
+          schedules,
+        });
+        setTemplates(prev => [...prev, newTemplate]);
+        showNotification("Nova turma criada com sucesso!");
+      } catch (err) {
+        console.error('Erro ao criar turma:', err);
+        showNotification("Erro ao criar turma.", 'error' as any);
+      }
     }
-    
+
     setIsModalOpen(false);
     resetForm();
   };
 
-  const handleRenameOnly = () => {
+  const handleRenameOnly = async () => {
     if (templateToRename && name) {
-      const updated = templates.map(t => 
-        t.id === templateToRename.id 
-          ? { ...t, name }
-          : t
-      );
-      setTemplates(updated);
-      StorageService.saveTemplates(updated, academy.id);
-      setIsRenameModalOpen(false);
-      setTemplateToRename(null);
-      setName('');
-      showNotification("Nome da turma alterado.");
+      try {
+        const updated = await templateService.update(templateToRename.id, { name });
+        setTemplates(prev => prev.map(t => t.id === templateToRename.id ? updated : t));
+        setIsRenameModalOpen(false);
+        setTemplateToRename(null);
+        setName('');
+        showNotification("Nome da turma alterado.");
+      } catch (err) {
+        console.error('Erro ao renomear turma:', err);
+        showNotification("Erro ao renomear turma.", 'error' as any);
+      }
     }
   };
 
@@ -190,14 +214,18 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
     setIsDeleteModalOpen(true);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (templateToDelete) {
-      const updated = templates.filter(t => t.id !== templateToDelete.id);
-      setTemplates(updated);
-      StorageService.saveTemplates(updated, academy.id);
-      setIsDeleteModalOpen(false);
-      setTemplateToDelete(null);
-      showNotification("Turma removida do sistema.", 'delete');
+      try {
+        await templateService.delete(templateToDelete.id);
+        setTemplates(prev => prev.filter(t => t.id !== templateToDelete.id));
+        setIsDeleteModalOpen(false);
+        setTemplateToDelete(null);
+        showNotification("Turma removida do sistema.", 'delete');
+      } catch (err) {
+        console.error('Erro ao excluir turma:', err);
+        showNotification("Erro ao excluir turma.", 'error' as any);
+      }
     }
   };
 
@@ -214,6 +242,14 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
     showNotification("Notificação enviada para os alunos!");
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-10 w-10 border-4 border-indigo-600 border-t-transparent" />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-20 relative">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -221,7 +257,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
           <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Turmas & Horários</h1>
           <p className="text-slate-500 font-medium">Modelos de aula para chamadas rápidas.</p>
         </div>
-        <button 
+        <button
           onClick={openCreateModal}
           className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-4 rounded-3xl font-bold flex items-center justify-center gap-2 shadow-xl shadow-indigo-600/20 transition-all active:scale-95"
         >
@@ -274,7 +310,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-center justify-between pt-4 border-t border-slate-50">
               <div className="flex -space-x-2">
                 {t.assignedStudentIds.slice(0, 4).map(sid => {
@@ -294,23 +330,23 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                   <span className="text-[10px] font-bold text-slate-300 italic uppercase">Sem alunos vinculados</span>
                 )}
               </div>
-              
+
               <div className="flex items-center gap-2">
-                <button 
+                <button
                   onClick={() => openEditModal(t)}
                   className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
                   title="Configurar Turma (Editar Tudo)"
                 >
                   <Edit2 size={18} />
                 </button>
-                <button 
+                <button
                   onClick={() => openNotifyModal(t)}
                   className="p-2.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all"
                   title="Notificar Turma"
                 >
                   <Bell size={18} />
                 </button>
-                <button 
+                <button
                   onClick={() => confirmDelete(t)}
                   className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                   title="Excluir Turma"
@@ -356,8 +392,8 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-2">
                   <label className="block text-xs font-black text-slate-400 uppercase mb-3 tracking-widest">Nome da Turma</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Ex: Kids 5-9 Sábado"
@@ -366,8 +402,8 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                 </div>
                 <div>
                   <label className="block text-xs font-black text-slate-400 uppercase mb-3 tracking-widest">Duração (min)</label>
-                  <select 
-                    value={duration} 
+                  <select
+                    value={duration}
                     onChange={(e) => setDuration(Number(e.target.value))}
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none font-bold text-slate-700 appearance-none"
                   >
@@ -381,8 +417,8 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
 
               <div>
                 <label className="block text-xs font-black text-slate-400 uppercase mb-3 tracking-widest">Limite de Faltas da Turma</label>
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   min="0"
                   placeholder="Usar padrão da academia"
                   value={absenceLimit || ''}
@@ -397,19 +433,19 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <label className="block text-xs font-black text-slate-400 uppercase tracking-widest">Horários de Aula</label>
-                  <button 
+                  <button
                     onClick={addSchedule}
                     className="flex items-center gap-1.5 text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl hover:bg-indigo-100 transition-colors uppercase italic"
                   >
                     <Plus size={14} /> Adicionar Horário
                   </button>
                 </div>
-                
+
                 <div className="space-y-3">
                   {schedules.map((schedule, idx) => (
                     <div key={idx} className="flex flex-wrap md:flex-nowrap items-center gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-100 animate-in slide-in-from-left duration-200">
                       <div className="flex-1 min-w-[120px]">
-                        <select 
+                        <select
                           value={schedule.dayOfWeek}
                           onChange={(e) => updateSchedule(idx, 'dayOfWeek', parseInt(e.target.value))}
                           className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
@@ -421,8 +457,8 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                       </div>
                     <div className="w-full md:w-32">
                       <label className="text-[8px] font-black text-slate-400 uppercase ml-1">Início <span className="text-red-500">*</span></label>
-                      <input 
-                        type="time" 
+                      <input
+                        type="time"
                         value={schedule.startTime}
                         onChange={(e) => updateSchedule(idx, 'startTime', e.target.value)}
                         className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
@@ -430,14 +466,14 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                     </div>
                     <div className="w-full md:w-32">
                       <label className="text-[8px] font-black text-slate-400 uppercase ml-1">Término <span className="text-red-500">*</span></label>
-                      <input 
-                        type="time" 
+                      <input
+                        type="time"
                         value={schedule.endTime}
                         onChange={(e) => updateSchedule(idx, 'endTime', e.target.value)}
                         className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
                       />
                     </div>
-                      <button 
+                      <button
                         onClick={() => removeSchedule(idx)}
                         className="p-2.5 text-slate-300 hover:text-red-500 bg-white border border-slate-200 rounded-xl hover:bg-red-50 transition-all ml-auto"
                       >
@@ -459,7 +495,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                 </label>
                 <div className="relative mb-4">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
-                  <input 
+                  <input
                     type="text"
                     placeholder="Pesquisar..."
                     value={search}
@@ -474,8 +510,8 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                       key={s.id}
                       onClick={() => toggleStudent(s.id)}
                       className={`flex items-center justify-between p-3 rounded-2xl border transition-all text-left group ${
-                        selectedStudents.has(s.id) 
-                          ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-600/20' 
+                        selectedStudents.has(s.id)
+                          ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-600/20'
                           : 'bg-white border-slate-100 hover:border-slate-300 text-slate-600'
                       }`}
                     >
@@ -520,7 +556,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
             </div>
 
             <div className="pt-4 pb-10 md:pb-2">
-              <button 
+              <button
                 onClick={handleSave}
                 disabled={!name}
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-6 rounded-3xl shadow-2xl shadow-indigo-600/30 transition-all shrink-0 disabled:opacity-50 active:scale-95 flex items-center justify-center gap-3"
@@ -555,8 +591,8 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
             <div className="space-y-6">
               <div>
                 <label className="block text-xs font-black text-slate-400 uppercase mb-3 tracking-widest">Novo Nome da Turma</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   autoFocus
@@ -566,14 +602,14 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
               </div>
 
               <div className="flex flex-col gap-3">
-                <button 
+                <button
                   onClick={handleRenameOnly}
                   disabled={!name || name === templateToRename.name}
                   className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-5 rounded-3xl shadow-xl shadow-indigo-600/20 transition-all active:scale-95 disabled:opacity-50"
                 >
                   Confirmar Novo Nome
                 </button>
-                <button 
+                <button
                   onClick={() => setIsRenameModalOpen(false)}
                   className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-5 rounded-3xl transition-all"
                 >
@@ -604,7 +640,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
               </button>
             </div>
 
-            <textarea 
+            <textarea
               rows={4}
               value={notificationMsg}
               onChange={(e) => setNotificationMsg(e.target.value)}
@@ -612,7 +648,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
               placeholder="Escreva seu aviso aqui..."
             />
 
-            <button 
+            <button
               onClick={handleSendNotification}
               disabled={!notificationMsg}
               className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black py-6 rounded-[32px] shadow-2xl shadow-slate-900/20 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
@@ -631,20 +667,20 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
             <div className="bg-red-100 w-20 h-20 rounded-full flex items-center justify-center text-red-600 mx-auto mb-6">
               <AlertTriangle size={40} />
             </div>
-            
+
             <h2 className="text-2xl font-black text-slate-800 mb-2">Excluir Turma?</h2>
             <p className="text-sm text-slate-500 font-medium mb-8 leading-relaxed">
-              Deseja realmente excluir a turma <span className="text-slate-800 font-bold">"{templateToDelete.name}"</span>? 
+              Deseja realmente excluir a turma <span className="text-slate-800 font-bold">"{templateToDelete.name}"</span>?
             </p>
 
             <div className="flex flex-col gap-3">
-              <button 
+              <button
                 onClick={handleDelete}
                 className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-5 rounded-3xl shadow-xl shadow-red-600/20 transition-all active:scale-95"
               >
                 Sim, Excluir Agora
               </button>
-              <button 
+              <button
                 onClick={() => setIsDeleteModalOpen(false)}
                 className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-5 rounded-3xl transition-all"
               >

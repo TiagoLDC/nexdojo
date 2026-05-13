@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Academy, User, Product } from '../types';
-import { StorageService } from '../services/storage';
+import { inventoryService } from '@/features/inventory/services/inventoryService';
 import { useTranslation } from '../services/LanguageContext';
 import { Search, Package, Plus, Edit2, Trash2, X, Tag, DollarSign, Box, Camera, Image as ImageIcon, ShoppingBag, QrCode, Clipboard, CheckCircle2, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -22,8 +22,11 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
 
   useEffect(() => {
     if (academy) {
-      const loadedProducts = StorageService.getProducts(academy.id);
-      setProducts(Array.isArray(loadedProducts) ? loadedProducts : []);
+      inventoryService.getAll(academy.id).then((res) => {
+        setProducts(Array.isArray(res.data) ? res.data : []);
+      }).catch(() => {
+        setProducts([]);
+      });
     }
   }, [academy]);
 
@@ -46,45 +49,53 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
     reader.readAsDataURL(file);
   };
 
-  const handleSaveProduct = (e: React.FormEvent) => {
+  const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct?.name || !editingProduct?.price || editingProduct?.stock === undefined) {
       showNotification("Preencha os campos obrigatórios.", 'error');
       return;
     }
 
-    const newProduct: Product = {
-      id: editingProduct.id || 'prod_' + Math.random().toString(36).substr(2, 9),
-      academyId: academy.id,
-      name: editingProduct.name,
-      description: editingProduct.description || '',
-      price: Number(editingProduct.price),
-      stock: Number(editingProduct.stock),
-      category: editingProduct.category || '',
-      image: editingProduct.image,
-      createdAt: editingProduct.createdAt || new Date().toISOString()
-    };
+    try {
+      if (editingProduct.id) {
+        const updated = await inventoryService.update(editingProduct.id, {
+          name: editingProduct.name,
+          description: editingProduct.description || '',
+          price: Number(editingProduct.price),
+          stock: Number(editingProduct.stock),
+          category: editingProduct.category || '',
+          image: editingProduct.image,
+        });
+        setProducts(prev => prev.map(p => p.id === updated.id ? updated : p));
+      } else {
+        const created = await inventoryService.create(academy.id, {
+          name: editingProduct.name,
+          description: editingProduct.description || '',
+          price: Number(editingProduct.price),
+          stock: Number(editingProduct.stock),
+          category: editingProduct.category || '',
+          image: editingProduct.image,
+        });
+        setProducts(prev => [created, ...prev]);
+      }
 
-    let updatedProducts;
-    if (editingProduct.id) {
-      updatedProducts = products.map(p => p.id === editingProduct.id ? newProduct : p);
-    } else {
-      updatedProducts = [newProduct, ...products];
+      setIsModalOpen(false);
+      setEditingProduct(null);
+      showNotification(t.productSaved);
+    } catch {
+      showNotification("Erro ao salvar produto.", 'error');
     }
-
-    setProducts(updatedProducts);
-    StorageService.saveProducts(updatedProducts, academy.id);
-    setIsModalOpen(false);
-    setEditingProduct(null);
-    showNotification(t.productSaved);
   };
 
-  const handleDeleteProduct = (id: string) => {
-    const updatedProducts = products.filter(p => p.id !== id);
-    setProducts(updatedProducts);
-    StorageService.saveProducts(updatedProducts, academy.id);
-    setIsDeleting(null);
-    showNotification("Produto removido.", 'info');
+  const handleDeleteProduct = async (id: string) => {
+    try {
+      await inventoryService.delete(id);
+      setProducts(prev => prev.filter(p => p.id !== id));
+      setIsDeleting(null);
+      showNotification("Produto removido.", 'info');
+    } catch {
+      showNotification("Erro ao remover produto.", 'error');
+    }
   };
 
   const openAddModal = () => {
@@ -119,28 +130,17 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
     showNotification("Código PIX copiado!");
   };
 
-  const confirmPurchase = () => {
+  const confirmPurchase = async () => {
     if (!selectedProduct) return;
-    
-    // Simulate recording the sale
-    const sale = {
-      id: 'sale_' + Math.random().toString(36).substr(2, 9),
-      productId: selectedProduct.id,
-      productName: selectedProduct.name,
-      amount: selectedProduct.price,
-      customerName: user.name,
-      customerEmail: user.email,
-      paymentMethod,
-      date: new Date().toISOString(),
-      academyId: academy.id
-    };
 
-    // Update stock
-    const updatedProducts = products.map(p => 
-      p.id === selectedProduct.id ? { ...p, stock: Math.max(0, p.stock - 1) } : p
-    );
-    setProducts(updatedProducts);
-    StorageService.saveProducts(updatedProducts, academy.id);
+    try {
+      const updatedProduct = await inventoryService.update(selectedProduct.id, {
+        stock: Math.max(0, selectedProduct.stock - 1),
+      });
+      setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+    } catch {
+      // Continue even if stock update fails
+    }
 
     setIsPurchaseModalOpen(false);
     setSelectedProduct(null);
@@ -162,8 +162,8 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
 
         <div className="relative">
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={24} />
-          <input 
-            type="text" 
+          <input
+            type="text"
             placeholder={t.search + "..."}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -174,7 +174,7 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProducts.length > 0 ? (
             filteredProducts.map(product => (
-              <motion.div 
+              <motion.div
                 layout
                 key={product.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -210,7 +210,7 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
                       <span className="text-3xl font-black text-green-600">R$ {product.price.toLocaleString()}</span>
                     </div>
                     {product.stock > 0 && (
-                      <button 
+                      <button
                         onClick={() => handlePurchase(product)}
                         className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-indigo-600/20"
                       >
@@ -239,7 +239,7 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
           <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight uppercase italic">{t.inventory}</h1>
           <p className="text-slate-500 dark:text-slate-400 font-bold text-xs uppercase tracking-widest">{t.inventoryTitle}</p>
         </div>
-        <button 
+        <button
           onClick={openAddModal}
           className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-4 rounded-[24px] shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest active:scale-95 whitespace-nowrap"
         >
@@ -275,8 +275,8 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
 
       <div className="relative">
         <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-        <input 
-          type="text" 
+        <input
+          type="text"
           placeholder={t.search + "..."}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -287,9 +287,9 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {filteredProducts.length > 0 ? (
           filteredProducts.map(product => (
-            <motion.div 
+            <motion.div
               layout
-              key={product.id} 
+              key={product.id}
               className={`bg-white dark:bg-slate-900 p-6 rounded-[32px] border transition-all ${product.stock <= 3 ? 'border-amber-200 dark:border-amber-900/30' : 'border-slate-100 dark:border-slate-800'} flex flex-col justify-between shadow-sm group relative overflow-hidden`}
             >
               <div className="flex justify-between items-start mb-4 relative z-10">
@@ -335,13 +335,13 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <button 
+                  <button
                     onClick={() => openEditModal(product)}
                     className="p-3 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl transition-all"
                   >
                     <Edit2 size={18} />
                   </button>
-                  <button 
+                  <button
                     onClick={() => setIsDeleting(product.id)}
                     className="p-3 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-red-500 rounded-xl transition-all"
                   >
@@ -361,7 +361,7 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
               <Package className="opacity-40" size={64} />
             </div>
             <p className="text-lg font-black uppercase italic tracking-tight">{t.noProductsFound}</p>
-            <button 
+            <button
               onClick={openAddModal}
               className="mt-6 text-indigo-600 font-black text-xs uppercase tracking-widest hover:underline"
             >
@@ -374,7 +374,7 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
       <AnimatePresence>
         {isPurchaseModalOpen && selectedProduct && (
           <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -406,7 +406,7 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
 
                 <div className="space-y-3">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 italic">Selecione o Método de Pagamento</p>
-                  <button 
+                  <button
                     onClick={() => setPaymentMethod('Pix')}
                     className={`w-full flex items-center justify-between p-5 rounded-[24px] border-2 transition-all ${paymentMethod === 'Pix' ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700'}`}
                   >
@@ -422,7 +422,7 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
                     {paymentMethod === 'Pix' && <CheckCircle2 className="text-indigo-600" size={24} />}
                   </button>
 
-                  <button 
+                  <button
                     onClick={() => setPaymentMethod('Card')}
                     className={`w-full flex items-center justify-between p-5 rounded-[24px] border-2 transition-all ${paymentMethod === 'Card' ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700'}`}
                   >
@@ -440,7 +440,7 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
                 </div>
 
                 {paymentMethod === 'Pix' && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="space-y-4 p-6 bg-slate-50 dark:bg-slate-800 rounded-3xl border-2 border-dashed border-indigo-200 dark:border-indigo-900/50"
@@ -454,12 +454,12 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
 
                     <div className="space-y-2">
                        <div className="relative">
-                        <input 
+                        <input
                           readOnly
                           value={pixKeySimulated}
                           className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-4 py-3 text-[10px] font-mono text-slate-500 overflow-hidden text-ellipsis whitespace-nowrap pr-12 focus:ring-0"
                         />
-                        <button 
+                        <button
                           onClick={copyPixKey}
                           className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all"
                         >
@@ -472,13 +472,13 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
               </div>
 
               <div className="mt-8 flex gap-4 pt-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
-                <button 
+                <button
                   onClick={() => setIsPurchaseModalOpen(false)}
                   className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black text-xs uppercase tracking-widest py-5 rounded-2xl"
                 >
                   Cancelar
                 </button>
-                <button 
+                <button
                   disabled={!paymentMethod}
                   onClick={confirmPurchase}
                   className={`flex-[2] text-white font-black text-xs uppercase tracking-widest py-5 rounded-2xl shadow-xl transition-all ${paymentMethod ? 'bg-indigo-600 shadow-indigo-600/20 hover:bg-indigo-700 active:scale-95' : 'bg-slate-300 cursor-not-allowed opacity-50'}`}
@@ -494,7 +494,7 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -504,8 +504,8 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
                 <h2 className="text-3xl font-black text-slate-800 dark:text-white uppercase italic tracking-tight">
                   {editingProduct?.id ? t.edit : t.add} {t.products}
                 </h2>
-                <button 
-                  onClick={() => setIsModalOpen(false)} 
+                <button
+                  onClick={() => setIsModalOpen(false)}
                   className="bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-full p-2 hover:bg-red-50 hover:text-red-500 transition-all"
                 >
                   <X size={24} />
@@ -515,7 +515,7 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
               <form onSubmit={handleSaveProduct} className="space-y-6 overflow-y-auto pr-2 custom-scrollbar">
                 <div className="flex flex-col md:flex-row gap-8">
                   <div className="shrink-0 flex flex-col items-center gap-4">
-                    <div 
+                    <div
                       onClick={() => fileInputRef.current?.click()}
                       className="w-48 h-48 rounded-[32px] bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center overflow-hidden cursor-pointer group hover:border-indigo-500 transition-all"
                     >
@@ -533,16 +533,16 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
                         </>
                       )}
                     </div>
-                    <input 
-                      type="file" 
-                      ref={fileInputRef} 
-                      className="hidden" 
-                      accept="image/*" 
-                      onChange={handlePhotoUpload} 
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handlePhotoUpload}
                     />
                     {editingProduct?.image && (
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={() => setEditingProduct(prev => prev ? { ...prev, image: undefined } : null)}
                         className="text-red-500 font-bold text-[10px] uppercase tracking-widest hover:underline"
                       >
@@ -556,8 +556,8 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-2 italic">{t.productName} *</label>
                       <div className="relative">
                         <Package className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           required
                           value={editingProduct?.name || ''}
                           onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})}
@@ -572,8 +572,8 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-2 italic">{t.price} *</label>
                         <div className="relative">
                           <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-                          <input 
-                            type="number" 
+                          <input
+                            type="number"
                             required
                             step="0.01"
                             value={editingProduct?.price || ''}
@@ -587,8 +587,8 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-2 italic">{t.stock} *</label>
                         <div className="relative">
                           <Box className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-                          <input 
-                            type="number" 
+                          <input
+                            type="number"
                             required
                             value={editingProduct?.stock || ''}
                             onChange={(e) => setEditingProduct({...editingProduct, stock: parseInt(e.target.value)})}
@@ -603,8 +603,8 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-2 italic">{t.category}</label>
                       <div className="relative">
                         <Tag className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           value={editingProduct?.category || ''}
                           onChange={(e) => setEditingProduct({...editingProduct, category: e.target.value})}
                           className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl pl-12 pr-4 py-4 font-bold text-slate-700 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all"
@@ -615,7 +615,7 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
 
                     <div>
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-2 italic">{t.description}</label>
-                      <textarea 
+                      <textarea
                         value={editingProduct?.description || ''}
                         onChange={(e) => setEditingProduct({...editingProduct, description: e.target.value})}
                         className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-3xl p-4 font-medium text-slate-700 dark:text-white focus:ring-2 focus:ring-indigo-500 transition-all min-h-[100px] resize-none"
@@ -626,14 +626,14 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
                 </div>
 
                 <div className="flex gap-4 pt-4 sticky bottom-0 bg-white dark:bg-slate-900 pb-2">
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => setIsModalOpen(false)}
                     className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-500 font-black text-xs uppercase tracking-[0.2em] py-4 rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
                   >
                     {t.cancel}
                   </button>
-                  <button 
+                  <button
                     type="submit"
                     className="flex-[2] bg-indigo-600 text-white font-black text-xs uppercase tracking-[0.2em] py-4 rounded-2xl shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 transition-all active:scale-95"
                   >
@@ -648,7 +648,7 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
 
       {isDeleting && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[32px] p-8 text-center shadow-2xl"
@@ -660,8 +660,8 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 font-medium">{t.deleteProductText}</p>
             <div className="flex gap-3">
               <button onClick={() => setIsDeleting(null)} className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-500 font-bold py-4 rounded-2xl transition-all">{t.cancel}</button>
-              <button 
-                onClick={() => handleDeleteProduct(isDeleting)} 
+              <button
+                onClick={() => handleDeleteProduct(isDeleting)}
                 className="flex-1 bg-red-600 text-white font-black text-xs uppercase tracking-widest py-4 rounded-2xl transition-all shadow-lg shadow-red-600/20 active:scale-95"
               >
                 {t.delete}

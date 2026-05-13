@@ -10,18 +10,18 @@ import type {
 export const inventoryService = {
   getAll: (academyId: string, params?: GetProductsParams) =>
     api
-      .get<PaginatedResponse<Product>>('/inventory', { params: { academyId, ...params } })
+      .get<PaginatedResponse<Product>>('/products', { params: { academyId, ...params } })
       .then((r) => r.data),
 
   getById: (id: string) =>
-    api.get<Product>(`/inventory/${id}`).then((r) => r.data),
+    api.get<Product>(`/products/${id}`).then((r) => r.data),
 
   create: (academyId: string, data: CreateProductDTO) =>
-    api.post<Product>('/inventory', { ...data, academyId }).then((r) => r.data),
+    api.post<Product>('/products', { ...data, academyId }).then((r) => r.data),
 
   update: (id: string, data: UpdateProductDTO) =>
-    api.put<Product>(`/inventory/${id}`, data).then((r) => r.data),
+    api.put<Product>(`/products/${id}`, data).then((r) => r.data),
 
   delete: (id: string) =>
-    api.delete<void>(`/inventory/${id}`).then((r) => r.data),
+    api.delete<void>(`/products/${id}`).then((r) => r.data),
 };

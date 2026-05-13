@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+﻿import { Router, Request, Response, NextFunction } from 'express';
 import pool from '../db';
 import { requireAuth } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
@@ -8,7 +8,7 @@ import { validate } from '../utils/validate';
 const router = Router();
 
 // GET /api/academies — superuser: lista todas; admin: apenas a própria
-router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
+router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     if (req.user!.role === 'superuser') {
       const [rows] = await pool.execute<any[]>('SELECT * FROM academies ORDER BY name ASC');
@@ -22,26 +22,26 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
     const [rows] = await pool.execute<any[]>('SELECT * FROM academies WHERE id = ?', [academyId]);
     res.json({ data: rows, total: (rows as any[]).length });
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 
 // GET /api/academies/by-alias/:alias — público (login direto por alias)
-router.get('/by-alias/:alias', async (req: Request, res: Response): Promise<void> => {
+router.get('/by-alias/:alias', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const [rows] = await pool.execute<any[]>(
       'SELECT id, name, alias, logo FROM academies WHERE alias = ?',
-      [req.params.alias.toLowerCase().trim()]
+      [String(req.params.alias).toLowerCase().trim()]
     );
     if (!rows[0]) { res.status(404).json({ error: 'Academia não encontrada' }); return; }
     res.json(rows[0]);
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 
 // GET /api/academies/:id
-router.get('/:id', requireAuth, async (req: Request, res: Response): Promise<void> => {
+router.get('/:id', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { role, academyId: tokenAcademyId } = req.user!;
 
   if (role !== 'superuser' && tokenAcademyId !== req.params.id) {
@@ -54,12 +54,12 @@ router.get('/:id', requireAuth, async (req: Request, res: Response): Promise<voi
     if (!rows[0]) { res.status(404).json({ error: 'Academia não encontrada' }); return; }
     res.json(rows[0]);
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 
 // PUT /api/academies/:id — atualizar configurações
-router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response): Promise<void> => {
+router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { role, academyId: tokenAcademyId } = req.user!;
 
   if (role !== 'superuser' && tokenAcademyId !== req.params.id) {
@@ -112,7 +112,7 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
     const [rows] = await pool.execute<any[]>('SELECT * FROM academies WHERE id = ?', [req.params.id]);
     res.json(rows[0]);
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 

@@ -14,7 +14,7 @@ export function getAcademyId(req: Request, res: Response): string | null {
   }
 
   if (req.user.role === 'superuser') {
-    const id = (req.query.academyId ?? req.body?.academyId) as string | undefined;
+    const id = (req.query.academyId ?? req.body?.academyId ?? req.body?.academy_id) as string | undefined;
     if (!id) {
       res.status(400).json({ error: 'academyId é obrigatório para superusuário' });
       return null;

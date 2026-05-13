@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Student, Academy, Belt, StudentDocument } from '../types';
-import { StorageService } from '../services/storage';
-import { 
-  User as UserIcon, 
-  MapPin, 
-  Phone, 
-  Award, 
-  Calendar as CalendarIcon, 
-  CreditCard, 
-  Shield, 
-  Save, 
+import { studentService } from '@/features/students/services/studentService';
+import {
+  User as UserIcon,
+  MapPin,
+  Phone,
+  Award,
+  Calendar as CalendarIcon,
+  CreditCard,
+  Shield,
+  Save,
   ArrowLeft,
   ChevronRight,
   Camera,
@@ -40,12 +40,12 @@ import { QRCodeSVG } from 'qrcode.react';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
 import { BELT_COLORS } from '../constants';
 
-import { 
-  Radar, 
-  RadarChart, 
-  PolarGrid, 
-  PolarAngleAxis, 
-  ResponsiveContainer 
+import {
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  ResponsiveContainer
 } from 'recharts';
 
 const Loader2 = ({ size, className }: { size: number, className: string }) => (
@@ -67,44 +67,34 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Simulando um loading pequeno para garantir estabilidade visual
-    const timer = setTimeout(() => {
-      const students = StorageService.getStudents();
-      const found = students.find(s => s.email?.toLowerCase() === user.email?.toLowerCase());
-      
-      if (found) {
-        setProfile(found);
-        setEditData(JSON.parse(JSON.stringify(found)));
-      } else {
-        const defaultProfile: Student = {
-          id: `s_${Math.random().toString(36).substr(2, 9)}`,
-          academyId: academy.id,
-          name: user.name,
-          email: user.email,
-          belt: Belt.WHITE,
-          stripes: 0,
-          joinDate: new Date().toISOString(),
-          status: 'Active',
-          totalClasses: 0,
-          totalHours: 0,
-          absentCount: 0,
-          birthDate: '',
-          documents: []
-        };
-        setProfile(defaultProfile);
-        setEditData(JSON.parse(JSON.stringify(defaultProfile)));
-      }
-      setIsLoading(false);
-    }, 500);
+    if (!academy?.id) return;
 
-    return () => clearTimeout(timer);
-  }, [academy.id, user.email, user.name]);
+    setIsLoading(true);
+    studentService.getAll(academy.id, { email: user.email, limit: 1 })
+      .then(res => {
+        const found = res.data[0] || null;
+        if (found) {
+          setProfile(found);
+          setEditData(JSON.parse(JSON.stringify(found)));
+        } else {
+          // Profile not found in API — show empty state
+          setProfile(null);
+          setEditData(null);
+        }
+      })
+      .catch(err => {
+        console.error('Erro ao carregar perfil do aluno:', err);
+        setProfile(null);
+        setEditData(null);
+      })
+      .finally(() => setIsLoading(false));
+  }, [academy.id, user.email]);
 
   const calculateAge = (birthDate: string) => {
     if (!birthDate) return 0;
@@ -116,44 +106,41 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
       age--;
     }
     return age;
-};
+  };
 
-const handleCepLookup = async (value: string) => {
-  if (!editData) return;
-  const masked = maskCEP(value);
-  setEditData({ ...editData, cep: masked });
-
-  if (masked.replace(/\D/g, '').length === 8) {
-    setIsLoadingCep(true);
-    const addressData = await fetchAddressByCep(masked);
-    if (addressData) {
-      setEditData(prev => prev ? {
-        ...prev,
-        address: addressData.fullAddress
-      } : null);
-    }
-    setIsLoadingCep(false);
-  }
-};
-
-const handleSave = () => {
+  const handleCepLookup = async (value: string) => {
     if (!editData) return;
-    
-    const allStudents = StorageService.getStudents();
-    const exists = allStudents.some(s => s.id === editData.id);
-    
-    let updatedStudents: Student[];
-    if (exists) {
-      updatedStudents = allStudents.map(s => s.id === editData.id ? editData : s);
-    } else {
-      updatedStudents = [...allStudents, editData];
+    const masked = maskCEP(value);
+    setEditData({ ...editData, cep: masked });
+
+    if (masked.replace(/\D/g, '').length === 8) {
+      setIsLoadingCep(true);
+      const addressData = await fetchAddressByCep(masked);
+      if (addressData) {
+        setEditData(prev => prev ? {
+          ...prev,
+          address: addressData.fullAddress
+        } : null);
+      }
+      setIsLoadingCep(false);
     }
-    
-    StorageService.saveStudents(updatedStudents, academy.id);
-    setProfile(editData);
-    setIsEditing(false);
-    setMessage({ type: 'success', text: 'Sua ficha foi atualizada com sucesso! OSS!' });
-    setTimeout(() => setMessage(null), 3000);
+  };
+
+  const handleSave = async () => {
+    if (!editData) return;
+
+    try {
+      const updated = await studentService.update(editData.id, editData as any);
+      setProfile(updated);
+      setEditData(JSON.parse(JSON.stringify(updated)));
+      setIsEditing(false);
+      setMessage({ type: 'success', text: 'Sua ficha foi atualizada com sucesso! OSS!' });
+      setTimeout(() => setMessage(null), 3000);
+    } catch (err) {
+      console.error('Erro ao salvar perfil:', err);
+      setMessage({ type: 'error', text: 'Erro ao salvar suas informações. Tente novamente.' });
+      setTimeout(() => setMessage(null), 3000);
+    }
   };
 
   const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,7 +159,7 @@ const handleSave = () => {
     const file = e.target.files?.[0];
     if (!file || !editData) return;
 
-    if (file.size > 1000000) { 
+    if (file.size > 1000000) {
       alert("Arquivo muito grande. O limite para documentos é de 1MB.");
       return;
     }
@@ -214,7 +201,7 @@ const handleSave = () => {
     document.body.removeChild(link);
   };
 
-  if (isLoading || !profile || !editData) {
+  if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-[70vh] gap-6 animate-pulse">
         <div className="w-24 h-24 bg-indigo-100 dark:bg-slate-800 rounded-[40px] flex items-center justify-center text-indigo-600">
@@ -223,6 +210,20 @@ const handleSave = () => {
         <div className="text-center space-y-2">
           <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase italic tracking-tight">Carregando Ficha...</h2>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Sincronizando com a academia, OSS!</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile || !editData) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[70vh] gap-6">
+        <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800 rounded-[40px] flex items-center justify-center text-slate-400">
+          <UserCheck size={40} />
+        </div>
+        <div className="text-center space-y-2">
+          <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase italic tracking-tight">Ficha não encontrada</h2>
+          <p className="text-sm text-slate-400">Seu cadastro ainda não foi criado pelo administrador da academia.</p>
         </div>
       </div>
     );
@@ -257,7 +258,7 @@ const handleSave = () => {
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
           {isEditing ? (
-            <button 
+            <button
               onClick={handleSave}
               className="w-full sm:w-auto bg-emerald-600 text-white px-5 py-3.5 rounded-2xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 animate-in fade-in zoom-in duration-300"
             >
@@ -265,7 +266,7 @@ const handleSave = () => {
               <span className="text-[10px] font-black uppercase tracking-widest">Salvar Alterações</span>
             </button>
           ) : (
-            <button 
+            <button
               onClick={() => setIsEditing(true)}
               className="w-full sm:w-auto bg-indigo-600 text-white px-5 py-3.5 rounded-2xl shadow-lg shadow-indigo-600/20 active:scale-95 transition-all flex items-center justify-center gap-2"
             >
@@ -274,14 +275,14 @@ const handleSave = () => {
             </button>
           )}
           <div className="hidden md:flex items-center gap-2 ml-2 border-l border-slate-100 dark:border-slate-800 pl-4">
-            <button 
+            <button
               onClick={() => setIsQRModalOpen(true)}
               className="p-3 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-2xl transition-all"
               title="Minha Carteirinha Digital"
             >
               <QrCode size={24} />
             </button>
-            <button 
+            <button
               onClick={() => window.print()}
               className="p-3 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-2xl transition-all"
               title="Imprimir Ficha"
@@ -289,7 +290,7 @@ const handleSave = () => {
               <Printer size={24} />
             </button>
           </div>
-          <button 
+          <button
             onClick={() => window.history.back()}
             className="p-3 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all ml-1"
             title="Fechar"
@@ -321,8 +322,8 @@ const handleSave = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart cx="50%" cy="50%" outerRadius="80%" data={performanceData}>
                   <PolarGrid stroke="#cbd5e1" strokeOpacity={0.2} />
-                  <PolarAngleAxis 
-                    dataKey="subject" 
+                  <PolarAngleAxis
+                    dataKey="subject"
                     tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
                   />
                   <Radar
@@ -355,7 +356,7 @@ const handleSave = () => {
         </div>
 
         <div className="space-y-12">
-          
+
           {/* Seção 1: Dados Pessoais */}
           <section className="space-y-6">
             <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2 mb-8">
@@ -374,14 +375,14 @@ const handleSave = () => {
                   )}
                   {isEditing && (
                     <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity gap-4">
-                      <button 
+                      <button
                         onClick={() => cameraInputRef.current?.click()}
                         className="bg-indigo-600 text-white p-4 rounded-full shadow-xl hover:scale-110 transition-transform"
                         title="Tirar Foto Agora"
                       >
                         <Camera size={24} />
                       </button>
-                      <button 
+                      <button
                         onClick={() => photoInputRef.current?.click()}
                         className="bg-white/20 text-white p-3 rounded-full hover:bg-white/40 transition-all"
                         title="Escolher da Galeria"
@@ -393,13 +394,13 @@ const handleSave = () => {
                 </div>
                 {isEditing && (
                   <div className="grid grid-cols-2 gap-2 w-full">
-                    <button 
+                    <button
                       onClick={() => cameraInputRef.current?.click()}
                       className="text-[9px] font-black uppercase tracking-widest text-white bg-indigo-600 py-3 rounded-2xl border border-indigo-500 shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
                     >
                       <Camera size={14} /> CÂMERA
                     </button>
-                    <button 
+                    <button
                       onClick={() => photoInputRef.current?.click()}
                       className="text-[9px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 py-3 rounded-2xl border border-indigo-100 dark:border-indigo-800 hover:bg-indigo-100 transition-all flex items-center justify-center gap-2"
                     >
@@ -414,9 +415,9 @@ const handleSave = () => {
               <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
                 <div className="md:col-span-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">NOME COMPLETO *</label>
-                  <input 
+                  <input
                     disabled={!isEditing}
-                    type="text" 
+                    type="text"
                     value={editData.name}
                     onChange={(e) => setEditData({...editData, name: e.target.value})}
                     className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 focus:ring-4 focus:ring-indigo-500/10 outline-none font-bold text-slate-800 dark:text-white transition-all disabled:opacity-60"
@@ -424,7 +425,7 @@ const handleSave = () => {
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">SEXO *</label>
-                  <select 
+                  <select
                     disabled={!isEditing}
                     value={editData.gender || ''}
                     onChange={(e) => setEditData({...editData, gender: e.target.value as any})}
@@ -438,9 +439,9 @@ const handleSave = () => {
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">NASCIMENTO *</label>
-                  <input 
+                  <input
                     disabled={!isEditing}
-                    type="date" 
+                    type="date"
                     value={editData.birthDate}
                     onChange={(e) => setEditData({...editData, birthDate: e.target.value})}
                     className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-indigo-500 outline-none font-black text-slate-800 dark:text-white text-lg transition-all disabled:opacity-60"
@@ -454,9 +455,9 @@ const handleSave = () => {
                 </div>
                 <div className="md:col-span-3">
                   <label className="block text-[10px] font-black text-indigo-500 uppercase mb-2 ml-1">E-mail Profissional (Login) *</label>
-                  <input 
+                  <input
                     disabled={true}
-                    type="email" 
+                    type="email"
                     value={editData.email}
                     className="w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none font-bold text-slate-400 dark:text-slate-500 transition-all cursor-not-allowed"
                   />
@@ -483,9 +484,9 @@ const handleSave = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">WHATSAPP *</label>
-                <input 
+                <input
                   disabled={!isEditing}
-                  type="tel" 
+                  type="tel"
                   value={editData.phone || ''}
                   onChange={(e) => setEditData({...editData, phone: maskPhone(e.target.value)})}
                   placeholder="(00) 00000-0000"
@@ -494,30 +495,30 @@ const handleSave = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:col-span-2">
                 <div className="md:col-span-3">
-                  <Input 
-                    label="CEP" 
-                    value={editData.cep || ''} 
-                    onChange={handleCepLookup} 
+                  <Input
+                    label="CEP"
+                    value={editData.cep || ''}
+                    onChange={handleCepLookup}
                     placeholder="00000-000"
                     disabled={!isEditing}
                     icon={isLoadingCep ? <Loader2 size={16} className="animate-spin text-indigo-500" /> : <MapPin size={16} />}
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <Input 
-                    label="Número" 
-                    value={editData.addressNumber || ''} 
-                    onChange={v => setEditData({...editData, addressNumber: v})} 
+                  <Input
+                    label="Número"
+                    value={editData.addressNumber || ''}
+                    onChange={v => setEditData({...editData, addressNumber: v})}
                     placeholder="Ex: 123"
                     disabled={!isEditing}
                   />
                 </div>
                 <div className="md:col-span-7">
-                  <Input 
-                    label="Endereço Completo (Auto)" 
-                    value={editData.address || ''} 
-                    onChange={v => setEditData({...editData, address: v})} 
-                    placeholder="Rua, Bairro, Cidade..." 
+                  <Input
+                    label="Endereço Completo (Auto)"
+                    value={editData.address || ''}
+                    onChange={v => setEditData({...editData, address: v})}
+                    placeholder="Rua, Bairro, Cidade..."
                     disabled={!isEditing}
                   />
                 </div>
@@ -531,18 +532,18 @@ const handleSave = () => {
               <Activity size={16} /> EMERGÊNCIA
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Input 
-                label="Contato de Emergência" 
-                value={editData.emergencyContact || ''} 
-                onChange={v => setEditData({...editData, emergencyContact: v})} 
-                placeholder="Nome do contato" 
+              <Input
+                label="Contato de Emergência"
+                value={editData.emergencyContact || ''}
+                onChange={v => setEditData({...editData, emergencyContact: v})}
+                placeholder="Nome do contato"
                 disabled={!isEditing}
               />
-              <Input 
-                label="Telefone de Emergência" 
-                value={editData.emergencyPhone || ''} 
-                onChange={v => setEditData({...editData, emergencyPhone: maskPhone(v)})} 
-                placeholder="(00) 00000-0000" 
+              <Input
+                label="Telefone de Emergência"
+                value={editData.emergencyPhone || ''}
+                onChange={v => setEditData({...editData, emergencyPhone: maskPhone(v)})}
+                placeholder="(00) 00000-0000"
                 disabled={!isEditing}
               />
             </div>
@@ -557,66 +558,66 @@ const handleSave = () => {
             </div>
             <div className="bg-amber-50/30 dark:bg-amber-900/10 rounded-3xl p-8 border border-amber-100 dark:border-amber-900/30 grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-2">
-                <Input 
-                  label="Nome do Responsável *" 
-                  value={editData.guardianName || ''} 
-                  onChange={v => setEditData({...editData, guardianName: v})} 
-                  placeholder="Digite o nome do responsável" 
+                <Input
+                  label="Nome do Responsável *"
+                  value={editData.guardianName || ''}
+                  onChange={v => setEditData({...editData, guardianName: v})}
+                  placeholder="Digite o nome do responsável"
                   disabled={!isEditing}
                 />
               </div>
               <div>
-                <Input 
-                  label="Parentesco" 
-                  value={editData.guardianRelation || ''} 
-                  onChange={v => setEditData({...editData, guardianRelation: v})} 
-                  placeholder="Ex: Mãe" 
+                <Input
+                  label="Parentesco"
+                  value={editData.guardianRelation || ''}
+                  onChange={v => setEditData({...editData, guardianRelation: v})}
+                  placeholder="Ex: Mãe"
                   disabled={!isEditing}
                 />
               </div>
               <div>
-                <Input 
-                  label="CPF do Responsável *" 
-                  value={editData.guardianCpf || ''} 
-                  onChange={v => setEditData({...editData, guardianCpf: maskCPF(v)})} 
-                  placeholder="000.000.000-00" 
+                <Input
+                  label="CPF do Responsável *"
+                  value={editData.guardianCpf || ''}
+                  onChange={v => setEditData({...editData, guardianCpf: maskCPF(v)})}
+                  placeholder="000.000.000-00"
                   disabled={!isEditing}
                 />
               </div>
               <div>
-                <Input 
-                  label="WhatsApp do Responsável *" 
-                  value={editData.guardianPhone || ''} 
-                  onChange={v => setEditData({...editData, guardianPhone: maskPhone(v)})} 
-                  placeholder="(00) 00000-0000" 
+                <Input
+                  label="WhatsApp do Responsável *"
+                  value={editData.guardianPhone || ''}
+                  onChange={v => setEditData({...editData, guardianPhone: maskPhone(v)})}
+                  placeholder="(00) 00000-0000"
                   disabled={!isEditing}
                 />
               </div>
               <div>
-                <Input 
-                  label="RG do Responsável" 
-                  value={editData.guardianRg || ''} 
-                  onChange={v => setEditData({...editData, guardianRg: maskRG(v)})} 
-                  placeholder="00.000.000-0" 
+                <Input
+                  label="RG do Responsável"
+                  value={editData.guardianRg || ''}
+                  onChange={v => setEditData({...editData, guardianRg: maskRG(v)})}
+                  placeholder="00.000.000-0"
                   disabled={!isEditing}
                 />
               </div>
               <div className="md:col-span-2">
-                <Input 
-                  label="E-mail do Responsável" 
+                <Input
+                  label="E-mail do Responsável"
                   type="email"
-                  value={editData.guardianEmail || ''} 
-                  onChange={v => setEditData({...editData, guardianEmail: v})} 
-                  placeholder="email@exemplo.com" 
+                  value={editData.guardianEmail || ''}
+                  onChange={v => setEditData({...editData, guardianEmail: v})}
+                  placeholder="email@exemplo.com"
                   disabled={!isEditing}
                 />
               </div>
               <div>
-                <Input 
-                  label="Profissão do Responsável" 
-                  value={editData.guardianProfession || ''} 
-                  onChange={v => setEditData({...editData, guardianProfession: v})} 
-                  placeholder="Ex: Professora" 
+                <Input
+                  label="Profissão do Responsável"
+                  value={editData.guardianProfession || ''}
+                  onChange={v => setEditData({...editData, guardianProfession: v})}
+                  placeholder="Ex: Professora"
                   disabled={!isEditing}
                 />
               </div>
@@ -630,7 +631,7 @@ const handleSave = () => {
                 <FileText size={16} /> 4. DOCUMENTAÇÃO E ANEXOS
               </h3>
               {isEditing && (
-                <button 
+                <button
                   onClick={() => fileInputRef.current?.click()}
                   className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2"
                 >
@@ -656,7 +657,7 @@ const handleSave = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      <button 
+                      <button
                         onClick={() => downloadFile(doc)}
                         className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 rounded-lg transition-all"
                         title="Ver / Baixar"
@@ -664,7 +665,7 @@ const handleSave = () => {
                         <Download size={18} />
                       </button>
                       {isEditing && (
-                        <button 
+                        <button
                           onClick={() => deleteDocument(doc.id)}
                           className="p-2 text-slate-400 hover:text-red-500 hover:bg-white dark:hover:bg-slate-800 rounded-lg transition-all"
                         >
@@ -688,13 +689,13 @@ const handleSave = () => {
             <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2 mb-8">
               <Award size={16} /> GRADUAÇÃO & FAIXA ATUAL
             </h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
               <div className="space-y-6">
                 <div className="space-y-3">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Graus na Faixa</label>
                   <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${BELT_COLORS[editData.belt || Belt.WHITE]}`}>
-                    <button 
+                    <button
                       type="button"
                       disabled={!isEditing}
                       onClick={() => setEditData(prev => prev ? {...prev, stripes: Math.max(0, (prev.stripes || 0) - 1)} : null)}
@@ -704,13 +705,13 @@ const handleSave = () => {
                     </button>
                     <div className={`flex gap-1.5 p-1 rounded-md px-3 bg-opacity-90 ${editData.belt === Belt.BLACK ? 'bg-red-600' : 'bg-zinc-900 shadow-lg'}`}>
                       {[...Array(editData.belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
-                        <div 
-                          key={i} 
-                          className={`w-2.5 h-7 rounded-sm transition-all ${i < (editData.stripes || 0) ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-y-110' : 'bg-white/10'}`} 
+                        <div
+                          key={i}
+                          className={`w-2.5 h-7 rounded-sm transition-all ${i < (editData.stripes || 0) ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-y-110' : 'bg-white/10'}`}
                         />
                       ))}
                     </div>
-                    <button 
+                    <button
                       type="button"
                       disabled={!isEditing}
                       onClick={() => setEditData(prev => prev ? {...prev, stripes: Math.min(editData.belt === Belt.BLACK ? 6 : 4, (prev.stripes || 0) + 1)} : null)}
@@ -724,19 +725,19 @@ const handleSave = () => {
                   </p>
                 </div>
 
-                <Input 
-                  label="Data da última graduação" 
+                <Input
+                  label="Data da última graduação"
                   type="date"
-                  value={editData.lastGraduationDate || ''} 
-                  onChange={v => setEditData({...editData, lastGraduationDate: v})} 
+                  value={editData.lastGraduationDate || ''}
+                  onChange={v => setEditData({...editData, lastGraduationDate: v})}
                   disabled={!isEditing}
                 />
 
                 <div className="space-y-1">
-                  <Input 
-                    label="Total de aulas na ficha" 
-                    value={String(editData.totalClasses || 0)} 
-                    onChange={v => setEditData({...editData, totalClasses: parseInt(v) || 0})} 
+                  <Input
+                    label="Total de aulas na ficha"
+                    value={String(editData.totalClasses || 0)}
+                    onChange={v => setEditData({...editData, totalClasses: parseInt(v) || 0})}
                     disabled={!isEditing || user.role === 'student'}
                   />
                   <p className="text-[9px] font-medium text-slate-400 italic ml-1">
@@ -754,8 +755,8 @@ const handleSave = () => {
                       disabled={!isEditing}
                       onClick={() => setEditData({...editData, belt})}
                       className={`py-3 px-2 rounded-2xl border-2 text-[8px] font-black uppercase tracking-widest transition-all ${
-                        editData.belt === belt 
-                          ? `${BELT_COLORS[belt]} shadow-lg shadow-indigo-500/10 scale-105 ring-4 ring-indigo-500/10` 
+                        editData.belt === belt
+                          ? `${BELT_COLORS[belt]} shadow-lg shadow-indigo-500/10 scale-105 ring-4 ring-indigo-500/10`
                           : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-400 opacity-60 hover:opacity-100'
                       }`}
                     >
@@ -777,7 +778,7 @@ const handleSave = () => {
               <div className="space-y-6">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Status de Matrícula</label>
-                  <select 
+                  <select
                     disabled={!isEditing || user.role === 'student'}
                     value={editData.status || 'Active'}
                     onChange={(e) => setEditData({...editData, status: e.target.value as any})}
@@ -791,7 +792,7 @@ const handleSave = () => {
 
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Limite de faltas personalizado</label>
-                  <select 
+                  <select
                     disabled={!isEditing || user.role === 'student'}
                     value={editData.customAbsenceLimit || 'standard'}
                     onChange={(e) => setEditData({...editData, customAbsenceLimit: e.target.value as any})}
@@ -807,7 +808,7 @@ const handleSave = () => {
 
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Informações de saúde relevantes para o treino...</label>
-                <textarea 
+                <textarea
                   disabled={!isEditing}
                   rows={6}
                   value={editData.medicalNotes || ''}
@@ -824,7 +825,7 @@ const handleSave = () => {
         <div className="flex flex-col md:flex-row gap-4 pt-10 border-t border-slate-100 dark:border-slate-800 sticky bottom-0 bg-white dark:bg-slate-900 z-20 pb-2">
           {isEditing ? (
              <>
-               <button 
+               <button
                 onClick={() => {
                   setEditData(JSON.parse(JSON.stringify(profile)));
                   setIsEditing(false);
@@ -833,7 +834,7 @@ const handleSave = () => {
               >
                 Cancelar Edição
               </button>
-              <button 
+              <button
                 onClick={handleSave}
                 className="flex-[2] bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-3xl font-black uppercase text-xs tracking-widest shadow-xl shadow-indigo-600/20 active:scale-95 transition-all flex items-center justify-center gap-2"
               >
@@ -843,7 +844,7 @@ const handleSave = () => {
              </>
           ) : (
             <>
-              <button 
+              <button
                 onClick={() => {
                   if (confirm("Deseja realmente solicitar a exclusão de sua ficha? Esta ação não pode ser desfeita pelo usuário.")) {
                     alert("Para excluir sua conta definitivamente, entre em contato com a administração da academia.");
@@ -854,7 +855,7 @@ const handleSave = () => {
                 <Trash2 size={20} />
                 Excluir
               </button>
-              <button 
+              <button
                 onClick={() => setIsEditing(true)}
                 className="flex-[2] bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-3xl font-black uppercase text-xs tracking-widest shadow-xl shadow-indigo-600/20 active:scale-95 transition-all"
               >
@@ -867,11 +868,11 @@ const handleSave = () => {
 
       {/* Modal Carteirinha Digital Premium (QR Code Expandido) */}
       {isQRModalOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] flex items-center justify-center p-4 cursor-pointer"
           onClick={() => setIsQRModalOpen(false)}
         >
-          <div 
+          <div
             className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl overflow-y-auto max-h-[90vh] relative cursor-default custom-scrollbar"
             onClick={(e) => e.stopPropagation()}
           >
@@ -879,7 +880,7 @@ const handleSave = () => {
             <div className={`absolute top-0 left-0 w-full h-32 -z-10 ${getBeltHeaderColor(profile.belt)}`}>
                <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:10px_10px]"></div>
             </div>
-            
+
             <div className="flex flex-col items-center text-center">
               <div className="flex items-center justify-between w-full mb-8 text-white">
                 <div className="flex items-center gap-2">
@@ -888,8 +889,8 @@ const handleSave = () => {
                    </div>
                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Membro Ativo</span>
                 </div>
-                <button 
-                  onClick={() => setIsQRModalOpen(false)} 
+                <button
+                  onClick={() => setIsQRModalOpen(false)}
                   className="bg-white/10 p-2 rounded-full hover:bg-white/20 transition-colors"
                 >
                   <X size={20} />
@@ -910,9 +911,9 @@ const handleSave = () => {
                     {profile.belt} • {profile.stripes} Graus
                  </div>
               </div>
-              
+
               <div className="my-8 p-4 bg-white rounded-3xl shadow-inner flex items-center justify-center overflow-hidden">
-                <QRCodeSVG 
+                <QRCodeSVG
                   value={profile.id}
                   size={200}
                   level="M"
@@ -926,14 +927,14 @@ const handleSave = () => {
               </p>
 
               <div className="grid grid-cols-2 gap-4 w-full">
-                <button 
+                <button
                   onClick={() => window.print()}
                   className="flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase py-5 rounded-3xl transition-all"
                 >
                   <Printer size={18} />
                   Imprimir
                 </button>
-                <button 
+                <button
                   className="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase py-5 rounded-3xl transition-all shadow-xl shadow-indigo-600/20"
                 >
                   <Share2 size={18} />
@@ -948,19 +949,19 @@ const handleSave = () => {
   );
 };
 
-const Input: React.FC<{ label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; icon?: React.ReactNode; disabled?: boolean }> = ({ 
-  label, value, onChange, type = 'text', placeholder, icon, disabled 
+const Input: React.FC<{ label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; icon?: React.ReactNode; disabled?: boolean }> = ({
+  label, value, onChange, type = 'text', placeholder, icon, disabled
 }) => (
   <div className="space-y-1">
     <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider ml-1 truncate">{label}</label>
     <div className="relative">
       {icon && <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">{icon}</div>}
-      <input 
+      <input
         disabled={disabled}
-        type={type} 
-        value={value} 
-        onChange={e => onChange(e.target.value)} 
-        placeholder={placeholder} 
+        type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
         className={`w-full ${icon ? 'pl-11' : 'px-4'} py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-slate-800 dark:text-white transition-all font-bold text-sm disabled:opacity-60`}
       />
     </div>
@@ -979,4 +980,3 @@ const getBeltHeaderColor = (belt: Belt) => {
 };
 
 export default StudentProfileView;
-

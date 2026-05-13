@@ -1,18 +1,18 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Instructor, Belt, StudentDocument, Academy, User, GraduationHistoryItem } from '../types';
-import { StorageService } from '../services/storage';
+import { instructorService } from '@/features/instructors/services/instructorService';
 import { useTranslation } from '../services/LanguageContext';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
-import { 
-  UserPlus, 
-  Search, 
-  MoreVertical, 
-  X, 
-  Trash2, 
-  Save, 
-  GraduationCap, 
-  Minus, 
+import {
+  UserPlus,
+  Search,
+  MoreVertical,
+  X,
+  Trash2,
+  Save,
+  GraduationCap,
+  Minus,
   Plus,
   ArrowRight,
   Phone,
@@ -67,6 +67,7 @@ const compressImage = (base64Str: string, maxWidth = 400, maxHeight = 400): Prom
 const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
   const { t, showNotification } = useTranslation();
   const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -83,15 +84,22 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
   };
 
   useEffect(() => {
-    if (academy) {
-      setInstructors(StorageService.getInstructors(academy.id));
+    if (academy?.id) {
+      setIsLoading(true);
+      instructorService.getAll(academy.id, { limit: 1000 })
+        .then(res => setInstructors(res.data))
+        .catch(err => {
+          console.error('Erro ao carregar instrutores:', err);
+          showNotification('Erro ao carregar instrutores.', 'error');
+        })
+        .finally(() => setIsLoading(false));
     }
-  }, [academy]);
+  }, [academy?.id]);
 
   const handleOpenNewInstructor = () => {
     const newInstructor: Instructor = {
-      id: 'inst_' + Math.random().toString(36).substr(2, 9),
-      academyId: academy.id, // Garantindo vínculo com a academia atual
+      id: '',
+      academyId: academy.id,
       name: '',
       belt: Belt.BLACK,
       stripes: 0,
@@ -131,72 +139,48 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
     }
   };
 
-  const handleSaveInstructor = () => {
+  const handleSaveInstructor = async () => {
     if (!editingInstructor || !editingInstructor.name || !editingInstructor.birthDate) {
       alert(t.nameBirthRequired);
       return;
     }
 
     try {
-      const currentInstructors = StorageService.getInstructors();
-      const exists = currentInstructors.find(i => i.id === editingInstructor.id);
-      
-      let updated;
-      if (exists) {
-        updated = currentInstructors.map(i => i.id === editingInstructor.id ? editingInstructor : i);
+      const isNew = !editingInstructor.id;
+
+      if (isNew) {
+        const created = await instructorService.create(academy.id, editingInstructor as any);
+        setInstructors(prev => [...prev, created]);
+        showNotification(t.instructorAdded);
       } else {
-        updated = [...currentInstructors, editingInstructor];
-      }
-
-      StorageService.saveInstructors(updated, academy.id);
-      setInstructors(updated);
-
-      // Criar ou atualizar usuário de acesso
-      if (editingInstructor.email) {
-        const currentUsers = StorageService.getUsers(academy.id);
-        const existingUser = currentUsers.find(u => u.email.toLowerCase() === editingInstructor.email?.toLowerCase());
-
-        if (!existingUser) {
-          const newUser: User = {
-            id: 'u_' + Math.random().toString(36).substr(2, 9),
-            academyId: academy.id,
-            role: 'instructor',
-            name: editingInstructor.name,
-            email: editingInstructor.email.toLowerCase(),
-            status: 'Active',
-            password: '' // Será definida via "Esqueci a senha"
-          };
-          StorageService.saveUsers([...currentUsers, newUser], academy.id);
-        } else if (existingUser.name !== editingInstructor.name) {
-          const updatedUsers = currentUsers.map(u => 
-            u.email.toLowerCase() === editingInstructor.email?.toLowerCase() 
-              ? { ...u, name: editingInstructor.name } 
-              : u
-          );
-          StorageService.saveUsers(updatedUsers, academy.id);
-        }
+        const updated = await instructorService.update(editingInstructor.id, editingInstructor as any);
+        setInstructors(prev => prev.map(i => i.id === updated.id ? updated : i));
+        showNotification(t.profileUpdated);
       }
 
       setIsEditModalOpen(false);
       setEditingInstructor(null);
-      showNotification(exists ? t.profileUpdated : t.instructorAdded);
     } catch (e) {
+      console.error(e);
       showNotification(t.savingError, 'error');
     }
   };
 
-  const handleDeleteInstructor = () => {
-    if (!editingInstructor) return;
-    
-    const id = editingInstructor.id;
-    const updated = instructors.filter(i => i.id !== id);
-    StorageService.saveInstructors(updated, academy.id);
-    setInstructors(updated);
-    
+  const handleDeleteInstructor = async () => {
+    if (!editingInstructor?.id) return;
+
+    try {
+      await instructorService.delete(editingInstructor.id);
+      setInstructors(prev => prev.filter(i => i.id !== editingInstructor.id));
+      showNotification(t.instructorDeleted, 'delete');
+    } catch (e) {
+      console.error(e);
+      showNotification('Erro ao excluir instrutor.', 'error');
+    }
+
     setIsDeleteModalOpen(false);
     setIsEditModalOpen(false);
     setEditingInstructor(null);
-    showNotification(t.instructorDeleted, 'delete');
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -267,7 +251,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
           <h1 className="text-2xl font-bold text-slate-800">{t.instructors}</h1>
           <p className="text-slate-500">{t.instructorSubtitle}</p>
         </div>
-        <button 
+        <button
           onClick={handleOpenNewInstructor}
           className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg transition-all"
         >
@@ -279,8 +263,8 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
       <div className="space-y-4">
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-          <input 
-            type="text" 
+          <input
+            type="text"
             placeholder={t.searchByName}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -291,7 +275,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
         <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm w-fit">
           <Filter size={14} className="text-slate-400" />
           <span className="text-xs font-bold text-slate-400 uppercase">Status:</span>
-          <select 
+          <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="text-xs font-bold text-slate-700 outline-none bg-transparent"
@@ -307,47 +291,53 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
         {/* Mobile Card View */}
         <div className="md:hidden divide-y divide-slate-100">
-          {filtered.map(instructor => (
-            <div key={instructor.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="relative shrink-0">
-                  {instructor.photo ? (
-                    <img src={instructor.photo} className="w-12 h-12 rounded-xl object-cover border-2 border-white shadow-sm" />
-                  ) : (
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-xl ${BELT_COLORS[instructor.belt].split(' ')[0]}`}>{instructor.name.charAt(0)}</div>
-                  )}
-                </div>
-                <div>
-                  <div className="font-bold text-slate-800 text-sm">{instructor.name || t.noName}</div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <BeltBadge belt={instructor.belt} stripes={instructor.stripes} />
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-black uppercase ${instructor.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}`}>
-                      {instructor.status === 'Active' ? t.activeTitle : t.inactiveTitle}
-                    </span>
+          {isLoading ? (
+            <div className="p-8 text-center">
+              <Loader2 size={24} className="animate-spin text-indigo-500 mx-auto mb-2" />
+              <p className="text-slate-400 text-sm">Carregando instrutores...</p>
+            </div>
+          ) : filtered.length > 0 ? (
+            filtered.map(instructor => (
+              <div key={instructor.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="relative shrink-0">
+                    {instructor.photo ? (
+                      <img src={instructor.photo} className="w-12 h-12 rounded-xl object-cover border-2 border-white shadow-sm" />
+                    ) : (
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-xl ${BELT_COLORS[instructor.belt].split(' ')[0]}`}>{instructor.name.charAt(0)}</div>
+                    )}
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-800 text-sm">{instructor.name || t.noName}</div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <BeltBadge belt={instructor.belt} stripes={instructor.stripes} />
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-black uppercase ${instructor.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}`}>
+                        {instructor.status === 'Active' ? t.activeTitle : t.inactiveTitle}
+                      </span>
+                    </div>
                   </div>
                 </div>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={instructor.phone ? `https://wa.me/55${instructor.phone.replace(/\D/g, '')}` : '#'}
+                    target={instructor.phone ? "_blank" : "_self"}
+                    rel="noopener noreferrer"
+                    onClick={(e) => !instructor.phone && e.preventDefault()}
+                    className={`p-2 rounded-xl transition-all ${
+                      instructor.phone
+                        ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                        : 'bg-slate-100 text-slate-300 cursor-not-allowed'
+                    }`}
+                  >
+                    <MessageCircle size={18} />
+                  </a>
+                  <button onClick={() => { setEditingInstructor({...instructor}); setIsEditModalOpen(true); }} className="text-slate-400 p-2 hover:bg-slate-100 rounded-lg">
+                    <MoreVertical size={20} />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <a 
-                  href={instructor.phone ? `https://wa.me/55${instructor.phone.replace(/\D/g, '')}` : '#'} 
-                  target={instructor.phone ? "_blank" : "_self"}
-                  rel="noopener noreferrer"
-                  onClick={(e) => !instructor.phone && e.preventDefault()}
-                  className={`p-2 rounded-xl transition-all ${
-                    instructor.phone 
-                      ? 'bg-emerald-500 text-white hover:bg-emerald-600' 
-                      : 'bg-slate-100 text-slate-300 cursor-not-allowed'
-                  }`}
-                >
-                  <MessageCircle size={18} />
-                </a>
-                <button onClick={() => { setEditingInstructor({...instructor}); setIsEditModalOpen(true); }} className="text-slate-400 p-2 hover:bg-slate-100 rounded-lg">
-                  <MoreVertical size={20} />
-                </button>
-              </div>
-            </div>
-          ))}
-          {filtered.length === 0 && (
+            ))
+          ) : (
             <div className="p-8 text-center text-slate-400 text-sm italic">{t.noInstructorsFound}</div>
           )}
         </div>
@@ -364,55 +354,63 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map(instructor => (
-                <tr key={instructor.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-4">
-                      <div className="relative shrink-0 z-0 hover:z-50">
-                        {instructor.photo ? (
-                          <img src={instructor.photo} className="w-12 h-12 rounded-xl object-cover border-2 border-white shadow-sm transition-all duration-300 transform hover:scale-[2.5] hover:shadow-2xl hover:rounded-lg cursor-zoom-in" />
-                        ) : (
-                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-xl transition-all duration-300 transform hover:scale-[2.5] hover:shadow-2xl hover:rounded-lg ${BELT_COLORS[instructor.belt].split(' ')[0]}`}>{instructor.name.charAt(0)}</div>
-                        )}
-                      </div>
-                      <div>
-                        <div className="font-bold text-slate-800">{instructor.name || t.noName}</div>
-                        <BeltBadge belt={instructor.belt} stripes={instructor.stripes} />
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm font-medium text-slate-600">{instructor.specialties || t.general}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`text-[10px] px-2 py-1 rounded-full font-black uppercase ${instructor.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}`}>
-                      {instructor.status === 'Active' ? t.activeTitle : t.inactiveTitle}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <a 
-                        href={instructor.phone ? `https://wa.me/55${instructor.phone.replace(/\D/g, '')}` : '#'} 
-                        target={instructor.phone ? "_blank" : "_self"}
-                        rel="noopener noreferrer"
-                        onClick={(e) => !instructor.phone && e.preventDefault()}
-                        className={`p-2 rounded-xl transition-all shadow-sm ${
-                          instructor.phone 
-                            ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-200 hover:scale-105 active:scale-95' 
-                            : 'bg-slate-100 text-slate-300 cursor-not-allowed opacity-50'
-                        }`}
-                        title={instructor.phone ? `Chamar no WhatsApp (${instructor.phone})` : "Telefone não cadastrado"}
-                      >
-                        <MessageCircle size={18} fill={instructor.phone ? "currentColor" : "none"} />
-                      </a>
-                      <button onClick={() => { setEditingInstructor({...instructor}); setIsEditModalOpen(true); }} className="text-slate-400 hover:text-indigo-600 p-2 hover:bg-indigo-50 rounded-lg transition-all" title="Editar Ficha">
-                        <MoreVertical size={20} />
-                      </button>
-                    </div>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-10 text-center">
+                    <Loader2 size={24} className="animate-spin text-indigo-500 mx-auto mb-2" />
+                    <p className="text-slate-400 text-sm">Carregando instrutores...</p>
                   </td>
                 </tr>
-              ))}
-              {filtered.length === 0 && (
+              ) : filtered.length > 0 ? (
+                filtered.map(instructor => (
+                  <tr key={instructor.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-4">
+                        <div className="relative shrink-0 z-0 hover:z-50">
+                          {instructor.photo ? (
+                            <img src={instructor.photo} className="w-12 h-12 rounded-xl object-cover border-2 border-white shadow-sm transition-all duration-300 transform hover:scale-[2.5] hover:shadow-2xl hover:rounded-lg cursor-zoom-in" />
+                          ) : (
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-xl transition-all duration-300 transform hover:scale-[2.5] hover:shadow-2xl hover:rounded-lg ${BELT_COLORS[instructor.belt].split(' ')[0]}`}>{instructor.name.charAt(0)}</div>
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-bold text-slate-800">{instructor.name || t.noName}</div>
+                          <BeltBadge belt={instructor.belt} stripes={instructor.stripes} />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-medium text-slate-600">{instructor.specialties || t.general}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`text-[10px] px-2 py-1 rounded-full font-black uppercase ${instructor.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}`}>
+                        {instructor.status === 'Active' ? t.activeTitle : t.inactiveTitle}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <a
+                          href={instructor.phone ? `https://wa.me/55${instructor.phone.replace(/\D/g, '')}` : '#'}
+                          target={instructor.phone ? "_blank" : "_self"}
+                          rel="noopener noreferrer"
+                          onClick={(e) => !instructor.phone && e.preventDefault()}
+                          className={`p-2 rounded-xl transition-all shadow-sm ${
+                            instructor.phone
+                              ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-200 hover:scale-105 active:scale-95'
+                              : 'bg-slate-100 text-slate-300 cursor-not-allowed opacity-50'
+                          }`}
+                          title={instructor.phone ? `Chamar no WhatsApp (${instructor.phone})` : "Telefone não cadastrado"}
+                        >
+                          <MessageCircle size={18} fill={instructor.phone ? "currentColor" : "none"} />
+                        </a>
+                        <button onClick={() => { setEditingInstructor({...instructor}); setIsEditModalOpen(true); }} className="text-slate-400 hover:text-indigo-600 p-2 hover:bg-indigo-50 rounded-lg transition-all" title="Editar Ficha">
+                          <MoreVertical size={20} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center text-slate-400">{t.noInstructorsFound}</td>
                 </tr>
@@ -449,7 +447,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   <div className="flex flex-col items-center gap-3 shrink-0">
-                    <div 
+                    <div
                       className="w-32 h-32 rounded-3xl bg-slate-100 border border-slate-200 overflow-hidden relative group cursor-pointer shadow-sm"
                       onClick={() => editPhotoInputRef.current?.click()}
                     >
@@ -468,7 +466,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                     </div>
                     <input type="file" ref={editPhotoInputRef} accept="image/*" className="hidden" onChange={handlePhotoCapture} />
                   </div>
-                  
+
                   <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2">
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">{t.fullName} <span className="text-red-500">*</span></label>
@@ -494,12 +492,12 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                           {showSensitive['cpf'] ? <EyeOff size={12} /> : <Eye size={12} />}
                         </button>
                       </label>
-                      <input 
-                        type={showSensitive['cpf'] ? "text" : "password"} 
-                        value={editingInstructor.cpf || ''} 
-                        onChange={(e) => setEditingInstructor({...editingInstructor, cpf: maskCPF(e.target.value)})} 
-                        placeholder="000.000.000-00" 
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-medium" 
+                      <input
+                        type={showSensitive['cpf'] ? "text" : "password"}
+                        value={editingInstructor.cpf || ''}
+                        onChange={(e) => setEditingInstructor({...editingInstructor, cpf: maskCPF(e.target.value)})}
+                        placeholder="000.000.000-00"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-medium"
                       />
                     </div>
                     <div>
@@ -509,12 +507,12 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                           {showSensitive['rg'] ? <EyeOff size={12} /> : <Eye size={12} />}
                         </button>
                       </label>
-                      <input 
-                        type={showSensitive['rg'] ? "text" : "password"} 
-                        value={editingInstructor.rg || ''} 
-                        onChange={(e) => setEditingInstructor({...editingInstructor, rg: maskRG(e.target.value)})} 
-                        placeholder="00.000.000-0" 
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-medium" 
+                      <input
+                        type={showSensitive['rg'] ? "text" : "password"}
+                        value={editingInstructor.rg || ''}
+                        onChange={(e) => setEditingInstructor({...editingInstructor, rg: maskRG(e.target.value)})}
+                        placeholder="00.000.000-0"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-medium"
                       />
                     </div>
                     <div>
@@ -566,12 +564,12 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                     </label>
                     <div className="relative">
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
-                      <input 
-                        type="text" 
-                        value={editingInstructor.cep || ''} 
-                        onChange={handleCepChange} 
-                        placeholder="00000-000" 
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-3 outline-none font-medium" 
+                      <input
+                        type="text"
+                        value={editingInstructor.cep || ''}
+                        onChange={handleCepChange}
+                        placeholder="00000-000"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-3 outline-none font-medium"
                       />
                     </div>
                   </div>
@@ -598,9 +596,9 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                         <button type="button" onClick={() => setEditingInstructor({...editingInstructor, stripes: Math.max(0, (editingInstructor.stripes || 0) - 1)})} className="text-white/50 hover:scale-125 transition-all outline-none md:p-2"><Minus size={20} /></button>
                         <div className={`flex gap-1.5 p-1 rounded-md px-3 bg-opacity-90 ${editingInstructor.belt === Belt.BLACK ? 'bg-red-600' : 'bg-zinc-900 shadow-lg'}`}>
                           {[...Array(editingInstructor.belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
-                            <div 
-                              key={i} 
-                              className={`w-2.5 h-7 rounded-sm transition-all ${i < (editingInstructor.stripes || 0) ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-y-110' : 'bg-white/10'}`} 
+                            <div
+                              key={i}
+                              className={`w-2.5 h-7 rounded-sm transition-all ${i < (editingInstructor.stripes || 0) ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-y-110' : 'bg-white/10'}`}
                             />
                           ))}
                         </div>
@@ -629,8 +627,8 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                           key={belt}
                           onClick={() => setEditingInstructor({...editingInstructor, belt})}
                           className={`px-2 py-2 rounded-lg border text-[9px] font-black transition-all ${
-                            editingInstructor.belt === belt 
-                              ? `${BELT_COLORS[belt]} shadow-md transform scale-105 ring-2 ring-offset-1 ring-slate-100` 
+                            editingInstructor.belt === belt
+                              ? `${BELT_COLORS[belt]} shadow-md transform scale-105 ring-2 ring-offset-1 ring-slate-100`
                               : 'bg-white text-slate-400 border-slate-200 hover:border-slate-400'
                           }`}
                         >
@@ -645,7 +643,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                 <div className="mt-6 bg-slate-50/50 rounded-2xl p-4 border border-slate-100">
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{t.graduationHistory}</h4>
-                    <button 
+                    <button
                       onClick={() => {
                         const newItem: GraduationHistoryItem = {
                           id: 'hist_' + Math.random().toString(36).substr(2, 9),
@@ -678,7 +676,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                                <div className="text-[9px] font-black uppercase text-indigo-600">{item.newBelt}</div>
                              </div>
                            </div>
-                           <button 
+                           <button
                              onClick={() => {
                                const updatedHistory = (editingInstructor.graduationHistory || []).filter(h => h.id !== item.id);
                                setEditingInstructor({...editingInstructor, graduationHistory: updatedHistory});
@@ -744,13 +742,13 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
 
               {/* Botões de Ação */}
               <div className="flex gap-3 pt-6 pb-12 md:pb-2 border-t border-slate-100 sticky -bottom-1 bg-white z-10 mt-auto">
-                <button 
+                <button
                   onClick={() => setIsDeleteModalOpen(true)}
                   className="flex-1 bg-white hover:bg-red-50 text-red-500 font-bold py-4 rounded-2xl transition-all border border-slate-200 shadow-sm"
                 >
                   <Trash2 size={20} className="inline mr-2" /> {t.delete}
                 </button>
-                <button 
+                <button
                   onClick={handleSaveInstructor}
                   className="flex-[2] bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl shadow-xl transition-all"
                 >
@@ -774,13 +772,13 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
               {t.deleteInstructorText.replace('{name}', editingInstructor.name)}
             </p>
             <div className="flex flex-col gap-3">
-              <button 
+              <button
                 onClick={handleDeleteInstructor}
                 className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-5 rounded-3xl shadow-xl shadow-red-600/20 transition-all active:scale-95"
               >
                 {t.confirmDeleteInstructor}
               </button>
-              <button 
+              <button
                 onClick={() => setIsDeleteModalOpen(false)}
                 className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-5 rounded-3xl transition-all active:scale-95"
               >

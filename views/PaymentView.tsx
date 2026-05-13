@@ -1,12 +1,13 @@
 
 import React, { useMemo } from 'react';
 import { Academy, Student, User, FinanceTransaction } from '../types';
-import { StorageService } from '../services/storage';
-import { 
-  CreditCard, 
-  QrCode, 
-  Copy, 
-  CheckCircle2, 
+import { studentService } from '@/features/students/services/studentService';
+import { financeService } from '@/features/finances/services/financeService';
+import {
+  CreditCard,
+  QrCode,
+  Copy,
+  CheckCircle2,
   AlertCircle,
   Clock,
   DollarSign,
@@ -25,16 +26,23 @@ const PaymentView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
 
   React.useEffect(() => {
     if (academy && user) {
-      const students = StorageService.getStudents(academy.id);
-      const profile = students.find(s => s.email?.toLowerCase() === user.email?.toLowerCase());
-      
-      if (profile) {
-        setStudent(profile);
-        const allFinances = StorageService.getFinances(academy.id);
-        const studentFinances = allFinances.filter(f => f.studentId === profile.id);
-        setTransactions(studentFinances);
-      }
-      setIsLoading(false);
+      studentService.getAll(academy.id).then((res) => {
+        const students = Array.isArray(res.data) ? res.data : [];
+        const profile = students.find(s => s.email?.toLowerCase() === user.email?.toLowerCase());
+
+        if (profile) {
+          setStudent(profile);
+          return financeService.getAll(academy.id).then((finRes) => {
+            const allFinances = Array.isArray(finRes.data) ? finRes.data : [];
+            const studentFinances = allFinances.filter(f => f.studentId === profile.id);
+            setTransactions(studentFinances);
+          });
+        }
+      }).catch(() => {
+        // profile not found or error — leave student as null
+      }).finally(() => {
+        setIsLoading(false);
+      });
     }
   }, [academy, user]);
 
@@ -123,7 +131,7 @@ const PaymentView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
               </div>
 
               <div className="space-y-4">
-                <button 
+                <button
                   onClick={handleCopyPix}
                   className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-slate-700 dark:text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all text-sm uppercase tracking-widest"
                 >
@@ -150,7 +158,7 @@ const PaymentView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
               <DollarSign size={20} className="text-indigo-600" />
               Status da Mensalidade
             </h3>
-            
+
             <div className="flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-4">
                 <div className={`p-3 rounded-2xl ${student.status === 'Active' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
@@ -177,7 +185,7 @@ const PaymentView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
               <CreditCard size={20} className="text-indigo-600" />
               Dados Bancários
             </h3>
-            
+
             {academy.bankName ? (
               <div className="space-y-4">
                 <div className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">

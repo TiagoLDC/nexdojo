@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+﻿import { Router, Request, Response, NextFunction } from 'express';
 import pool from '../db';
 import { requireAuth } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
@@ -8,7 +8,7 @@ import { validate } from '../utils/validate';
 const router = Router();
 
 // GET /api/chat
-router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> => {
+router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -27,12 +27,12 @@ router.get('/', requireAuth, async (req: Request, res: Response): Promise<void> 
     );
     res.json({ data: (rows as any[]).reverse(), total: (rows as any[]).length });
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 
 // POST /api/chat
-router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor', 'staff'), async (req: Request, res: Response): Promise<void> => {
+router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor', 'staff'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -56,7 +56,7 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor', 's
     const [rows] = await pool.execute<any[]>('SELECT * FROM chat_messages WHERE id = ?', [id]);
     res.status(201).json(rows[0]);
   } catch (err) {
-    throw err;
+    next(err);
   }
 });
 
