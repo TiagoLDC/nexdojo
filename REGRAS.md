@@ -128,7 +128,7 @@ client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 client.connect('162.240.167.149', port=22022, username='qasnexdojo', password='@Tmd4738@', timeout=30)
 
 stdin, stdout, stderr = client.exec_command(
-    'cd /home/qasnexdojo/nexdojo && git fetch origin && git reset --hard origin/main && sed -i "s/DB_HOST=162.240.167.149/DB_HOST=127.0.0.1/" api/.env && docker compose down && docker compose up -d --build 2>&1',
+    'cd /home/qasnexdojo/nexdojo && git fetch origin && git reset --hard origin/main && sed -i "s/DB_HOST=.*/DB_HOST=host.docker.internal/" api/.env && docker compose down && docker compose up -d --build 2>&1',
     timeout=300
 )
 

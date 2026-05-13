@@ -378,11 +378,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           <aside className="login-hero">
             <div className="login-hero-top">
               <div className="login-mark">
-                {linkedAcademy?.logo ? (
-                  <img src={linkedAcademy.logo} alt={linkedAcademy.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '6px', borderRadius: '16px' }} />
-                ) : (
-                  <Trophy size={26} color="#fff" strokeWidth={2.5} />
-                )}
+                <Trophy size={26} color="#fff" strokeWidth={2.5} />
               </div>
               <span className="login-wordmark">NEXDOJO</span>
             </div>

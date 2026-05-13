@@ -1,6 +1,18 @@
 services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./api/.env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
   frontend:
     build: .
     restart: unless-stopped
     ports:
       - "3003:80"
+    depends_on:
+      - api
