@@ -44,6 +44,16 @@
     caret-color: #e2e8f0;
   }
 
+  /* Autofill override for login form (dark page without .dark class) */
+  .login-input:-webkit-autofill,
+  .login-input:-webkit-autofill:hover,
+  .login-input:-webkit-autofill:focus,
+  .login-input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0px 1000px #12172b inset !important;
+    -webkit-text-fill-color: oklch(0.98 0.005 260) !important;
+    caret-color: oklch(0.98 0.005 260);
+  }
+
   #root {
     height: 100%;
   }
