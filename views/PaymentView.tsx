@@ -114,8 +114,8 @@ const PaymentView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
           {academy.pixKey ? (
             <div className="flex-1 flex flex-col justify-center gap-8">
               <div className="bg-slate-50 dark:bg-slate-800/50 p-8 rounded-[32px] border border-dashed border-slate-200 dark:border-slate-700 text-center relative group">
-                <div className="w-48 h-48 bg-white p-4 rounded-3xl mx-auto mb-6 border border-slate-100 flex items-center justify-center shadow-inner">
-                  <QrCode size={140} className="text-slate-900" />
+                <div className="w-48 h-48 bg-white dark:bg-slate-800 p-4 rounded-3xl mx-auto mb-6 border border-slate-100 dark:border-slate-700/50 flex items-center justify-center shadow-inner">
+                  <QrCode size={140} className="text-slate-900 dark:text-white" />
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Chave PIX ({academy.pixType})</p>

@@ -1091,7 +1091,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                   setIsScannerOpen(false);
                   setIsKioskMode(false);
                 }}
-                className="w-full bg-white hover:bg-slate-100 text-slate-900 font-black py-4 md:py-5 rounded-3xl transition-all flex items-center justify-center gap-2 active:scale-95 shadow-xl"
+                className="w-full bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800/50 text-slate-900 dark:text-white font-black py-4 md:py-5 rounded-3xl transition-all flex items-center justify-center gap-2 active:scale-95 shadow-xl"
               >
                 <ChevronLeft size={20} />
                 {t.backToDashboard}

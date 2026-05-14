@@ -143,6 +143,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
   const [showSensitive, setShowSensitive] = useState<{[key: string]: boolean}>({});
   const [birthDateInput, setBirthDateInput] = useState('');
   const [gradDateInput, setGradDateInput] = useState('');
+  const [newStudentPassword, setNewStudentPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (editingStudent?.birthDate) {
@@ -318,6 +320,16 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
       }
     }
 
+    const isNew = !editingStudent.id;
+    if (isNew && editingStudent.email && !newStudentPassword) {
+      showNotification(language === 'pt' ? "Senha é obrigatória quando o e-mail de login é informado." : "Password is required when login email is provided.", 'error');
+      return;
+    }
+    if (isNew && newStudentPassword && newStudentPassword.length < 6) {
+      showNotification(language === 'pt' ? "A senha deve ter no mínimo 6 caracteres." : "Password must be at least 6 characters.", 'error');
+      return;
+    }
+
     if (isMinor) {
       if (!editingStudent.guardianName || !editingStudent.guardianPhone || !editingStudent.guardianCpf) {
         showNotification(language === 'pt' ? "Para menores de idade, os dados do responsável são obrigatórios." : "For minors, guardian details are required.", 'error');
@@ -326,10 +338,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     }
 
     try {
-      const isNew = !editingStudent.id;
-
       if (isNew) {
-        const created = await studentService.create(academy.id, editingStudent as any);
+        const created = await studentService.create(academy.id, { ...editingStudent, password: newStudentPassword || undefined } as any);
         setStudents(prev => [...prev, created]);
         showNotification(language === 'pt' ? "Atleta cadastrado com sucesso!" : "Athlete registered successfully!");
       } else {
@@ -340,6 +350,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
       setIsEditModalOpen(false);
       setEditingStudent(null);
+      setNewStudentPassword('');
     } catch (e) {
       console.error(e);
       showNotification(language === 'pt' ? "Erro ao salvar atleta." : "Error saving athlete.", 'error');
@@ -357,6 +368,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
       setIsDeleteModalOpen(false);
       setIsEditModalOpen(false);
       setEditingStudent(null);
+      setNewStudentPassword('');
     } catch (error) {
       console.error("Erro ao excluir aluno:", error);
       showNotification("Erro ao processar exclusão.", 'error');
@@ -639,7 +651,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
         )}
       </div>
 
-      <div className="bg-transparent md:bg-white md:rounded-3xl md:border md:border-slate-100 md:shadow-sm overflow-hidden">
+      <div className="bg-transparent md:bg-white dark:md:bg-slate-800 md:rounded-3xl md:border md:border-slate-100 dark:md:border-slate-700/50 md:shadow-sm overflow-hidden">
         {/* Mobile Card View - REESTILIZADO PARA MODO MOBILE "APP-LIKE" */}
         <div className="md:hidden space-y-4 px-2 pb-24">
           {isLoading ? (
@@ -776,7 +788,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
         {/* Desktop Table View */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left min-w-[600px]">
-            <thead className="bg-slate-50 border-b border-slate-100">
+            <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700/50">
               <tr>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Aluno</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest hidden md:table-cell">Idade</th>
@@ -817,7 +829,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <div className="font-bold text-slate-800">{student.name}</div>
+                            <div className="font-bold text-slate-800 dark:text-slate-100">{student.name}</div>
                             {(() => {
                               const { readyForBelt, readyForStripe } = isReadyForGraduation(student);
                               const effectiveLimit = getEffectiveAbsenceLimit(student);
@@ -848,7 +860,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       <span className="text-sm font-bold text-slate-500">{age || '--'} anos</span>
                     </td>
                     <td className="px-6 py-4 hidden md:table-cell">
-                      <span className="text-sm font-bold text-slate-800">{student.totalClasses}</span>
+                      <span className="text-sm font-bold text-slate-800 dark:text-slate-100">{student.totalClasses}</span>
                     </td>
                     <td className="px-6 py-4 hidden md:table-cell">
                       <span className={`text-sm font-bold ${student.absentCount > 0 ? 'text-red-500' : 'text-slate-400'}`}>
@@ -874,7 +886,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                           className={`p-2 rounded-xl transition-all shadow-sm ${
                             contactPhone
                               ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-200 hover:scale-105 active:scale-95'
-                              : 'bg-slate-100 text-slate-300 cursor-not-allowed opacity-50'
+                              : 'bg-slate-100 dark:bg-slate-800/50 text-slate-300 cursor-not-allowed opacity-50'
                           }`}
                           title={contactPhone ? `Chamar no WhatsApp (${contactPhone})` : "Nenhum telefone cadastrado"}
                         >
@@ -918,7 +930,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
           onClick={() => setIsQRModalOpen(false)}
         >
           <div
-            className="bg-white w-full max-w-sm rounded-[40px] p-6 animate-in zoom-in duration-300 shadow-2xl overflow-hidden relative cursor-default"
+            className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[40px] p-6 animate-in zoom-in duration-300 shadow-2xl overflow-hidden relative cursor-default"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="absolute top-0 left-0 w-full h-24 bg-slate-900 -z-10"></div>
@@ -942,10 +954,10 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                 )}
               </div>
 
-              <h3 className="text-xl font-bold text-slate-800">{qrStudent.name}</h3>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{qrStudent.name}</h3>
               <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">{qrStudent.belt}</p>
 
-              <div className="my-4 p-2 bg-white rounded-3xl border-2 border-slate-100 flex items-center justify-center">
+              <div className="my-4 p-2 bg-white dark:bg-slate-800 rounded-3xl border-2 border-slate-100 dark:border-slate-700/50 flex items-center justify-center">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${qrStudent.id}`}
                   alt="QR Code do Aluno"
@@ -961,7 +973,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => window.print()}
-                    className="flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-2xl transition-all"
+                    className="flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800/50 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-bold py-3 rounded-2xl transition-all"
                   >
                     <Printer size={18} />
                     Imprimir
@@ -988,14 +1000,14 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
       {/* Modal de Ficha Completa */}
       {isEditModalOpen && editingStudent && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[150] flex items-end md:items-center justify-center p-0 md:p-4">
-          <div className="bg-white w-full max-w-4xl rounded-t-3xl md:rounded-3xl p-6 md:p-8 animate-in slide-in-from-bottom duration-300 max-h-[95vh] overflow-y-auto custom-scrollbar">
-            <div className="flex items-center justify-between mb-8 sticky top-0 bg-white py-2 z-10 border-b border-slate-50">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-4xl rounded-t-3xl md:rounded-3xl p-6 md:p-8 animate-in slide-in-from-bottom duration-300 max-h-[95vh] overflow-y-auto custom-scrollbar">
+            <div className="flex items-center justify-between mb-8 sticky top-0 bg-white dark:bg-slate-800 py-2 z-10 border-b border-slate-50">
               <div className="flex items-center gap-3">
                 <div className="bg-indigo-100 p-2 rounded-xl text-indigo-600">
                   {isNewStudent ? <UserPlus size={24} /> : <GraduationCap size={24} />}
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-slate-800">{isNewStudent ? 'Novo Aluno' : 'Ficha do Aluno'}</h2>
+                  <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">{isNewStudent ? 'Novo Aluno' : 'Ficha do Aluno'}</h2>
                   <p className="text-xs text-slate-400 font-medium">
                     {isNewStudent ? 'Preencha os dados obrigatórios (*)' : `Cadastrado em ${new Date(editingStudent.joinDate).toLocaleDateString()}`}
                   </p>
@@ -1020,7 +1032,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     </button>
                   </>
                 )}
-                <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 p-2 hover:bg-slate-100 rounded-full">
+                <button onClick={() => { setIsEditModalOpen(false); setNewStudentPassword(''); }} className="text-slate-400 p-2 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-full">
                   <X size={24} />
                 </button>
               </div>
@@ -1034,12 +1046,12 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                 <div className="flex flex-col md:flex-row gap-8 items-start">
                     <div className="flex flex-col items-center gap-3 shrink-0">
                       <div
-                        className="w-32 h-32 rounded-3xl bg-slate-100 border border-slate-200 overflow-hidden relative group shadow-sm"
+                        className="w-32 h-32 rounded-3xl bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 overflow-hidden relative group shadow-sm"
                       >
                         {editingStudent.photo ? (
                           <img src={editingStudent.photo} alt={editingStudent.name} className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-50">
+                          <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-50 dark:bg-slate-900/50">
                             <UserIcon size={40} />
                             <span className="text-[10px] font-black uppercase tracking-widest mt-2">Sem Foto</span>
                           </div>
@@ -1083,25 +1095,42 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         type="text"
                         value={editingStudent.name}
                         onChange={(e) => setEditingStudent({...editingStudent, name: e.target.value})}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                        className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                       />
                     </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">{t.studentLoginEmail} <span className="text-red-500">*</span></label>
+                    <div className={isNewStudent && editingStudent.email ? "md:col-span-1" : "md:col-span-2"}>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">{t.studentLoginEmail} {isNewStudent && <span className="text-red-500">*</span>}</label>
                       <input
                         type="email"
                         value={editingStudent.email || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, email: e.target.value.toLowerCase()})}
                         placeholder="aluno@email.com"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-indigo-600"
+                        className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-indigo-600"
                       />
                     </div>
+                    {isNewStudent && editingStudent.email && (
+                      <div className="md:col-span-1">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1 flex items-center justify-between">
+                          <span>Senha de Acesso <span className="text-red-500">*</span></span>
+                          <button type="button" onClick={() => setShowPassword(p => !p)} className="text-slate-400">
+                            {showPassword ? <EyeOff size={12} /> : <Eye size={12} />}
+                          </button>
+                        </label>
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          value={newStudentPassword}
+                          onChange={(e) => setNewStudentPassword(e.target.value)}
+                          placeholder="Mín. 6 caracteres"
+                          className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                        />
+                      </div>
+                    )}
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Sexo <span className="text-red-500">*</span></label>
                       <select
                         value={editingStudent.gender || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, gender: e.target.value as any})}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-700"
+                        className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-700 dark:text-slate-200"
                       >
                         <option value="">Selecionar</option>
                         <option value="M">Masculino</option>
@@ -1117,7 +1146,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         placeholder="DD/MM/AAAA"
                         value={birthDateInput}
                         onChange={(e) => handleBirthDateChange(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-800 text-lg appearance-none"
+                        className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-800 dark:text-slate-100 text-lg appearance-none"
                       />
                       <p className="text-[9px] text-slate-400 mt-1 ml-1 font-medium italic">Digite a data manualmente no formato DD/MM/AAAA.</p>
                     </div>
@@ -1133,7 +1162,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         placeholder="000.000.000-00"
                         value={editingStudent.cpf || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, cpf: maskCPF(e.target.value)})}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                        className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-800 dark:text-slate-100"
                       />
                     </div>
                     <div>
@@ -1148,7 +1177,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         placeholder="00.000.000-0"
                         value={editingStudent.rg || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, rg: maskRG(e.target.value)})}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                        className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-800 dark:text-slate-100"
                       />
                     </div>
                     <div>
@@ -1158,7 +1187,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         placeholder="Ex: 80"
                         value={editingStudent.weight || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, weight: e.target.value})}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                        className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                       />
                     </div>
                     <div>
@@ -1168,7 +1197,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         placeholder="Ex: 180"
                         value={editingStudent.height || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, height: e.target.value})}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                        className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                       />
                     </div>
                     <div>
@@ -1178,7 +1207,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         placeholder="Ex: O+"
                         value={editingStudent.bloodType || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, bloodType: e.target.value})}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                        className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                       />
                     </div>
                   </div>
@@ -1196,7 +1225,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       type="tel"
                       value={editingStudent.phone || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, phone: maskPhone(e.target.value)})}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                      className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                     />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:col-span-2">
@@ -1210,7 +1239,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         value={editingStudent.cep || ''}
                         onChange={handleCepChange}
                         placeholder="00000-000"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                        className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                       />
                     </div>
                     <div className="md:col-span-2">
@@ -1220,7 +1249,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         value={editingStudent.addressNumber || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, addressNumber: e.target.value})}
                         placeholder="Nº"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                        className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                       />
                     </div>
                     <div className="md:col-span-6">
@@ -1230,7 +1259,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         value={editingStudent.address || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, address: e.target.value})}
                         placeholder="Rua, Bairro, Cidade - UF"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                        className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                       />
                     </div>
                   </div>
@@ -1249,7 +1278,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       value={editingStudent.emergencyContact || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, emergencyContact: e.target.value})}
                       placeholder="Nome do contato"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                      className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                     />
                   </div>
                   <div>
@@ -1259,13 +1288,13 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       value={editingStudent.emergencyPhone || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, emergencyPhone: maskPhone(e.target.value)})}
                       placeholder="(00) 00000-0000"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                      className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                     />
                   </div>
                 </div>
               </div>
 
-              <div className={`space-y-4 p-6 rounded-3xl border transition-all ${isMinor ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100 opacity-60'}`}>
+              <div className={`space-y-4 p-6 rounded-3xl border transition-all ${isMinor ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700/50 opacity-60'}`}>
                 <h3 className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${isMinor ? 'text-amber-700' : 'text-slate-500'}`}>
                   <UsersIcon size={14} /> Responsável Legal {isMinor && <span className="bg-amber-200 text-amber-800 text-[8px] px-2 py-1 rounded-full ml-2">OBRIGATÓRIO</span>}
                 </h3>
@@ -1276,7 +1305,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       type="text"
                       value={editingStudent.guardianName || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, guardianName: e.target.value})}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                      className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                     />
                   </div>
                   <div>
@@ -1286,7 +1315,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       placeholder="Ex: Mãe"
                       value={editingStudent.guardianRelation || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, guardianRelation: e.target.value})}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                      className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                     />
                   </div>
                   <div>
@@ -1295,7 +1324,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       type="text"
                       value={editingStudent.guardianCpf || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, guardianCpf: maskCPF(e.target.value)})}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                      className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                     />
                   </div>
                   <div>
@@ -1304,7 +1333,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       type="text"
                       value={editingStudent.guardianRg || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, guardianRg: maskRG(e.target.value)})}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                      className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                     />
                   </div>
                   <div>
@@ -1313,7 +1342,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       type="tel"
                       value={editingStudent.guardianPhone || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, guardianPhone: maskPhone(e.target.value)})}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                      className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -1322,7 +1351,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       type="email"
                       value={editingStudent.guardianEmail || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, guardianEmail: e.target.value})}
-                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                      className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                     />
                   </div>
                   <div>
@@ -1333,7 +1362,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         type="text"
                         value={editingStudent.guardianProfession || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, guardianProfession: e.target.value})}
-                        className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                       />
                     </div>
                   </div>
@@ -1362,13 +1391,13 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {editingStudent.documents && editingStudent.documents.length > 0 ? (
                     editingStudent.documents.map(doc => (
-                      <div key={doc.id} className="bg-slate-50 border border-slate-100 p-4 rounded-2xl flex items-center justify-between group hover:border-indigo-200 transition-all">
+                      <div key={doc.id} className="bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700/50 p-4 rounded-2xl flex items-center justify-between group hover:border-indigo-200 transition-all">
                         <div className="flex items-center gap-3">
-                          <div className="bg-white p-2 rounded-xl text-slate-400 group-hover:text-indigo-600 transition-colors shadow-sm">
+                          <div className="bg-white dark:bg-slate-800 p-2 rounded-xl text-slate-400 group-hover:text-indigo-600 transition-colors shadow-sm">
                             <FileIcon size={20} />
                           </div>
                           <div className="overflow-hidden">
-                            <p className="text-sm font-bold text-slate-700 truncate max-w-[150px]">{doc.name}</p>
+                            <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate max-w-[150px]">{doc.name}</p>
                             <p className="text-[10px] text-slate-400 font-medium">
                               {(doc.size / 1024).toFixed(1)} KB • {new Date(doc.uploadedAt).toLocaleDateString()}
                             </p>
@@ -1377,14 +1406,14 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => downloadFile(doc)}
-                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-all"
+                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-800 rounded-lg transition-all"
                             title="Download Documento"
                           >
                             <Download size={18} />
                           </button>
                           <button
                             onClick={() => deleteDocument(doc.id)}
-                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-white rounded-lg transition-all"
+                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-white dark:hover:bg-slate-800 rounded-lg transition-all"
                           >
                             <Trash2 size={18} />
                           </button>
@@ -1392,7 +1421,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       </div>
                     ))
                   ) : (
-                    <div className="col-span-full py-8 flex flex-col items-center justify-center bg-slate-50 border border-dashed border-slate-200 rounded-3xl text-slate-400">
+                    <div className="col-span-full py-8 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900/50 border border-dashed border-slate-200 dark:border-slate-700 rounded-3xl text-slate-400">
                       <AlertCircle size={24} className="mb-2 opacity-30" />
                       <p className="text-xs font-medium">Nenhum documento anexado.</p>
                     </div>
@@ -1409,16 +1438,16 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase ml-1 mb-2">Graus na Faixa</label>
                       <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${BELT_COLORS[editingStudent.belt || Belt.WHITE]}`}>
-                        <button type="button" onClick={() => setEditingStudent({...editingStudent, stripes: Math.max(0, (editingStudent.stripes || 0) - 1)})} className="text-white/50 hover:scale-125 transition-all outline-none md:p-2"><Minus size={20} /></button>
+                        <button type="button" onClick={() => setEditingStudent({...editingStudent, stripes: Math.max(0, (editingStudent.stripes || 0) - 1)})} className="bg-black/30 hover:bg-black/50 border border-white/20 text-white rounded-xl p-2 transition-all outline-none"><Minus size={20} /></button>
                         <div className={`flex gap-1.5 p-1 rounded-md px-3 bg-opacity-90 ${editingStudent.belt === Belt.BLACK ? 'bg-red-600' : 'bg-zinc-900 shadow-lg'}`}>
                           {[...Array(editingStudent.belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
                             <div
                               key={i}
-                              className={`w-2.5 h-7 rounded-sm transition-all ${i < (editingStudent.stripes || 0) ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-y-110' : 'bg-white/10'}`}
+                              className={`w-2.5 h-7 rounded-sm transition-all ${i < (editingStudent.stripes || 0) ? 'bg-white dark:bg-slate-800 shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-y-110' : 'bg-white/10'}`}
                             />
                           ))}
                         </div>
-                        <button type="button" onClick={() => setEditingStudent({...editingStudent, stripes: Math.min(editingStudent.belt === Belt.BLACK ? 6 : 4, (editingStudent.stripes || 0) + 1)})} className="text-white/50 hover:scale-125 transition-all outline-none md:p-2"><PlusIcon size={20} /></button>
+                        <button type="button" onClick={() => setEditingStudent({...editingStudent, stripes: Math.min(editingStudent.belt === Belt.BLACK ? 6 : 4, (editingStudent.stripes || 0) + 1)})} className="bg-black/30 hover:bg-black/50 border border-white/20 text-white rounded-xl p-2 transition-all outline-none"><PlusIcon size={20} /></button>
                       </div>
                       <p className="text-[9px] text-slate-400 mt-1 ml-1 font-medium">
                         {editingStudent.belt === Belt.BLACK ? 'Faixa preta possui até 6 graus.' : 'Faixas coloridas possuem até 4 graus.'}
@@ -1435,7 +1464,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         placeholder="DD/MM/AAAA"
                         value={gradDateInput}
                         onChange={(e) => handleGradDateChange(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                        className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                       />
                       <p className="text-[9px] text-slate-400 mt-1 ml-1 font-medium italic">Digite manualmente DD/MM/AAAA.</p>
                     </div>
@@ -1453,8 +1482,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                           onChange={(e) => setEditingStudent({...editingStudent, totalClasses: parseInt(e.target.value) || 0})}
                           className={`flex-1 border rounded-xl px-4 py-3 outline-none font-bold ${
                             canEditTotalClasses
-                              ? "bg-slate-50 border-slate-200 focus:ring-2 focus:ring-indigo-500 text-slate-700"
-                              : "bg-slate-100 border-slate-100 text-slate-400 cursor-not-allowed"
+                              ? "bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500 text-slate-700 dark:text-slate-200"
+                              : "bg-slate-100 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700/50 text-slate-400 cursor-not-allowed"
                           }`}
                         />
                         {(() => {
@@ -1465,7 +1494,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                                <button
                                  onClick={() => handlePromoteStudent(editingStudent, nextBelt, nextStripes)}
                                  disabled={isPromoting}
-                                 className="bg-amber-500 text-slate-900 px-4 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-500/20 active:scale-95 transition-all disabled:opacity-60"
+                                 className="bg-amber-500 text-slate-900 dark:text-white px-4 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-500/20 active:scale-95 transition-all disabled:opacity-60"
                                >
                                  {isPromoting ? <Loader2 size={14} className="animate-spin" /> : 'Promover'}
                                </button>
@@ -1483,15 +1512,15 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
                     {/* Histórico Local do Aluno */}
                     {editingStudent.graduationHistory && editingStudent.graduationHistory.length > 0 && (
-                      <div className="mt-8 border-t border-slate-100 pt-6">
+                      <div className="mt-8 border-t border-slate-100 dark:border-slate-700/50 pt-6">
                         <label className="block text-[10px] font-bold text-slate-400 uppercase ml-1 mb-4 flex items-center gap-1">
                           <Activity size={12} /> Histórico de Graduações
                         </label>
                         <div className="space-y-3">
                           {editingStudent.graduationHistory.slice().reverse().map(h => (
-                            <div key={h.id} className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center justify-between">
+                            <div key={h.id} className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
                               <div className="flex items-center gap-3">
-                                <div className="bg-white p-1.5 rounded-lg text-emerald-600 shadow-sm"><Check size={14} /></div>
+                                <div className="bg-white dark:bg-slate-800 p-1.5 rounded-lg text-emerald-600 shadow-sm"><Check size={14} /></div>
                                 <div>
                                   <div className="flex items-center gap-2">
                                     <span className="text-[10px] font-black text-slate-500 uppercase">{h.previousBelt}</span>
@@ -1542,7 +1571,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     <select
                       value={editingStudent.status}
                       onChange={(e) => setEditingStudent({...editingStudent, status: e.target.value as any})}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700"
+                      className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700 dark:text-slate-200"
                     >
                       <option value="Active">Ativo</option>
                       <option value="Inactive">Inativo</option>
@@ -1554,7 +1583,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     <select
                       value={editingStudent.planId || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, planId: e.target.value})}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700"
+                      className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700 dark:text-slate-200"
                     >
                       <option value="">Nenhum Plano Vinculado</option>
                       {(academy.plans || []).map(plan => (
@@ -1570,7 +1599,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       type="date"
                       value={editingStudent.nextPaymentDate || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, nextPaymentDate: e.target.value})}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700"
+                      className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700 dark:text-slate-200"
                     />
                   </div>
                   <div>
@@ -1581,7 +1610,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       placeholder="Usar padrão da academia"
                       value={editingStudent.absenceLimit || ''}
                       onChange={(e) => setEditingStudent({...editingStudent, absenceLimit: parseInt(e.target.value) || undefined})}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700"
+                      className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700 dark:text-slate-200"
                     />
                     <p className="text-[9px] text-slate-400 mt-1 ml-1 font-medium italic">
                       * Deixe vazio para usar o limite padrão da academia.
@@ -1593,11 +1622,11 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   placeholder="Informações de saúde relevantes para o treino..."
                   value={editingStudent.medicalNotes || ''}
                   onChange={(e) => setEditingStudent({...editingStudent, medicalNotes: e.target.value})}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-4 focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-sm"
+                  className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-4 focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-sm"
                 />
               </div>
 
-              <div className="flex flex-col md:flex-row gap-3 pt-8 border-t border-slate-100 md:sticky md:bottom-0 bg-white z-[200] pb-24 md:pb-6 px-4 -mx-6 md:mx-0">
+              <div className="flex flex-col md:flex-row gap-3 pt-8 border-t border-slate-100 dark:border-slate-700/50 md:sticky md:bottom-0 bg-white dark:bg-slate-800 z-[200] pb-24 md:pb-6 px-4 -mx-6 md:mx-0">
                 <div className="flex gap-3 w-full px-2 md:px-0">
                   {!isNewStudent && (
                     <button
@@ -1607,7 +1636,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         e.stopPropagation();
                         setIsDeleteModalOpen(true);
                       }}
-                      className="flex-1 bg-white hover:bg-red-50 text-red-500 font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 border border-slate-200 hover:border-red-100 active:scale-95"
+                      className="flex-1 bg-white dark:bg-slate-800 hover:bg-red-50 text-red-500 font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700 hover:border-red-100 active:scale-95"
                     >
                       <Trash2 size={20} />
                       Excluir
@@ -1630,13 +1659,13 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
       {/* Modal de Confirmação de Exclusão de Aluno */}
       {isDeleteModalOpen && editingStudent && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-sm rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl text-center">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl text-center">
             <div className="bg-red-100 w-20 h-20 rounded-full flex items-center justify-center text-red-600 mx-auto mb-6">
               <AlertTriangle size={40} />
             </div>
-            <h2 className="text-2xl font-black text-slate-800 mb-2 tracking-tight">Excluir Atleta?</h2>
+            <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-2 tracking-tight">Excluir Atleta?</h2>
             <p className="text-sm text-slate-500 font-medium mb-8 leading-relaxed">
-              Deseja realmente excluir <span className="text-slate-900 font-bold">{editingStudent.name}</span>? Esta ação não pode ser desfeita.
+              Deseja realmente excluir <span className="text-slate-900 dark:text-white font-bold">{editingStudent.name}</span>? Esta ação não pode ser desfeita.
             </p>
             <div className="flex flex-col gap-3">
               <button
@@ -1647,7 +1676,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
               </button>
               <button
                 onClick={() => setIsDeleteModalOpen(false)}
-                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-5 rounded-3xl transition-all active:scale-95"
+                className="w-full bg-slate-100 dark:bg-slate-800/50 hover:bg-slate-200 text-slate-600 dark:text-slate-300 font-bold py-5 rounded-3xl transition-all active:scale-95"
               >
                 Cancelar
               </button>
@@ -1824,7 +1853,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                                 <button
                                   onClick={() => handlePromoteStudent(student, nextBelt, nextStripes)}
                                   disabled={isPromoting}
-                                  className="bg-amber-500 hover:bg-amber-400 text-slate-900 px-4 md:px-6 py-2.5 rounded-xl font-black text-[10px] md:text-xs uppercase tracking-widest shadow-lg shadow-amber-500/20 active:scale-95 transition-all text-center disabled:opacity-60"
+                                  className="bg-amber-500 hover:bg-amber-400 text-slate-900 dark:text-white px-4 md:px-6 py-2.5 rounded-xl font-black text-[10px] md:text-xs uppercase tracking-widest shadow-lg shadow-amber-500/20 active:scale-95 transition-all text-center disabled:opacity-60"
                                 >
                                   {isPromoting ? <Loader2 size={14} className="animate-spin" /> : 'Promover'}
                                 </button>
@@ -1873,7 +1902,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                                 <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
                                   {history.previousBelt} ({history.previousStripes}º)
                                 </span>
-                                <ChevronRight size={10} className="text-slate-600" />
+                                <ChevronRight size={10} className="text-slate-600 dark:text-slate-300" />
                                 <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">
                                   {history.newBelt} ({history.newStripes}º)
                                 </span>
@@ -1887,7 +1916,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       ))}
 
                     {students.every(s => !s.graduationHistory || s.graduationHistory.length === 0) && (
-                      <p className="text-center py-10 text-slate-600 text-sm italic">Nenhum histórico de graduação registrado recentemente.</p>
+                      <p className="text-center py-10 text-slate-600 dark:text-slate-300 text-sm italic">Nenhum histórico de graduação registrado recentemente.</p>
                     )}
                   </div>
                 </div>
@@ -1897,7 +1926,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
             <div className="p-6 border-t border-white/10 bg-slate-950 shrink-0">
                <button
                 onClick={() => setIsGraduationCenterOpen(false)}
-                className="w-full bg-white text-slate-900 font-black py-4 rounded-2xl hover:bg-slate-100 transition-all active:scale-[0.98] uppercase tracking-widest shadow-xl"
+                className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-black py-4 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-all active:scale-[0.98] uppercase tracking-widest shadow-xl"
                >
                  Sair da Central
                </button>

@@ -312,7 +312,7 @@ const StaffView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }
                     <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">{member.position || 'Geral'}</span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`text-[10px] px-2 py-1 rounded-full font-black uppercase ${member.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700'}`}>
+                    <span className={`text-[10px] px-2 py-1 rounded-full font-black uppercase ${member.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200'}`}>
                       {member.status === 'Active' ? 'Ativo' : 'Inativo'}
                     </span>
                   </td>
@@ -341,7 +341,7 @@ const StaffView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }
           <div className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-[32px] p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase italic">{!editingStaff.id ? 'Novo Colaborador' : 'Editar Ficha'}</h2>
-              <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                 <X size={24} />
               </button>
             </div>

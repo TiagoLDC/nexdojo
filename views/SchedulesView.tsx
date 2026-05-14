@@ -38,7 +38,7 @@ const SchedulesView: React.FC<{ academy: Academy | null; user: User }> = ({ acad
     return (
       <div className="max-w-5xl mx-auto py-20 text-center">
         <Clock size={64} className="mx-auto text-slate-200 mb-6" />
-        <h2 className="text-2xl font-black text-slate-800 uppercase italic">Selecione uma Unidade</h2>
+        <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 uppercase italic">Selecione uma Unidade</h2>
         <p className="text-slate-400 mt-2">Para visualizar a grade de horários, você precisa selecionar uma academia no menu superior.</p>
       </div>
     );

@@ -44,7 +44,7 @@ const PrintHeader: React.FC<{ title: string; academy: Academy }> = ({ title, aca
     <div className="hidden print:block mb-8 border-b-2 border-slate-900 pb-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-black uppercase italic tracking-tighter text-slate-900">{academy?.name || 'Academia'}</h1>
+          <h1 className="text-3xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">{academy?.name || 'Academia'}</h1>
           <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{academy?.address || ''}</p>
         </div>
         <div className="text-right">
@@ -366,7 +366,7 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-20 px-2 md:px-0">
-      <div ref={reportRef} className="bg-white p-4 md:p-8 rounded-[48px] print:p-0">
+      <div ref={reportRef} className="bg-white dark:bg-slate-800 p-4 md:p-8 rounded-[48px] print:p-0">
         <PrintHeader title="Análise de Percepções da Academia" academy={academy} />
         
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 no-print mb-8">
@@ -464,7 +464,7 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
               item.color === 'indigo' ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/30' :
               item.color === 'amber' ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/30' :
               item.color === 'emerald' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30' :
-              'bg-slate-100 text-slate-600 dark:bg-slate-800'
+              'bg-slate-100 text-slate-600 dark:text-slate-300 dark:bg-slate-800'
             }`}>
               {item.icon}
             </div>
@@ -883,7 +883,7 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
                   window.focus();
                   setTimeout(() => window.print(), 300);
                 }}
-                className="w-full mt-8 py-4 bg-white text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
+                className="w-full mt-8 py-4 bg-white dark:bg-slate-800 text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
               >
                 Imprimir Relatório Geral
               </button>

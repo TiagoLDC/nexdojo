@@ -312,7 +312,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="p-5 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="bg-slate-100 dark:bg-slate-800 w-10 h-10 rounded-xl flex items-center justify-center">
-                  {theme === 'dark' ? <Sun size={20} className="text-amber-500" /> : <Moon size={20} className="text-slate-600" />}
+                  {theme === 'dark' ? <Sun size={20} className="text-amber-500" /> : <Moon size={20} className="text-slate-600 dark:text-slate-300" />}
                 </div>
                 <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm">{t.theme}</h4>
               </div>
@@ -320,7 +320,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                 onClick={onToggleTheme}
                 className={`w-12 h-6 rounded-full p-1 transition-colors ${theme === 'dark' ? 'bg-indigo-600' : 'bg-slate-300'}`}
               >
-                <div className={`bg-white w-4 h-4 rounded-full transition-transform ${theme === 'dark' ? 'translate-x-6' : 'translate-x-0'}`} />
+                <div className={`bg-white dark:bg-slate-800 w-4 h-4 rounded-full transition-transform ${theme === 'dark' ? 'translate-x-6' : 'translate-x-0'}`} />
               </button>
             </div>
 
@@ -372,7 +372,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             />
             {userProfile.address && (
               <SettingItem 
-                icon={<MapPin className="text-slate-600" />} 
+                icon={<MapPin className="text-slate-600 dark:text-slate-300" />} 
                 title="Meu Endereço" 
                 subtitle={`${userProfile.address}${userProfile.addressNumber ? `, ${userProfile.addressNumber}` : ''}`} 
                 onClick={() => {
@@ -468,7 +468,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
               <p className="text-xs text-indigo-100 font-medium mb-6 max-w-[200px]">Unlock all features and scale your academy professionally.</p>
               <button 
                 onClick={() => setIsEditingPlans(true)}
-                className="bg-white text-indigo-600 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95"
+                className="bg-white dark:bg-slate-800 text-indigo-600 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-all active:scale-95"
               >
                 {t.viewPlans}
               </button>
@@ -1456,7 +1456,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                 </ul>
                 <button 
                   onClick={() => setIsCheckingOut('Black Belt')}
-                  className="w-full py-4 bg-white text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
+                  className="w-full py-4 bg-white dark:bg-slate-800 text-slate-950 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
                 >
                   Virar Black Belt
                 </button>
@@ -1498,7 +1498,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
               </button>
               <button 
                 onClick={() => setIsCheckingOut(null)}
-                className="w-full py-4 text-slate-400 font-bold uppercase tracking-widest text-[10px] hover:text-slate-600"
+                className="w-full py-4 text-slate-400 font-bold uppercase tracking-widest text-[10px] hover:text-slate-600 dark:hover:text-slate-300"
               >
                 Cancelar
               </button>

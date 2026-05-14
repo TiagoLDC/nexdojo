@@ -429,7 +429,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
                     <button
                       disabled={!isEditing}
                       onClick={() => setEditData({ ...editData, stripes: Math.max(0, (editData.stripes || 0) - 1) } as Instructor)}
-                      className="text-white/50 hover:scale-125 transition-all p-2 disabled:opacity-40"
+                      className="bg-black/30 hover:bg-black/50 border border-white/20 text-white rounded-xl p-2 transition-all outline-none disabled:opacity-40"
                     >
                       <Minus size={20} />
                     </button>
@@ -437,14 +437,14 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
                        {[...Array((editData as Instructor).belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
                         <div
                           key={i}
-                          className={`w-3 h-8 rounded-sm transition-all ${i < (editData.stripes || 0) ? 'bg-white shadow-[0_0_12px_rgba(255,255,255,0.7)] scale-y-110' : 'bg-white/10'}`}
+                          className={`w-3 h-8 rounded-sm transition-all ${i < (editData.stripes || 0) ? 'bg-white dark:bg-slate-800 shadow-[0_0_12px_rgba(255,255,255,0.7)] scale-y-110' : 'bg-white/10'}`}
                         />
                       ))}
                     </div>
                     <button
                       disabled={!isEditing}
                       onClick={() => setEditData({ ...editData, stripes: Math.min((editData as Instructor).belt === Belt.BLACK ? 6 : 4, (editData.stripes || 0) + 1) } as Instructor)}
-                      className="text-white/50 hover:scale-125 transition-all p-2 disabled:opacity-40"
+                      className="bg-black/30 hover:bg-black/50 border border-white/20 text-white rounded-xl p-2 transition-all outline-none disabled:opacity-40"
                     >
                       <Plus size={20} />
                     </button>

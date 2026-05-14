@@ -50,7 +50,7 @@ const PrintHeader: React.FC<{ title: string; academy: Academy }> = ({ title, aca
     <div className="hidden print:block mb-8 border-b-2 border-slate-900 pb-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-black uppercase italic tracking-tighter text-slate-900">{academy?.name || 'Academia'}</h1>
+          <h1 className="text-3xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">{academy?.name || 'Academia'}</h1>
           <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{academy?.address || ''}</p>
         </div>
         <div className="text-right">
@@ -315,7 +315,7 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-32 animate-in fade-in duration-500">
-      <div ref={financeRef} className="bg-white p-4 md:p-8 rounded-[48px] print:p-0">
+      <div ref={financeRef} className="bg-white dark:bg-slate-800 p-4 md:p-8 rounded-[48px] print:p-0">
         <PrintHeader title="Relatório Financeiro e Fluxo de Caixa" academy={academy} />
 
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print mb-8">
@@ -526,8 +526,8 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
             {academy.pixKey ? (
               <div className="space-y-6">
                 <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-[32px] border border-dashed border-slate-200 dark:border-slate-700">
-                  <div className="w-48 h-48 bg-white p-4 rounded-3xl mx-auto mb-4 border border-slate-100 flex items-center justify-center">
-                    <QrCode size={120} className="text-slate-900" />
+                  <div className="w-48 h-48 bg-white dark:bg-slate-800 p-4 rounded-3xl mx-auto mb-4 border border-slate-100 dark:border-slate-700/50 flex items-center justify-center">
+                    <QrCode size={120} className="text-slate-900 dark:text-white" />
                   </div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{t.pixKeyLabel} ({academy.pixType})</p>
                   <p className="font-mono font-bold text-xs text-slate-800 dark:text-white break-all">{academy.pixKey}</p>

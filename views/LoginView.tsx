@@ -824,7 +824,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-100 dark:border-slate-800">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Graus na Faixa</label>
                     <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${BELT_COLORS[studentData.belt || Belt.WHITE]}`}>
-                      <button type="button" onClick={() => setStudentData({...studentData, stripes: Math.max(0, (studentData.stripes || 0) - 1)})} className="text-white/50 hover:scale-125 transition-all outline-none md:p-2"><Minus size={20} /></button>
+                      <button type="button" onClick={() => setStudentData({...studentData, stripes: Math.max(0, (studentData.stripes || 0) - 1)})} className="bg-black/30 hover:bg-black/50 border border-white/20 text-white rounded-xl p-2 transition-all outline-none"><Minus size={20} /></button>
                       <div className={`flex gap-1.5 p-1 rounded-md px-3 bg-opacity-90 ${studentData.belt === Belt.BLACK ? 'bg-red-600' : 'bg-zinc-900 shadow-lg'}`}>
                         {[...Array(studentData.belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
                           <div
@@ -833,7 +833,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                           />
                         ))}
                       </div>
-                      <button type="button" onClick={() => setStudentData({...studentData, stripes: Math.min(studentData.belt === Belt.BLACK ? 6 : 4, (studentData.stripes || 0) + 1)})} className="text-white/50 hover:scale-125 transition-all outline-none md:p-2"><Plus size={20} /></button>
+                      <button type="button" onClick={() => setStudentData({...studentData, stripes: Math.min(studentData.belt === Belt.BLACK ? 6 : 4, (studentData.stripes || 0) + 1)})} className="bg-black/30 hover:bg-black/50 border border-white/20 text-white rounded-xl p-2 transition-all outline-none"><Plus size={20} /></button>
                     </div>
                     <p className="text-[9px] font-bold text-slate-400 uppercase mt-4 italic">
                       {studentData.belt === Belt.BLACK ? 'Faixa preta possui até 6 graus.' : 'Faixas coloridas possuem até 4 graus.'}

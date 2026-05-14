@@ -253,21 +253,42 @@ export const Sidebar: React.FC = () => {
         </Link>
 
         {/* Theme toggle */}
-        <button
-          onClick={toggleTheme}
-          title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
-          className={[
-            'flex items-center rounded-xl h-10 transition-all w-full text-slate-400 hover:text-white hover:bg-slate-800',
-            collapsed ? 'justify-center w-10 mx-auto' : 'px-4 gap-3',
-          ].join(' ')}
-        >
-          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          {!collapsed && (
-            <span className="font-bold text-xs">
-              {theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
-            </span>
-          )}
-        </button>
+        {!collapsed ? (
+          <div className="flex items-center bg-slate-800 rounded-xl p-1 gap-1">
+            <button
+              onClick={() => theme !== 'light' && toggleTheme()}
+              className={[
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg flex-1 justify-center transition-all text-xs font-bold',
+                theme === 'light'
+                  ? 'bg-amber-400 text-slate-900 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200',
+              ].join(' ')}
+            >
+              <Sun size={13} />
+              Claro
+            </button>
+            <button
+              onClick={() => theme !== 'dark' && toggleTheme()}
+              className={[
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg flex-1 justify-center transition-all text-xs font-bold',
+                theme === 'dark'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200',
+              ].join(' ')}
+            >
+              <Moon size={13} />
+              Escuro
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+            className="flex items-center justify-center rounded-xl h-10 transition-all w-10 mx-auto text-slate-400 hover:text-white hover:bg-slate-800"
+          >
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+        )}
       </div>
     </aside>
   );

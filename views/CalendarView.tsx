@@ -122,7 +122,7 @@ const CalendarView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
         } ${
           event
             ? 'bg-red-50 border-red-200 ring-2 ring-red-100'
-            : 'bg-white border-slate-100 hover:border-indigo-300 hover:shadow-md'
+            : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700/50 hover:border-indigo-300 hover:shadow-md'
         } ${isToday ? 'ring-2 ring-indigo-500' : ''}`}
       >
         <span className={`text-xs md:text-sm font-black ${event ? 'text-red-600' : isToday ? 'text-indigo-600' : 'text-slate-400'}`}>
@@ -165,15 +165,15 @@ const CalendarView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
     <div className="max-w-4xl mx-auto space-y-6 pb-10">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">{t.calendar}</h1>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{t.calendar}</h1>
           <p className="text-slate-500">{user.role === 'student' ? (language === 'pt' ? 'Veja os dias de funcionamento e recessos.' : 'View functioning days and recesses.') : (language === 'pt' ? 'Planeje os recessos e avise os alunos.' : 'Plan recesses and notify students.')}</p>
         </div>
-        <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-100 shadow-sm">
-          <button onClick={handlePrevMonth} className="p-2 hover:bg-slate-50 rounded-xl text-slate-400"><ChevronLeft size={20} /></button>
-          <span className="text-sm font-black text-slate-700 uppercase tracking-widest min-w-[140px] text-center">
+        <div className="flex items-center gap-3 bg-white dark:bg-slate-800 p-2 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm">
+          <button onClick={handlePrevMonth} className="p-2 hover:bg-slate-50 dark:hover:bg-slate-900/50 rounded-xl text-slate-400"><ChevronLeft size={20} /></button>
+          <span className="text-sm font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest min-w-[140px] text-center">
             {monthName} {year}
           </span>
-          <button onClick={handleNextMonth} className="p-2 hover:bg-slate-50 rounded-xl text-slate-400"><ChevronRight size={20} /></button>
+          <button onClick={handleNextMonth} className="p-2 hover:bg-slate-50 dark:hover:bg-slate-900/50 rounded-xl text-slate-400"><ChevronRight size={20} /></button>
         </div>
       </header>
 
@@ -197,20 +197,20 @@ const CalendarView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-md rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
                 <div className={`p-3 rounded-2xl ${selectedEvent ? 'bg-amber-100 text-amber-600' : 'bg-red-100 text-red-600'}`}>
                   <CalendarIcon size={24} />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+                  <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
                     {user.role === 'student' ? (language === 'pt' ? 'Detalhes do Evento' : 'Event Details') : (selectedEvent ? (language === 'pt' ? 'Gerenciar Recesso' : 'Manage Recess') : (language === 'pt' ? 'Suspender Aula' : 'Suspend Class'))}
                   </h2>
                   <p className="text-xs text-slate-400 font-bold uppercase">{new Date(selectedDate + 'T12:00:00').toLocaleDateString(monthLocale, { day: '2-digit', month: 'long', year: 'numeric' })}</p>
                 </div>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="bg-slate-100 text-slate-400 p-3 rounded-full hover:bg-slate-200">
+              <button onClick={() => setIsModalOpen(false)} className="bg-slate-100 dark:bg-slate-800/50 text-slate-400 p-3 rounded-full hover:bg-slate-200">
                 <X size={24} />
               </button>
             </div>
@@ -224,7 +224,7 @@ const CalendarView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                   onChange={(e) => setReason(e.target.value)}
                   autoFocus
                   placeholder={language === 'pt' ? "Ex: Feriado Nacional, Manutenção..." : "Ex: National Holiday, Maintenance..."}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-5 focus:ring-4 focus:ring-red-500/10 focus:border-red-500 outline-none transition-all font-bold text-slate-700 disabled:opacity-50"
+                  className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-6 py-5 focus:ring-4 focus:ring-red-500/10 focus:border-red-500 outline-none transition-all font-bold text-slate-700 dark:text-slate-200 disabled:opacity-50"
                   disabled={!!selectedEvent || user.role === 'student'}
                 />
               </div>
@@ -232,7 +232,7 @@ const CalendarView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
               {user.role === 'student' ? (
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="w-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-black py-4 rounded-3xl transition-all"
+                  className="w-full bg-slate-100 dark:bg-slate-800/50 hover:bg-slate-200 text-slate-500 font-black py-4 rounded-3xl transition-all"
                 >
                   {t.close}
                 </button>
@@ -250,7 +250,7 @@ const CalendarView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                   </button>
                   <button
                     onClick={() => setIsModalOpen(false)}
-                    className="w-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-black py-4 rounded-3xl transition-all"
+                    className="w-full bg-slate-100 dark:bg-slate-800/50 hover:bg-slate-200 text-slate-500 font-black py-4 rounded-3xl transition-all"
                   >
                     {t.back}
                   </button>

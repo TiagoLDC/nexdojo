@@ -143,7 +143,7 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
             <div className="flex items-center gap-2">
               <button
                 onClick={handleBulkRestore}
-                className="flex items-center gap-2 bg-white text-indigo-600 px-5 py-2.5 rounded-2xl font-bold text-xs shadow-sm hover:bg-indigo-50 transition-all active:scale-95"
+                className="flex items-center gap-2 bg-white dark:bg-slate-800 text-indigo-600 px-5 py-2.5 rounded-2xl font-bold text-xs shadow-sm hover:bg-indigo-50 transition-all active:scale-95"
               >
                 <RotateCcw size={16} />
                 Restaurar

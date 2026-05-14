@@ -84,6 +84,7 @@ export interface CreateStudentDTO {
   guardianRelation?: string;
   guardianProfession?: string;
   medicalNotes?: string;
+  password?: string;
 }
 
 export type UpdateStudentDTO = Partial<CreateStudentDTO>;

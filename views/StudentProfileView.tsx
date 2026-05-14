@@ -699,7 +699,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
                       type="button"
                       disabled={!isEditing}
                       onClick={() => setEditData(prev => prev ? {...prev, stripes: Math.max(0, (prev.stripes || 0) - 1)} : null)}
-                      className={`${editData.belt === Belt.WHITE ? 'text-slate-400' : 'text-white/50'} hover:scale-125 transition-all outline-none disabled:opacity-40`}
+                      className="bg-black/30 hover:bg-black/50 border border-white/20 text-white rounded-xl p-2 transition-all outline-none disabled:opacity-40"
                     >
                       <Minus size={20} />
                     </button>
@@ -707,7 +707,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
                       {[...Array(editData.belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
                         <div
                           key={i}
-                          className={`w-2.5 h-7 rounded-sm transition-all ${i < (editData.stripes || 0) ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-y-110' : 'bg-white/10'}`}
+                          className={`w-2.5 h-7 rounded-sm transition-all ${i < (editData.stripes || 0) ? 'bg-white dark:bg-slate-800 shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-y-110' : 'bg-white/10'}`}
                         />
                       ))}
                     </div>
@@ -715,7 +715,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
                       type="button"
                       disabled={!isEditing}
                       onClick={() => setEditData(prev => prev ? {...prev, stripes: Math.min(editData.belt === Belt.BLACK ? 6 : 4, (prev.stripes || 0) + 1)} : null)}
-                      className={`${editData.belt === Belt.WHITE ? 'text-slate-400' : 'text-white/50'} hover:scale-125 transition-all outline-none disabled:opacity-40`}
+                      className="bg-black/30 hover:bg-black/50 border border-white/20 text-white rounded-xl p-2 transition-all outline-none disabled:opacity-40"
                     >
                       <Plus size={20} />
                     </button>
@@ -850,7 +850,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
                     alert("Para excluir sua conta definitivamente, entre em contato com a administração da academia.");
                   }
                 }}
-                className="flex-1 bg-white hover:bg-red-50 text-red-500 py-5 rounded-3xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all border border-slate-200 flex items-center justify-center gap-2"
+                className="flex-1 bg-white dark:bg-slate-800 hover:bg-red-50 text-red-500 py-5 rounded-3xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-2"
               >
                 <Trash2 size={20} />
                 Excluir
@@ -912,7 +912,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
                  </div>
               </div>
 
-              <div className="my-8 p-4 bg-white rounded-3xl shadow-inner flex items-center justify-center overflow-hidden">
+              <div className="my-8 p-4 bg-white dark:bg-slate-800 rounded-3xl shadow-inner flex items-center justify-center overflow-hidden">
                 <QRCodeSVG
                   value={profile.id}
                   size={200}
@@ -970,7 +970,7 @@ const Input: React.FC<{ label: string; value: string; onChange: (v: string) => v
 
 const getBeltHeaderColor = (belt: Belt) => {
   switch (belt) {
-    case Belt.WHITE: return 'bg-slate-100';
+    case Belt.WHITE: return 'bg-slate-100 dark:bg-slate-800/50';
     case Belt.BLUE: return 'bg-blue-600';
     case Belt.PURPLE: return 'bg-purple-700';
     case Belt.BROWN: return 'bg-amber-900';

@@ -140,9 +140,9 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
 
   const getBeltColor = (belt: Belt) => {
     switch (belt) {
-      case Belt.WHITE: return 'bg-white text-slate-900 border-slate-200';
+      case Belt.WHITE: return 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-slate-200 dark:border-slate-700';
       case Belt.GREY: return 'bg-slate-400 text-white border-slate-500';
-      case Belt.YELLOW: return 'bg-yellow-400 text-slate-900 border-yellow-500';
+      case Belt.YELLOW: return 'bg-yellow-400 text-slate-900 dark:text-white border-yellow-500';
       case Belt.ORANGE: return 'bg-orange-500 text-white border-orange-600';
       case Belt.GREEN: return 'bg-green-600 text-white border-green-700';
       case Belt.BLUE: return 'bg-blue-600 text-white border-blue-400';
@@ -157,8 +157,8 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
 
   const getBeltTheme = (belt: Belt) => {
     switch (belt) {
-      case Belt.WHITE: return { text: 'text-slate-400', bg: 'bg-slate-400', border: 'border-slate-100', shadow: 'shadow-slate-100' };
-      case Belt.GREY: return { text: 'text-slate-500', bg: 'bg-slate-500', border: 'border-slate-100', shadow: 'shadow-slate-200' };
+      case Belt.WHITE: return { text: 'text-slate-400', bg: 'bg-slate-400', border: 'border-slate-100 dark:border-slate-700/50', shadow: 'shadow-slate-100' };
+      case Belt.GREY: return { text: 'text-slate-500', bg: 'bg-slate-500', border: 'border-slate-100 dark:border-slate-700/50', shadow: 'shadow-slate-200' };
       case Belt.YELLOW: return { text: 'text-yellow-500', bg: 'bg-yellow-500', border: 'border-yellow-100', shadow: 'shadow-yellow-100' };
       case Belt.ORANGE: return { text: 'text-orange-500', bg: 'bg-orange-500', border: 'border-orange-100', shadow: 'shadow-orange-100' };
       case Belt.GREEN: return { text: 'text-green-600', bg: 'bg-green-600', border: 'border-green-100', shadow: 'shadow-green-100' };
@@ -373,9 +373,9 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   
   const [systemConfig, setSystemConfig] = React.useState<SystemConfig>({
     plans: [
-      { id: 'free', name: 'Free', price: 0, description: 'Grátis para sempre', features: ['Gestão Básica'], color: 'bg-slate-100 text-slate-600' },
+      { id: 'free', name: 'Free', price: 0, description: 'Grátis para sempre', features: ['Gestão Básica'], color: 'bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300' },
       { id: 'silver', name: 'Silver', price: 49.90, description: 'Ideal para academias pequenas', features: ['Alunos Ilimitados', 'Chamada Digital'], color: 'bg-slate-400 text-white' },
-      { id: 'gold', name: 'Gold', price: 99.90, description: 'Para academias em crescimento', features: ['Financeiro Completo', 'Relatórios Avançados'], color: 'bg-yellow-400 text-slate-900' },
+      { id: 'gold', name: 'Gold', price: 99.90, description: 'Para academias em crescimento', features: ['Financeiro Completo', 'Relatórios Avançados'], color: 'bg-yellow-400 text-slate-900 dark:text-white' },
       { id: 'blackbelt', name: 'Black Belt', price: 199.90, description: 'Para redes de academias', features: ['Multi-unidades', 'White-label'], color: 'bg-slate-950 text-white' },
     ]
   } as any);
@@ -684,7 +684,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                    </div>
                  </div>
 
-                 <div className="absolute right-4 bottom-4 bg-white p-2 rounded-2xl shadow-xl transform rotate-3 group-hover:rotate-0 transition-transform duration-500">
+                 <div className="absolute right-4 bottom-4 bg-white dark:bg-slate-800 p-2 rounded-2xl shadow-xl transform rotate-3 group-hover:rotate-0 transition-transform duration-500">
                     <img 
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=oss_id_${profile.id}`} 
                       alt="QR Entry" 
@@ -876,7 +876,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
               </div>
               <Link 
                 to="/students" 
-                className="w-full md:w-auto bg-white text-amber-600 px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.1em] shadow-xl hover:scale-105 active:scale-95 transition-all text-center"
+                className="w-full md:w-auto bg-white dark:bg-slate-800 text-amber-600 px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.1em] shadow-xl hover:scale-105 active:scale-95 transition-all text-center"
               >
                 {t.manageGraduations}
               </Link>
@@ -972,7 +972,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
           </div>
           <button 
             onClick={() => showNotification(t.supportText.replace('{plan}', academy?.currentPlan || ''), 'info')}
-            className="bg-white text-slate-900 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm active:scale-95 transition-all shrink-0 ml-4"
+            className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm active:scale-95 transition-all shrink-0 ml-4"
           >
             {t.supportTitle}
           </button>
@@ -1106,7 +1106,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                     setIsPlanEditModalOpen(true);
                   }}
                 >
-                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${plan.color || 'bg-slate-100 text-slate-600'}`}>
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${plan.color || 'bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300'}`}>
                     {plan.name === 'Free' ? <Medal size={20} /> : plan.name === 'Silver' ? <Award size={20} /> : plan.name === 'Gold' ? <Star size={20} /> : <Trophy size={20} />}
                   </div>
                   <div>
@@ -1169,7 +1169,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                       <span className={`px-2 py-1 rounded-lg font-black uppercase tracking-tighter ${
                         acc.currentPlan === 'Black Belt' ? 'bg-slate-900 text-white' : 
                         acc.currentPlan === 'Gold' ? 'bg-yellow-100 text-yellow-700' : 
-                        'bg-slate-100 text-slate-600'
+                        'bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300'
                       }`}>
                         {acc.currentPlan || 'Free'}
                       </span>
@@ -1233,7 +1233,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                           <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
                             acc.currentPlan === 'Black Belt' ? 'bg-slate-900 text-white' : 
                             acc.currentPlan === 'Gold' ? 'bg-yellow-100 text-yellow-700' : 
-                            'bg-slate-100 text-slate-600'
+                            'bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300'
                           }`}>
                             {acc.currentPlan || 'Free'}
                           </span>
@@ -1549,7 +1549,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                         <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-tighter ${
                           pendingUser.role === 'student' ? 'bg-blue-100 text-blue-600' :
                           pendingUser.role === 'instructor' ? 'bg-indigo-100 text-indigo-600' :
-                          'bg-slate-100 text-slate-600'
+                          'bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300'
                         }`}>
                           {pendingUser.role === 'student' ? 'Aluno' : pendingUser.role === 'instructor' ? 'Mestre' : 'Staff'}
                         </span>
@@ -1676,7 +1676,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
               <span className="text-[10px] font-black uppercase tracking-widest">72%</span>
             </div>
             <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden">
-              <div className="h-full bg-white w-[72%] rounded-full" />
+              <div className="h-full bg-white dark:bg-slate-800 w-[72%] rounded-full" />
             </div>
           </div>
 
@@ -1922,7 +1922,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                 const isLightBelt = belt === Belt.WHITE || belt === Belt.YELLOW;
                 return (
                   <div key={belt} className={`flex flex-col md:flex-row items-center justify-between px-3 md:px-4 py-3 rounded-2xl border ${BELT_COLORS[belt]} shadow-sm transition-transform hover:scale-[1.02] cursor-default gap-2`}>
-                    <span className={`text-[9px] md:text-[10px] font-black uppercase tracking-tight ${isLightBelt ? 'text-slate-900' : 'text-white'} truncate w-full md:w-auto text-center md:text-left`}>{belt}</span>
+                    <span className={`text-[9px] md:text-[10px] font-black uppercase tracking-tight ${isLightBelt ? 'text-slate-900 dark:text-white' : 'text-white'} truncate w-full md:w-auto text-center md:text-left`}>{belt}</span>
                     <span className={`px-2 py-0.5 rounded-lg text-[9px] md:text-[10px] font-black ${isLightBelt ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'}`}>{count}</span>
                   </div>
                 );
