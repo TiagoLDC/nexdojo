@@ -8,6 +8,7 @@ export interface User {
   name: string;
   email: string;
   status: UserAccountStatus;
+  requiresPasswordChange?: boolean;
 }
 
 export interface LoginCredentials {

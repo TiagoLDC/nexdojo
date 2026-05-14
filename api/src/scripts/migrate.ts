@@ -73,6 +73,7 @@ const DDL_STATEMENTS = [
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     status ENUM('Active','Pending','Blocked') DEFAULT 'Active',
+    requires_password_change TINYINT(1) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE SET NULL
   )`,

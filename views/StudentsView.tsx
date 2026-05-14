@@ -148,18 +148,18 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
   useEffect(() => {
     if (editingStudent?.birthDate) {
-      const [year, month, day] = editingStudent.birthDate.split('-');
+      const [year, month, day] = editingStudent.birthDate.split('T')[0].split('-');
       if (year && month && day) {
         setBirthDateInput(`${day}/${month}/${year}`);
       } else {
-         setBirthDateInput('');
+        setBirthDateInput('');
       }
     } else {
       setBirthDateInput('');
     }
 
     if (editingStudent?.lastGraduationDate) {
-      const [year, month, day] = editingStudent.lastGraduationDate.split('-');
+      const [year, month, day] = editingStudent.lastGraduationDate.split('T')[0].split('-');
       if (year && month && day) {
         setGradDateInput(`${day}/${month}/${year}`);
       } else {
@@ -325,7 +325,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
       showNotification(language === 'pt' ? "Senha é obrigatória quando o e-mail de login é informado." : "Password is required when login email is provided.", 'error');
       return;
     }
-    if (isNew && newStudentPassword && newStudentPassword.length < 6) {
+    if (newStudentPassword && newStudentPassword.length < 6) {
       showNotification(language === 'pt' ? "A senha deve ter no mínimo 6 caracteres." : "Password must be at least 6 characters.", 'error');
       return;
     }
@@ -343,7 +343,9 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
         setStudents(prev => [...prev, created]);
         showNotification(language === 'pt' ? "Atleta cadastrado com sucesso!" : "Athlete registered successfully!");
       } else {
-        const updated = await studentService.update(editingStudent.id, editingStudent as any);
+        const payload: any = { ...editingStudent };
+        if (newStudentPassword) payload.password = newStudentPassword;
+        const updated = await studentService.update(editingStudent.id, payload);
         setStudents(prev => prev.map(s => s.id === updated.id ? updated : s));
         showNotification(language === 'pt' ? "Ficha atualizada com sucesso!" : "Profile updated successfully!");
       }
@@ -1098,31 +1100,34 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                       />
                     </div>
-                    <div className={isNewStudent && editingStudent.email ? "md:col-span-1" : "md:col-span-2"}>
+                    <div className={isNewStudent && !editingStudent.email ? "md:col-span-2" : "md:col-span-1"}>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">{t.studentLoginEmail} {isNewStudent && <span className="text-red-500">*</span>}</label>
                       <input
                         type="email"
+                        autoComplete="off"
                         value={editingStudent.email || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, email: e.target.value.toLowerCase()})}
                         placeholder="aluno@email.com"
                         className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-indigo-600"
                       />
                     </div>
-                    {isNewStudent && editingStudent.email && (
+                    {(!isNewStudent || editingStudent.email) && (
                       <div className="md:col-span-1">
                         <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1 flex items-center justify-between">
-                          <span>Senha de Acesso <span className="text-red-500">*</span></span>
+                          <span>{isNewStudent ? 'Senha de Acesso' : 'Redefinir Senha'} {isNewStudent && <span className="text-red-500">*</span>}</span>
                           <button type="button" onClick={() => setShowPassword(p => !p)} className="text-slate-400">
                             {showPassword ? <EyeOff size={12} /> : <Eye size={12} />}
                           </button>
                         </label>
                         <input
                           type={showPassword ? "text" : "password"}
+                          autoComplete="new-password"
                           value={newStudentPassword}
                           onChange={(e) => setNewStudentPassword(e.target.value)}
-                          placeholder="Mín. 6 caracteres"
+                          placeholder={isNewStudent ? "Mín. 6 caracteres" : "Nova senha (opcional)"}
                           className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                         />
+                        {!isNewStudent && <p className="text-[9px] text-slate-400 mt-1 ml-1 italic">O aluno será obrigado a trocar na próxima entrada.</p>}
                       </div>
                     )}
                     <div>
@@ -1151,14 +1156,11 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       <p className="text-[9px] text-slate-400 mt-1 ml-1 font-medium italic">Digite a data manualmente no formato DD/MM/AAAA.</p>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1 flex items-center justify-between">
-                        <span>CPF <span className="text-red-500">*</span></span>
-                        <button onClick={() => toggleSensitive('cpf')} className="text-slate-400">
-                          {showSensitive['cpf'] ? <EyeOff size={12} /> : <Eye size={12} />}
-                        </button>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">
+                        CPF <span className="text-red-500">*</span>
                       </label>
                       <input
-                        type={showSensitive['cpf'] ? "text" : "password"}
+                        type="text"
                         placeholder="000.000.000-00"
                         value={editingStudent.cpf || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, cpf: maskCPF(e.target.value)})}
@@ -1166,14 +1168,9 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1 flex items-center justify-between">
-                        RG
-                        <button onClick={() => toggleSensitive('rg')} className="text-slate-400">
-                          {showSensitive['rg'] ? <EyeOff size={12} /> : <Eye size={12} />}
-                        </button>
-                      </label>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">RG</label>
                       <input
-                        type={showSensitive['rg'] ? "text" : "password"}
+                        type="text"
                         placeholder="00.000.000-0"
                         value={editingStudent.rg || ''}
                         onChange={(e) => setEditingStudent({...editingStudent, rg: maskRG(e.target.value)})}
@@ -1597,7 +1594,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Próximo Vencimento</label>
                     <input
                       type="date"
-                      value={editingStudent.nextPaymentDate || ''}
+                      value={(editingStudent.nextPaymentDate || '').split('T')[0]}
                       onChange={(e) => setEditingStudent({...editingStudent, nextPaymentDate: e.target.value})}
                       className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700 dark:text-slate-200"
                     />

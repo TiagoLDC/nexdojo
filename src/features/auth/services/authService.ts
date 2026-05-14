@@ -10,4 +10,7 @@ export const authService = {
 
   me: () =>
     api.get<User>('/auth/me').then((r) => r.data),
+
+  changePassword: (newPassword: string) =>
+    api.post<{ message: string }>('/auth/change-password', { newPassword }).then((r) => r.data),
 };

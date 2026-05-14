@@ -1,4 +1,5 @@
 ﻿import { Router, Request, Response, NextFunction } from 'express';
+import bcrypt from 'bcrypt';
 import pool from '../db';
 import { requireAuth } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
@@ -138,23 +139,63 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
   });
   if (errors.length) { res.status(400).json({ error: errors[0] }); return; }
 
+  const newPassword = req.body.password ? String(req.body.password) : null;
+  if (newPassword && newPassword.length < 6) {
+    res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres' });
+    return;
+  }
+
   const fields = Object.keys(req.body).filter(k => UPDATABLE_FIELDS.includes(k));
-  if (!fields.length) { res.status(400).json({ error: 'Nenhum campo válido para atualizar' }); return; }
+  if (!fields.length && !newPassword) { res.status(400).json({ error: 'Nenhum campo válido para atualizar' }); return; }
 
   try {
     const [existing] = await pool.execute<any[]>(
-      'SELECT id FROM instructors WHERE id = ? AND academy_id = ?',
+      'SELECT id, user_id, name, email FROM instructors WHERE id = ? AND academy_id = ?',
       [req.params.id, academyId]
     );
     if (!existing[0]) { res.status(404).json({ error: 'Instrutor não encontrado' }); return; }
 
-    const set = fields.map(f => `${f} = ?`).join(', ');
-    const values = fields.map(f => req.body[f] ?? null);
+    if (fields.length) {
+      const set = fields.map(f => `${f} = ?`).join(', ');
+      const values = fields.map(f => req.body[f] ?? null);
+      await pool.execute(
+        `UPDATE instructors SET ${set} WHERE id = ? AND academy_id = ?`,
+        [...values, req.params.id, academyId]
+      );
+    }
 
-    await pool.execute(
-      `UPDATE instructors SET ${set} WHERE id = ? AND academy_id = ?`,
-      [...values, req.params.id, academyId]
-    );
+    if (newPassword) {
+      const hash = await bcrypt.hash(newPassword, 10);
+
+      if (existing[0].user_id) {
+        // Usuário já existe: atualiza senha e marca como temporária
+        await pool.execute(
+          'UPDATE users SET password_hash = ?, requires_password_change = 1 WHERE id = ?',
+          [hash, existing[0].user_id]
+        );
+      } else {
+        // Usuário não existe: cria conta e vincula ao instrutor
+        const email = String(req.body.email || existing[0].email || '').toLowerCase().trim();
+        if (email) {
+          const [emailCheck] = await pool.execute<any[]>('SELECT id FROM users WHERE email = ?', [email]);
+          if (emailCheck[0]) {
+            res.status(409).json({ error: 'E-mail já cadastrado em outro usuário' });
+            return;
+          }
+          const userId = crypto.randomUUID();
+          const instructorName = req.body.name || existing[0].name;
+          await pool.execute(
+            `INSERT INTO users (id, academy_id, role, name, email, password_hash, requires_password_change)
+             VALUES (?, ?, 'instructor', ?, ?, ?, 1)`,
+            [userId, academyId, instructorName, email, hash]
+          );
+          await pool.execute(
+            'UPDATE instructors SET user_id = ? WHERE id = ?',
+            [userId, req.params.id]
+          );
+        }
+      }
+    }
 
     const [rows] = await pool.execute<any[]>('SELECT * FROM instructors WHERE id = ?', [req.params.id]);
     res.json(rows[0]);

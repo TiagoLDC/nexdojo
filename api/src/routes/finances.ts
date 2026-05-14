@@ -38,7 +38,8 @@ router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunct
       params
     );
 
-    res.json({ data: rows, total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) });
+    const parsed = rows.map((r: any) => ({ ...r, amount: Number(r.amount) }));
+    res.json({ data: parsed, total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) });
   } catch (err) {
     next(err);
   }
@@ -71,7 +72,8 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'staff'), async 
     );
 
     const [rows] = await pool.execute<any[]>('SELECT * FROM finance_transactions WHERE id = ?', [id]);
-    res.status(201).json(rows[0]);
+    const row = rows[0] as any;
+    res.status(201).json({ ...row, amount: Number(row.amount) });
   } catch (err) {
     next(err);
   }
@@ -111,7 +113,8 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser', 'staff'), asyn
     );
 
     const [rows] = await pool.execute<any[]>('SELECT * FROM finance_transactions WHERE id = ?', [req.params.id]);
-    res.json(rows[0]);
+    const row = rows[0] as any;
+    res.json({ ...row, amount: Number(row.amount) });
   } catch (err) {
     next(err);
   }

@@ -78,6 +78,8 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
   const [editingInstructor, setEditingInstructor] = useState<Instructor | null>(null);
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [showSensitive, setShowSensitive] = useState<{[key: string]: boolean}>({});
+  const [newInstructorPassword, setNewInstructorPassword] = useState('');
+  const [showInstructorPassword, setShowInstructorPassword] = useState(false);
 
   const toggleSensitive = (field: string) => {
     setShowSensitive(prev => ({ ...prev, [field]: !prev[field] }));
@@ -148,18 +150,26 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
     try {
       const isNew = !editingInstructor.id;
 
+      if (newInstructorPassword && newInstructorPassword.length < 6) {
+        showNotification('A senha deve ter no mínimo 6 caracteres.', 'error');
+        return;
+      }
+
       if (isNew) {
         const created = await instructorService.create(academy.id, editingInstructor as any);
         setInstructors(prev => [...prev, created]);
         showNotification(t.instructorAdded);
       } else {
-        const updated = await instructorService.update(editingInstructor.id, editingInstructor as any);
+        const payload: any = { ...editingInstructor };
+        if (newInstructorPassword) payload.password = newInstructorPassword;
+        const updated = await instructorService.update(editingInstructor.id, payload);
         setInstructors(prev => prev.map(i => i.id === updated.id ? updated : i));
         showNotification(t.profileUpdated);
       }
 
       setIsEditModalOpen(false);
       setEditingInstructor(null);
+      setNewInstructorPassword('');
     } catch (e) {
       console.error(e);
       showNotification(t.savingError, 'error');
@@ -474,7 +484,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">{t.birthDate} <span className="text-red-500">*</span></label>
-                      <input type="date" value={editingInstructor.birthDate} onChange={(e) => setEditingInstructor({...editingInstructor, birthDate: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none font-bold text-slate-800 dark:text-slate-100 text-lg" />
+                      <input type="date" value={(editingInstructor.birthDate || '').split('T')[0]} onChange={(e) => setEditingInstructor({...editingInstructor, birthDate: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none font-bold text-slate-800 dark:text-slate-100 text-lg" />
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">{t.gender}</label>
@@ -486,14 +496,9 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1 flex items-center justify-between">
-                        CPF
-                        <button onClick={() => toggleSensitive('cpf')} className="text-slate-400">
-                          {showSensitive['cpf'] ? <EyeOff size={12} /> : <Eye size={12} />}
-                        </button>
-                      </label>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">CPF</label>
                       <input
-                        type={showSensitive['cpf'] ? "text" : "password"}
+                        type="text"
                         value={editingInstructor.cpf || ''}
                         onChange={(e) => setEditingInstructor({...editingInstructor, cpf: maskCPF(e.target.value)})}
                         placeholder="000.000.000-00"
@@ -501,14 +506,9 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1 flex items-center justify-between">
-                        RG
-                        <button onClick={() => toggleSensitive('rg')} className="text-slate-400">
-                          {showSensitive['rg'] ? <EyeOff size={12} /> : <Eye size={12} />}
-                        </button>
-                      </label>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">RG</label>
                       <input
-                        type={showSensitive['rg'] ? "text" : "password"}
+                        type="text"
                         value={editingInstructor.rg || ''}
                         onChange={(e) => setEditingInstructor({...editingInstructor, rg: maskRG(e.target.value)})}
                         placeholder="00.000.000-0"
@@ -550,13 +550,32 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                       <input type="tel" value={editingInstructor.phone || ''} onChange={(e) => setEditingInstructor({...editingInstructor, phone: maskPhone(e.target.value)})} placeholder="(00) 00000-0000" className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 outline-none font-medium" />
                     </div>
                   </div>
-                  <div className="md:col-span-2">
+                  <div className={editingInstructor.email ? "" : "md:col-span-2"}>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">{t.professionalEmail}</label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
-                      <input type="email" value={editingInstructor.email || ''} onChange={(e) => setEditingInstructor({...editingInstructor, email: e.target.value})} placeholder="exemplo@academia.com" className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 outline-none font-medium" />
+                      <input type="email" autoComplete="off" value={editingInstructor.email || ''} onChange={(e) => setEditingInstructor({...editingInstructor, email: e.target.value})} placeholder="exemplo@academia.com" className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 outline-none font-medium" />
                     </div>
                   </div>
+                  {editingInstructor.email && editingInstructor.id && (
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1 flex items-center justify-between">
+                        <span>Redefinir Senha</span>
+                        <button type="button" onClick={() => setShowInstructorPassword(p => !p)} className="text-slate-400">
+                          {showInstructorPassword ? <EyeOff size={12} /> : <Eye size={12} />}
+                        </button>
+                      </label>
+                      <input
+                        type={showInstructorPassword ? "text" : "password"}
+                        autoComplete="new-password"
+                        value={newInstructorPassword}
+                        onChange={e => setNewInstructorPassword(e.target.value)}
+                        placeholder="Nova senha (opcional)"
+                        className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                      />
+                      <p className="text-[9px] text-slate-400 mt-1 ml-1 italic">O instrutor será obrigado a trocar na próxima entrada.</p>
+                    </div>
+                  )}
                   <div className="md:col-span-2">
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1 flex items-center justify-between">
                       CEP
@@ -612,7 +631,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                       <label className="block text-[10px] font-bold text-slate-400 uppercase ml-1 mb-2 flex items-center gap-1">
                         <CalendarClock size={12} /> {t.lastGraduationDate}
                       </label>
-                      <input type="date" value={editingInstructor.lastGraduationDate || ''} onChange={(e) => setEditingInstructor({...editingInstructor, lastGraduationDate: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none font-medium" />
+                      <input type="date" value={(editingInstructor.lastGraduationDate || '').split('T')[0]} onChange={(e) => setEditingInstructor({...editingInstructor, lastGraduationDate: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none font-medium" />
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase ml-1 mb-2">{t.specialtiesFocus}</label>

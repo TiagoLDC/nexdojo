@@ -355,9 +355,9 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       studentsCount: students.length,
       activeStudentsCount: students.filter(s => s.status === 'Active').length,
       todayAttendanceCount: attendance.filter((a: any) => a.date && a.date.startsWith(todayStr)).length,
-      totalIncome: finances.filter((t: any) => t.type === 'income').reduce((acc: number, t: any) => acc + t.amount, 0),
-      totalMensalidades: finances.filter((t: any) => t.type === 'income' && (t.category === 'Mensalidade' || (t.description && t.description.toLowerCase().includes('mensalidade')))).reduce((acc: number, t: any) => acc + t.amount, 0),
-      totalExpense: finances.filter((t: any) => t.type === 'expense').reduce((acc: number, t: any) => acc + t.amount, 0),
+      totalIncome: finances.filter((t: any) => t.type === 'income').reduce((acc: number, t: any) => acc + Number(t.amount), 0),
+      totalMensalidades: finances.filter((t: any) => t.type === 'income' && (t.category === 'Mensalidade' || (t.description && t.description.toLowerCase().includes('mensalidade')))).reduce((acc: number, t: any) => acc + Number(t.amount), 0),
+      totalExpense: finances.filter((t: any) => t.type === 'expense').reduce((acc: number, t: any) => acc + Number(t.amount), 0),
       plansCount,
       allAcademies
     };
@@ -412,9 +412,9 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   }, [students]);
 
   const financialSummary = useMemo(() => {
-    const income = finances.filter(f => f.type === 'income').reduce((acc, f) => acc + f.amount, 0);
-    const expense = finances.filter(f => f.type === 'expense').reduce((acc, f) => acc + f.amount, 0);
-    const pendingIncome = finances.filter(f => f.type === 'income' && f.status === 'pending').reduce((acc, f) => acc + f.amount, 0);
+    const income = finances.filter(f => f.type === 'income').reduce((acc, f) => acc + Number(f.amount), 0);
+    const expense = finances.filter(f => f.type === 'expense').reduce((acc, f) => acc + Number(f.amount), 0);
+    const pendingIncome = finances.filter(f => f.type === 'income' && f.status === 'pending').reduce((acc, f) => acc + Number(f.amount), 0);
     return { income, expense, balance: income - expense, pendingIncome };
   }, [finances]);
 

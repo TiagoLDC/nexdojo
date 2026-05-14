@@ -31,7 +31,7 @@ router.post('/login', loginMiddleware, async (req: Request, res: Response, next:
 
   try {
     const [rows] = await pool.execute<any[]>(
-      `SELECT id, academy_id, role, name, email, password_hash, status
+      `SELECT id, academy_id, role, name, email, password_hash, status, requires_password_change
        FROM users WHERE email = ?`,
       [String(email).toLowerCase().trim()]
     );
@@ -70,6 +70,7 @@ router.post('/login', loginMiddleware, async (req: Request, res: Response, next:
         role: user.role,
         name: user.name,
         email: user.email,
+        requiresPasswordChange: !!user.requires_password_change,
       },
     });
   } catch (err) {
@@ -234,6 +235,28 @@ router.post('/register/instructor', async (req: Request, res: Response, next: Ne
     );
     res.status(201).json({ message: 'Ficha enviada! Aguarde aprovação do administrador. OSS!' });
   } catch (err) { next(err); }
+});
+
+// POST /api/auth/change-password — usuário autenticado redefine senha (limpa flag de senha temporária)
+router.post('/change-password', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  // Interceptor do frontend converte camelCase → snake_case antes de enviar
+  const newPassword = req.body.new_password;
+
+  if (!newPassword || String(newPassword).length < 6) {
+    res.status(400).json({ error: 'A nova senha deve ter no mínimo 6 caracteres' });
+    return;
+  }
+
+  try {
+    const hash = await bcrypt.hash(String(newPassword), 10);
+    await pool.execute(
+      'UPDATE users SET password_hash = ?, requires_password_change = 0 WHERE id = ?',
+      [hash, req.user!.userId]
+    );
+    res.json({ message: 'Senha alterada com sucesso' });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // POST /api/auth/logout — JWT é stateless; apenas sinaliza ao cliente para descartar o token

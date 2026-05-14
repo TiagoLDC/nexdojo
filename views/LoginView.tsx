@@ -108,6 +108,13 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Senha temporária: dados pendentes enquanto o usuário define nova senha
+  const [pendingAuth, setPendingAuth] = useState<{ user: User; token: string; academy: Academy | null } | null>(null);
+  const [newPass, setNewPass] = useState('');
+  const [confirmNewPass, setConfirmNewPass] = useState('');
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [isFromSharedLink, setIsFromSharedLink] = useState(false);
   const [linkedAcademy, setLinkedAcademy] = useState<Academy | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -190,12 +197,39 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           // academia não encontrada — prosseguir sem branding
         }
       }
+      if ((user as any).requiresPasswordChange) {
+        setPendingAuth({ user: user as unknown as User, token, academy });
+        return;
+      }
       onLogin(user as unknown as User, token, academy);
     } catch (err: any) {
       const msg = err?.response?.data?.error || 'E-mail ou senha incorretos.';
       showNotification(msg, 'error');
     } finally {
       setIsLoggingIn(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pendingAuth) return;
+    if (newPass.length < 6) {
+      showNotification('A nova senha deve ter no mínimo 6 caracteres.', 'error');
+      return;
+    }
+    if (newPass !== confirmNewPass) {
+      showNotification('As senhas não coincidem.', 'error');
+      return;
+    }
+    setIsSavingPassword(true);
+    try {
+      await authService.changePassword(newPass);
+      const updatedUser = { ...pendingAuth.user, requiresPasswordChange: false };
+      onLogin(updatedUser, pendingAuth.token, pendingAuth.academy);
+    } catch (err: any) {
+      showNotification(err?.response?.data?.error || 'Erro ao alterar senha.', 'error');
+    } finally {
+      setIsSavingPassword(false);
     }
   };
 
@@ -373,6 +407,66 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
   const studentAge = calculateAge(studentData.birthDate || '');
   const isMinor = studentAge > 0 && studentAge < 18;
+
+  if (pendingAuth) {
+    return (
+      <div className="h-[100dvh] overflow-hidden relative login-app flex items-center justify-center">
+        <div className="login-grain" />
+        <div className="w-full max-w-md mx-auto px-6 z-10">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-8 flex flex-col gap-6">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
+                <ShieldCheck size={28} className="text-indigo-600" />
+              </div>
+              <h2 className="text-xl font-black text-slate-800 dark:text-slate-100">Defina sua nova senha</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                O administrador redefiniu sua senha. Por segurança, escolha uma senha definitiva para continuar.
+              </p>
+            </div>
+
+            <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1 flex items-center justify-between">
+                  <span>Nova Senha <span className="text-red-500">*</span></span>
+                  <button type="button" onClick={() => setShowNewPass(p => !p)} className="text-slate-400">
+                    {showNewPass ? <EyeOff size={12} /> : <Eye size={12} />}
+                  </button>
+                </label>
+                <input
+                  type={showNewPass ? 'text' : 'password'}
+                  value={newPass}
+                  onChange={e => setNewPass(e.target.value)}
+                  placeholder="Mín. 6 caracteres"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">
+                  Confirmar Nova Senha <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type={showNewPass ? 'text' : 'password'}
+                  value={confirmNewPass}
+                  onChange={e => setConfirmNewPass(e.target.value)}
+                  placeholder="Repita a senha"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isSavingPassword}
+                className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 uppercase tracking-widest mt-2"
+              >
+                {isSavingPassword ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
+                {isSavingPassword ? 'Salvando...' : 'Salvar e Entrar'}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (view === 'login') {
     const academyInitials = linkedAcademy
