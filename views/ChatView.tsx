@@ -12,10 +12,13 @@ interface ChatViewProps {
 const ChatView: React.FC<ChatViewProps> = ({ academy, user }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
+  const [loadError, setLoadError] = useState(false);
+  const [sendError, setSendError] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (academy) {
+      setLoadError(false);
       chatService.getMessages(academy.id)
         .then(res => {
           setMessages(res.data);
@@ -26,7 +29,7 @@ const ChatView: React.FC<ChatViewProps> = ({ academy, user }) => {
             localStorage.setItem(`oss_chat_last_read_${academy.id}`, latestTimestamp);
           }
         })
-        .catch(() => {});
+        .catch(() => { setLoadError(true); });
     }
   }, [academy]);
 
@@ -58,6 +61,7 @@ const ChatView: React.FC<ChatViewProps> = ({ academy, user }) => {
     const content = newMessage.trim();
     setNewMessage('');
 
+    setSendError('');
     try {
       const message = await chatService.sendMessage(academy.id, {
         content,
@@ -70,6 +74,7 @@ const ChatView: React.FC<ChatViewProps> = ({ academy, user }) => {
       localStorage.setItem(`oss_chat_last_read_${academy.id}`, message.timestamp);
     } catch {
       setNewMessage(content);
+      setSendError('Falha ao enviar mensagem. Tente novamente.');
     }
   };
 
@@ -98,7 +103,14 @@ const ChatView: React.FC<ChatViewProps> = ({ academy, user }) => {
 
       {/* Lista de Mensagens */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar bg-slate-50/30 dark:bg-slate-950/20">
-        {messages.length === 0 ? (
+        {loadError && (
+          <div className="flex items-center justify-center py-4">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-xs font-bold px-4 py-2 rounded-2xl">
+              Erro ao carregar mensagens. Verifique a conexão com o servidor.
+            </div>
+          </div>
+        )}
+        {messages.length === 0 && !loadError ? (
           <div className="h-full flex flex-col items-center justify-center text-center opacity-30 select-none">
             <MessageSquare size={64} className="mb-4 text-slate-400" />
             <p className="font-bold text-slate-500 italic">Inicie uma conversa com a equipe.</p>
@@ -174,6 +186,9 @@ const ChatView: React.FC<ChatViewProps> = ({ academy, user }) => {
       {/* Input de Mensagem */}
       {user.role !== 'student' ? (
         <footer className="p-4 md:p-6 bg-white dark:bg-slate-900 border-t border-slate-50 dark:border-slate-800 transition-colors shrink-0">
+          {sendError && (
+            <p className="text-xs font-bold text-red-500 mb-2 px-2">{sendError}</p>
+          )}
           <form onSubmit={handleSendMessage} className="flex items-center gap-2 md:gap-3 bg-slate-50 dark:bg-slate-800 rounded-3xl p-1.5 border border-slate-100 dark:border-slate-700 focus-within:ring-4 focus-within:ring-indigo-500/10 focus-within:border-indigo-500 transition-all">
             <input
               type="text"

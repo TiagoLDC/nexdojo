@@ -22,8 +22,8 @@ router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunct
 
   try {
     const [rows] = await pool.execute<any[]>(
-      `SELECT * FROM chat_messages ${where} ORDER BY timestamp DESC LIMIT ?`,
-      [...params, limitNum]
+      `SELECT * FROM chat_messages ${where} ORDER BY timestamp DESC LIMIT ${limitNum}`,
+      params
     );
     res.json({ data: (rows as any[]).reverse(), total: (rows as any[]).length });
   } catch (err) {
