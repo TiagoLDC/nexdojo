@@ -44,6 +44,11 @@ router.post('/login', loginMiddleware, async (req: Request, res: Response, next:
       return;
     }
 
+    if (user.status === 'Pending') {
+      res.status(403).json({ error: 'Cadastro pendente de aprovação. Aguarde o administrador ativar sua conta.' });
+      return;
+    }
+
     if (user.status === 'Blocked') {
       res.status(403).json({ error: 'Conta bloqueada. Entre em contato com o administrador.' });
       return;
@@ -179,6 +184,10 @@ router.post('/register/student', async (req: Request, res: Response, next: NextF
       `INSERT INTO users (id, academy_id, role, name, email, password_hash, status) VALUES (?, ?, 'student', ?, ?, ?, 'Pending')`,
       [userId, academyId, name, String(email).toLowerCase().trim(), passwordHash]
     );
+    await pool.execute(
+      `UPDATE students SET user_id = ? WHERE id = ?`,
+      [userId, studentId]
+    );
     res.status(201).json({ message: 'Matrícula realizada! Aguarde aprovação do administrador. OSS!' });
   } catch (err) { next(err); }
 });
@@ -221,17 +230,21 @@ router.post('/register/instructor', async (req: Request, res: Response, next: Ne
     const passwordHash = await bcrypt.hash(String(password), 10);
 
     await pool.execute(
-      `INSERT INTO instructors (id, academy_id, name, email, belt, stripes, birth_date, gender, phone, cpf, rg, marital_status, last_graduation_date, specialties, cep, address, address_number, photo, status, join_date)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())`,
+      `INSERT INTO instructors (id, academy_id, name, email, belt, stripes, birth_date, gender, phone, cpf, rg, marital_status, specialties, cep, address, address_number, photo, status, join_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())`,
       [instructorId, academyId, name, String(email).toLowerCase().trim(), belt, stripes || 0, birthDate,
        gender || null, phone || null, cpf || null, rg || null,
-       maritalStatus || 'Solteiro', lastGraduationDate || null,
+       maritalStatus || 'Solteiro',
        specialties || null, cep || null, address || null,
        addressNumber || null, photo || null]
     );
     await pool.execute(
       `INSERT INTO users (id, academy_id, role, name, email, password_hash, status) VALUES (?, ?, 'instructor', ?, ?, ?, 'Pending')`,
       [userId, academyId, name, String(email).toLowerCase().trim(), passwordHash]
+    );
+    await pool.execute(
+      `UPDATE instructors SET user_id = ? WHERE id = ?`,
+      [userId, instructorId]
     );
     res.status(201).json({ message: 'Ficha enviada! Aguarde aprovação do administrador. OSS!' });
   } catch (err) { next(err); }

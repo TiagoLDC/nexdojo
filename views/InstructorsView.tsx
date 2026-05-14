@@ -176,6 +176,17 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
     }
   };
 
+  const handleApproveInstructor = async (instructor: Instructor) => {
+    try {
+      const updated = await instructorService.update(instructor.id, { status: 'Active' } as any);
+      setInstructors(prev => prev.map(i => i.id === updated.id ? updated : i));
+      showNotification('Instrutor aprovado com sucesso!');
+    } catch (e) {
+      console.error(e);
+      showNotification('Erro ao aprovar instrutor.', 'error');
+    }
+  };
+
   const handleDeleteInstructor = async () => {
     if (!editingInstructor?.id) return;
 
@@ -248,7 +259,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
 
   const filtered = instructors.filter(i => {
     const matchesSearch = i.name.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === 'All' ? i.status !== 'Pending' : i.status === statusFilter;
+    const matchesStatus = statusFilter === 'All' || i.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -321,26 +332,35 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                     <div className="font-bold text-slate-800 dark:text-slate-100 text-sm">{instructor.name || t.noName}</div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <BeltBadge belt={instructor.belt} stripes={instructor.stripes} />
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-black uppercase ${instructor.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200'}`}>
-                        {instructor.status === 'Active' ? t.activeTitle : t.inactiveTitle}
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-black uppercase ${instructor.status === 'Active' ? 'bg-green-100 text-green-700' : instructor.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200'}`}>
+                        {instructor.status === 'Active' ? t.activeTitle : instructor.status === 'Pending' ? t.pendingTitle : t.inactiveTitle}
                       </span>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <a
-                    href={instructor.phone ? `https://wa.me/55${instructor.phone.replace(/\D/g, '')}` : '#'}
-                    target={instructor.phone ? "_blank" : "_self"}
-                    rel="noopener noreferrer"
-                    onClick={(e) => !instructor.phone && e.preventDefault()}
-                    className={`p-2 rounded-xl transition-all ${
-                      instructor.phone
-                        ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                        : 'bg-slate-100 dark:bg-slate-800/50 text-slate-300 cursor-not-allowed'
-                    }`}
-                  >
-                    <MessageCircle size={18} />
-                  </a>
+                  {instructor.status === 'Pending' ? (
+                    <button
+                      onClick={() => handleApproveInstructor(instructor)}
+                      className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black uppercase rounded-xl transition-all flex items-center gap-1"
+                    >
+                      <Check size={12} /> Aprovar
+                    </button>
+                  ) : (
+                    <a
+                      href={instructor.phone ? `https://wa.me/55${instructor.phone.replace(/\D/g, '')}` : '#'}
+                      target={instructor.phone ? "_blank" : "_self"}
+                      rel="noopener noreferrer"
+                      onClick={(e) => !instructor.phone && e.preventDefault()}
+                      className={`p-2 rounded-xl transition-all ${
+                        instructor.phone
+                          ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                          : 'bg-slate-100 dark:bg-slate-800/50 text-slate-300 cursor-not-allowed'
+                      }`}
+                    >
+                      <MessageCircle size={18} />
+                    </a>
+                  )}
                   <button onClick={() => { setEditingInstructor({...instructor}); setIsEditModalOpen(true); }} className="text-slate-400 p-2 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg">
                     <MoreVertical size={20} />
                   </button>
@@ -393,26 +413,36 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                       <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{instructor.specialties || t.general}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`text-[10px] px-2 py-1 rounded-full font-black uppercase ${instructor.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200'}`}>
-                        {instructor.status === 'Active' ? t.activeTitle : t.inactiveTitle}
+                      <span className={`text-[10px] px-2 py-1 rounded-full font-black uppercase ${instructor.status === 'Active' ? 'bg-green-100 text-green-700' : instructor.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200'}`}>
+                        {instructor.status === 'Active' ? t.activeTitle : instructor.status === 'Pending' ? t.pendingTitle : t.inactiveTitle}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <a
-                          href={instructor.phone ? `https://wa.me/55${instructor.phone.replace(/\D/g, '')}` : '#'}
-                          target={instructor.phone ? "_blank" : "_self"}
-                          rel="noopener noreferrer"
-                          onClick={(e) => !instructor.phone && e.preventDefault()}
-                          className={`p-2 rounded-xl transition-all shadow-sm ${
-                            instructor.phone
-                              ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-200 hover:scale-105 active:scale-95'
-                              : 'bg-slate-100 dark:bg-slate-800/50 text-slate-300 cursor-not-allowed opacity-50'
-                          }`}
-                          title={instructor.phone ? `Chamar no WhatsApp (${instructor.phone})` : "Telefone não cadastrado"}
-                        >
-                          <MessageCircle size={18} fill={instructor.phone ? "currentColor" : "none"} />
-                        </a>
+                        {instructor.status === 'Pending' ? (
+                          <button
+                            onClick={() => handleApproveInstructor(instructor)}
+                            className="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black uppercase rounded-xl transition-all flex items-center gap-1 shadow-sm"
+                            title="Aprovar cadastro"
+                          >
+                            <Check size={14} /> Aprovar
+                          </button>
+                        ) : (
+                          <a
+                            href={instructor.phone ? `https://wa.me/55${instructor.phone.replace(/\D/g, '')}` : '#'}
+                            target={instructor.phone ? "_blank" : "_self"}
+                            rel="noopener noreferrer"
+                            onClick={(e) => !instructor.phone && e.preventDefault()}
+                            className={`p-2 rounded-xl transition-all shadow-sm ${
+                              instructor.phone
+                                ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-200 hover:scale-105 active:scale-95'
+                                : 'bg-slate-100 dark:bg-slate-800/50 text-slate-300 cursor-not-allowed opacity-50'
+                            }`}
+                            title={instructor.phone ? `Chamar no WhatsApp (${instructor.phone})` : "Telefone não cadastrado"}
+                          >
+                            <MessageCircle size={18} fill={instructor.phone ? "currentColor" : "none"} />
+                          </a>
+                        )}
                         <button onClick={() => { setEditingInstructor({...instructor}); setIsEditModalOpen(true); }} className="text-slate-400 hover:text-indigo-600 p-2 hover:bg-indigo-50 rounded-lg transition-all" title="Editar Ficha">
                           <MoreVertical size={20} />
                         </button>
@@ -531,6 +561,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                       <select value={editingInstructor.status} onChange={(e) => setEditingInstructor({...editingInstructor, status: e.target.value as any})} className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 dark:text-slate-200">
                         <option value="Active">{t.activeTitle}</option>
                         <option value="Inactive">{t.inactiveTitle}</option>
+                        <option value="Pending">{t.pendingTitle}</option>
                       </select>
                     </div>
                   </div>

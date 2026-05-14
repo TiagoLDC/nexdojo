@@ -241,6 +241,35 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
         `UPDATE students SET ${set} WHERE id = ? AND academy_id = ?`,
         [...values, req.params.id, academyId]
       );
+
+      // Ao ativar aluno, ativa também o usuário vinculado
+      if (req.body.status === 'Active') {
+        if (existing[0].user_id) {
+          await pool.execute(
+            `UPDATE users SET status = 'Active' WHERE id = ? AND status = 'Pending'`,
+            [existing[0].user_id]
+          );
+        } else {
+          // Fallback: vincula e ativa por email (cadastros sem user_id linkado)
+          const email = req.body.email || existing[0].email;
+          if (email) {
+            const [userRows] = await pool.execute<any[]>(
+              `SELECT id FROM users WHERE email = ? AND status = 'Pending'`,
+              [String(email).toLowerCase().trim()]
+            );
+            if (userRows[0]) {
+              await pool.execute(
+                `UPDATE users SET status = 'Active' WHERE id = ?`,
+                [userRows[0].id]
+              );
+              await pool.execute(
+                `UPDATE students SET user_id = ? WHERE id = ?`,
+                [userRows[0].id, req.params.id]
+              );
+            }
+          }
+        }
+      }
     }
 
     if (newPassword) {

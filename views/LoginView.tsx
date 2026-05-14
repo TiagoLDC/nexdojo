@@ -100,8 +100,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     navigate(paths[v]);
   };
 
-  const [email, setEmail] = useState('admin@oss.com');
-  const [password, setPassword] = useState('oss123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [forgotEmail, setForgotEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -530,22 +530,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           {/* ── Form Panel ── */}
           <main className="login-form-side">
             <div className="login-form-shell">
-              {/* Demo banner */}
-              <button
-                type="button"
-                className="login-demo-banner"
-                onClick={() => { setEmail('admin@oss.com'); setPassword('oss123'); }}
-              >
-                <div className="login-demo-ic">
-                  <Info size={14} strokeWidth={2.5} />
-                </div>
-                <div>
-                  <span className="login-demo-b">{t.demoMode}</span>
-                  <span className="login-demo-creds">{t.demoCredentials}</span>
-                </div>
-              </button>
-
-              <h2 className="login-form-title">{t.accessPortal}</h2>
+<h2 className="login-form-title">{t.accessPortal}</h2>
               <p className="login-form-sub">Entre com suas credenciais para continuar</p>
 
               <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -873,12 +858,12 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                     </select>
                   </div>
                   <Input label="Data de Nascimento" required type="date" value={studentData.birthDate || ''} onChange={v => setStudentData({...studentData, birthDate: v})} />
-                  <Input label="E-mail (Para Login)" required type="email" value={studentData.email || ''} onChange={v => setStudentData({...studentData, email: v})} placeholder="seu@email.com" />
+                  <Input label="E-mail (Para Login)" required type="email" autoComplete="off" value={studentData.email || ''} onChange={v => setStudentData({...studentData, email: v})} placeholder="seu@email.com" />
                   <div className="md:col-span-1">
-                    <Input label="Definir Senha" required type="password" value={regPassword} onChange={setRegPassword} placeholder="••••••••" icon={<Lock size={18} />} />
+                    <Input label="Definir Senha" required type="password" autoComplete="new-password" value={regPassword} onChange={setRegPassword} placeholder="••••••••" icon={<Lock size={18} />} />
                   </div>
                   <div className="md:col-span-1">
-                    <Input label="Confirmar Senha" required type="password" value={confirmPassword} onChange={setConfirmPassword} placeholder="••••••••" icon={<Lock size={18} />} />
+                    <Input label="Confirmar Senha" required type="password" autoComplete="new-password" value={confirmPassword} onChange={setConfirmPassword} placeholder="••••••••" icon={<Lock size={18} />} />
                   </div>
                   <Input label="WhatsApp" value={studentData.phone || ''} onChange={v => setStudentData({...studentData, phone: maskPhone(v)})} placeholder="(00) 00000-0000" />
                   <Input label="CPF" value={studentData.cpf || ''} onChange={v => setStudentData({...studentData, cpf: maskCPF(v)})} placeholder="000.000.000-00" />
@@ -1062,12 +1047,12 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                     </select>
                   </div>
                   <Input label="Data de Nascimento" required type="date" value={instructorData.birthDate || ''} onChange={v => setInstructorData({...instructorData, birthDate: v})} />
-                  <Input label="E-mail (Para Login)" required type="email" value={instructorData.email || ''} onChange={v => setInstructorData({...instructorData, email: v})} placeholder="mestre@ct.com" />
+                  <Input label="E-mail (Para Login)" required type="email" autoComplete="off" value={instructorData.email || ''} onChange={v => setInstructorData({...instructorData, email: v})} placeholder="mestre@ct.com" />
                   <div className="md:col-span-1">
-                    <Input label="Definir Senha" required type="password" value={regPassword} onChange={setRegPassword} placeholder="••••••••" icon={<Lock size={18} />} />
+                    <Input label="Definir Senha" required type="password" autoComplete="new-password" value={regPassword} onChange={setRegPassword} placeholder="••••••••" icon={<Lock size={18} />} />
                   </div>
                   <div className="md:col-span-1">
-                    <Input label="Confirmar Senha" required type="password" value={confirmPassword} onChange={setConfirmPassword} placeholder="••••••••" icon={<Lock size={18} />} />
+                    <Input label="Confirmar Senha" required type="password" autoComplete="new-password" value={confirmPassword} onChange={setConfirmPassword} placeholder="••••••••" icon={<Lock size={18} />} />
                   </div>
                   <Input label="CPF" value={instructorData.cpf || ''} onChange={v => setInstructorData({...instructorData, cpf: maskCPF(v)})} placeholder="000.000.000-00" />
                   <Input label="RG" value={instructorData.rg || ''} onChange={v => setInstructorData({...instructorData, rg: maskRG(v)})} placeholder="00.000.000-0" />
@@ -1252,7 +1237,7 @@ const ChoiceCard: React.FC<{ icon: React.ReactNode; title: string; desc: string;
   </button>
 );
 
-const Input: React.FC<{ label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; icon?: React.ReactNode; inputMode?: any; required?: boolean }> = ({ label, value, onChange, type = 'text', placeholder, icon, inputMode, required }) => {
+const Input: React.FC<{ label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; icon?: React.ReactNode; inputMode?: any; required?: boolean; autoComplete?: string }> = ({ label, value, onChange, type = 'text', placeholder, icon, inputMode, required, autoComplete }) => {
   const [show, setShow] = useState(false);
   const isPassword = type === 'password';
   const inputType = isPassword ? (show ? 'text' : 'password') : type;
@@ -1270,6 +1255,7 @@ const Input: React.FC<{ label: string; value: string; onChange: (v: string) => v
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           inputMode={inputMode}
+          autoComplete={autoComplete}
           className={`w-full ${icon ? 'pl-12' : 'px-5'} ${isPassword ? 'pr-12' : 'pr-5'} py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-slate-800 dark:text-white transition-all font-bold text-sm`}
         />
         {isPassword && (
