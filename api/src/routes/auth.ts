@@ -8,15 +8,20 @@ import { requireAuth } from '../middleware/auth';
 const router = Router();
 
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // janela de 15 minutos
-  max: 10,                   // máx. 10 tentativas por IP
+  windowMs: 15 * 60 * 1000,
+  max: 10,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Muitas tentativas de login. Tente novamente em 15 minutos.' },
 });
 
+// Rate limiting só ativo em produção (NODE_ENV=production)
+const loginMiddleware = process.env.NODE_ENV === 'production'
+  ? loginLimiter
+  : (_req: Request, _res: Response, next: NextFunction) => next();
+
 // POST /api/auth/login
-router.post('/login', loginLimiter, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.post('/login', loginMiddleware, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { email, password } = req.body;
 
   if (!email || !password) {
