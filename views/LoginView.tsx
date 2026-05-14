@@ -120,6 +120,13 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
 
+  // Redireciona cadastro de aluno/instrutor sem alias (academia obrigatória na URL)
+  React.useEffect(() => {
+    if ((view === 'signup-student' || view === 'signup-instructor') && !alias) {
+      navigate('/login');
+    }
+  }, [view, alias, navigate]);
+
   // Reset terms when switching signup views
   React.useEffect(() => {
     if (view.startsWith('signup-')) {
@@ -588,33 +595,43 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   }
 
   return (
-    <div className="min-h-[100dvh] h-[100dvh] overflow-y-auto bg-slate-900 flex flex-col items-center justify-start py-8 px-4 transition-colors relative custom-scrollbar">
+    <div className="min-h-[100dvh] h-[100dvh] overflow-y-auto login-app flex flex-col items-center justify-start py-8 px-4 relative custom-scrollbar">
       <div className="w-full max-w-5xl space-y-8 py-10">
 
         {/* Header Comum */}
         {view === 'choice' && (
-          <div className="text-center animate-in fade-in duration-700">
+          <div className="animate-in fade-in duration-700">
             {linkedAcademy ? (
-              <>
-                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] mb-4">NEXDOJO</p>
-                <div className="inline-flex items-center justify-center w-28 h-28 bg-indigo-600 rounded-[32px] mb-6 shadow-2xl shadow-indigo-600/30 overflow-hidden ring-4 ring-slate-800/50">
-                  {linkedAcademy.logo ? (
-                    <img src={linkedAcademy.logo} alt={linkedAcademy.name} className="w-full h-full object-contain p-2" />
-                  ) : (
-                    <Award className="text-white" size={40} />
-                  )}
+              <div className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="login-brand-card">
+                    <img src="/logo.png" alt="NexDojo" className="login-brand-logo" />
+                  </div>
+                  <span className="login-brand-name">
+                    <span className="login-brand-nex">Nex</span><span className="login-brand-dojo">Dojo</span>
+                  </span>
                 </div>
-                <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic leading-none">{linkedAcademy.name}</h1>
-                <p className="text-slate-400 mt-3 font-bold text-xs uppercase tracking-[0.3em] opacity-80">{t.legacyContinues}</p>
-              </>
+                <div className="text-center">
+                  <div className="inline-flex items-center justify-center w-28 h-28 bg-indigo-600 rounded-full mb-6 shadow-2xl shadow-indigo-600/30 overflow-hidden ring-4 ring-slate-800/50">
+                    {linkedAcademy.logo ? (
+                      <img src={linkedAcademy.logo} alt={linkedAcademy.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <Award className="text-white" size={40} />
+                    )}
+                  </div>
+                  <h1 className="text-4xl font-black text-white tracking-tighter uppercase leading-none">{linkedAcademy.name}</h1>
+                  <p className="text-slate-400 mt-3 font-bold text-xs uppercase tracking-[0.3em] opacity-80">{t.legacyContinues}</p>
+                </div>
+              </div>
             ) : (
-              <>
-                <div className="inline-flex items-center justify-center w-28 h-28 bg-indigo-600 rounded-[32px] mb-6 shadow-2xl shadow-indigo-600/30 overflow-hidden ring-4 ring-slate-800/50">
-                  <Trophy className="text-white" size={40} />
+              <div className="flex items-center gap-3">
+                <div className="login-brand-card">
+                  <img src="/logo.png" alt="NexDojo" className="login-brand-logo" />
                 </div>
-                <h1 className="text-4xl font-black text-white tracking-tighter uppercase italic leading-none">NEXDOJO</h1>
-                <p className="text-slate-400 mt-3 font-bold text-xs uppercase tracking-[0.3em] opacity-80">{t.legacyContinues}</p>
-              </>
+                <span className="login-brand-name">
+                  <span className="login-brand-nex">Nex</span><span className="login-brand-dojo">Dojo</span>
+                </span>
+              </div>
             )}
           </div>
         )}
@@ -666,10 +683,22 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
             <button onClick={() => setView('login')} className="text-white flex items-center gap-2 mb-4 hover:text-indigo-400 transition-colors font-bold text-xs uppercase tracking-[0.2em]">
               <ChevronLeft size={18} /> Voltar ao Login
             </button>
-            <div className={`grid grid-cols-1 ${isFromSharedLink ? 'sm:grid-cols-2' : 'sm:grid-cols-3'} gap-4`}>
-              {!isFromSharedLink && <ChoiceCard icon={<Trophy size={28} />} title="Nova Academia" desc="Para instrutores e gestores." onClick={() => setView('signup-academy')} />}
-              <ChoiceCard icon={<Users size={28} />} title="Sou Aluno" desc="Fazer matrícula agora." onClick={() => setView('signup-student')} />
-              <ChoiceCard icon={<Award size={28} />} title="Sou Instrutor" desc="Ficha técnica do instrutor." onClick={() => setView('signup-instructor')} />
+            <div className="flex justify-center">
+              {!alias && (
+                <div className="w-full max-w-xs">
+                  <ChoiceCard icon={<Trophy size={28} />} title="Nova Academia" desc="Para instrutores e gestores." onClick={() => setView('signup-academy')} />
+                </div>
+              )}
+              {alias && (
+                <div className="flex gap-0">
+                  <div className="w-64">
+                    <ChoiceCard icon={<Users size={28} />} title="Sou Aluno" desc="Fazer matrícula agora." onClick={() => setView('signup-student')} />
+                  </div>
+                  <div className="w-64">
+                    <ChoiceCard icon={<Award size={28} />} title="Sou Instrutor" desc="Ficha técnica do instrutor." onClick={() => setView('signup-instructor')} />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

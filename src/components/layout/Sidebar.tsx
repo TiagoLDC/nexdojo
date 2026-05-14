@@ -78,9 +78,9 @@ export const Sidebar: React.FC = () => {
             </div>
             {/* Academy row */}
             <div className="flex items-center gap-2 bg-slate-800/60 rounded-xl px-2 py-1.5">
-              <div className="w-7 h-7 bg-indigo-500 rounded-lg overflow-hidden shrink-0 shadow shadow-indigo-500/20 flex items-center justify-center p-0.5">
+              <div className="w-7 h-7 bg-indigo-500 rounded-full overflow-hidden shrink-0 shadow shadow-indigo-500/20 flex items-center justify-center">
                 {academy?.logo ? (
-                  <img src={academy.logo} alt={academy.name} className="w-full h-full object-contain" />
+                  <img src={academy.logo} alt={academy.name} className="w-full h-full object-cover" />
                 ) : (
                   <Award className="text-white" size={14} />
                 )}

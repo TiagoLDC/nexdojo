@@ -539,8 +539,8 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                 className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-[32px] sm:rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all group text-left w-full h-full cursor-pointer relative overflow-hidden"
               >
                  <div className="flex items-start justify-between mb-6">
-                   <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:rotate-12 transition-transform shadow-inner">
-                      {a.logo ? <img src={a.logo} className="w-full h-full rounded-2xl object-cover" /> : <Award size={24} />}
+                   <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center text-indigo-600 group-hover:rotate-12 transition-transform overflow-hidden">
+                      {a.logo ? <img src={a.logo} className="w-full h-full object-cover" /> : <Award size={24} />}
                    </div>
                    <div className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${a.planStatus === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
                      {a.planStatus || 'Trial'}
@@ -1156,8 +1156,8 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                 .map(acc => (
                   <div key={acc.id} className="bg-white dark:bg-slate-900 p-5 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm space-y-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold uppercase shrink-0">
-                        {acc.logo ? <img src={acc.logo} className="w-full h-full rounded-2xl object-cover" /> : acc.name.charAt(0)}
+                      <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold uppercase shrink-0 overflow-hidden">
+                        {acc.logo ? <img src={acc.logo} className="w-full h-full object-cover" /> : acc.name.charAt(0)}
                       </div>
                       <div className="min-w-0">
                         <p className="font-black text-slate-800 dark:text-white text-sm uppercase truncate italic">{acc.name}</p>
@@ -1216,8 +1216,8 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                       <tr key={acc.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold uppercase">
-                              {acc.logo ? <img src={acc.logo} className="w-full h-full rounded-xl object-cover" /> : acc.name.charAt(0)}
+                            <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold uppercase overflow-hidden">
+                              {acc.logo ? <img src={acc.logo} className="w-full h-full object-cover" /> : acc.name.charAt(0)}
                             </div>
                             <div>
                               <p className="font-bold text-slate-800 dark:text-white text-sm uppercase">{acc.name}</p>
@@ -1270,9 +1270,9 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
               <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[40px] shadow-2xl p-8 space-y-8 animate-in zoom-in-95 duration-300">
                 <header className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-3xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                    <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 overflow-hidden">
                       {selectedAcademy.logo ? (
-                        <img src={selectedAcademy.logo} className="w-full h-full rounded-3xl object-cover" />
+                        <img src={selectedAcademy.logo} className="w-full h-full object-cover" />
                       ) : (
                         <ShieldCheck size={32} />
                       )}
