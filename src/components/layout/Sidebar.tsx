@@ -59,21 +59,23 @@ export const Sidebar: React.FC = () => {
       {/* Logo / Academy */}
       <div className="p-4 pb-2">
         {collapsed ? (
+          /* Collapsed: só o card do logo centralizado */
           <div className="flex justify-center">
-            <div className="w-10 h-10 bg-indigo-500 rounded-xl overflow-hidden shrink-0 shadow-lg shadow-indigo-500/20 flex items-center justify-center p-0.5">
-              {academy?.logo ? (
-                <img src={academy.logo} alt={academy.name} className="w-full h-full object-contain" />
-              ) : (
-                <Award className="text-white" size={22} />
-              )}
+            <div className="sidebar-brand-card-sm">
+              <img src="/logo.png" alt="NexDojo" className="sidebar-brand-logo-sm" />
             </div>
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {/* System name */}
-            <h1 className="text-xl font-black tracking-tighter uppercase italic leading-none text-white">
-              NexDojo
-            </h1>
+            {/* Brand: logo card + NexDojo camelCase */}
+            <div className="sidebar-brand-row">
+              <div className="sidebar-brand-card">
+                <img src="/logo.png" alt="NexDojo" className="sidebar-brand-logo" />
+              </div>
+              <span className="sidebar-brand-name">
+                <span className="sidebar-brand-nex">Nex</span><span className="sidebar-brand-dojo">Dojo</span>
+              </span>
+            </div>
             {/* Academy row */}
             <div className="flex items-center gap-2 bg-slate-800/60 rounded-xl px-2 py-1.5">
               <div className="w-7 h-7 bg-indigo-500 rounded-lg overflow-hidden shrink-0 shadow shadow-indigo-500/20 flex items-center justify-center p-0.5">
@@ -249,13 +251,6 @@ export const Sidebar: React.FC = () => {
           <Settings size={18} />
           {!collapsed && <span className="font-bold text-xs">{String(t.settings ?? 'Configurações')}</span>}
         </Link>
-
-        {/* Version tag */}
-        {!collapsed && (
-          <p className="text-[7px] font-bold text-slate-600 uppercase tracking-widest text-center py-1">
-            VERSÃO QAS 13/05/2026 14:16:23
-          </p>
-        )}
 
         {/* Theme toggle */}
         <button

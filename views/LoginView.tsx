@@ -201,6 +201,14 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
   const handleRegisterAcademy = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!academyData.name || !academyData.owner || !academyData.email) {
+      const missing: string[] = [];
+      if (!academyData.owner) missing.push('Seu Nome');
+      if (!academyData.name) missing.push('Nome da Unidade');
+      if (!academyData.email) missing.push('E-mail de Contato');
+      showNotification(`Preencha os campos obrigatórios: ${missing.join(', ')}.`, 'error');
+      return;
+    }
     if (!academyData.password) {
       showNotification("Defina uma senha para o administrador.", 'error');
       return;
@@ -378,10 +386,16 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           {/* ── Hero Panel ── */}
           <aside className="login-hero">
             <div className="login-hero-top">
-              <div className="login-mark">
-                <Trophy size={26} color="#fff" strokeWidth={2.5} />
+              <div className="login-brand-card">
+                <img
+                  src="/logo.png"
+                  alt="NexDojo"
+                  className="login-brand-logo"
+                />
               </div>
-              <span className="login-wordmark">NEXDOJO</span>
+              <span className="login-brand-name">
+                <span className="login-brand-nex">Nex</span><span className="login-brand-dojo">Dojo</span>
+              </span>
             </div>
 
             {linkedAcademy && (
@@ -618,7 +632,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   <Input
                     label="CEP"
                     value={academyData.cep || ''}
-                    onChange={v => handleCepLookup(v, (c, a) => setAcademyData({...academyData, cep: c, address: a}))}
+                    onChange={v => handleCepLookup(v, (c, a) => setAcademyData(prev => ({...prev, cep: c, address: a})))}
                     placeholder="00000-000"
                     icon={isLoadingCep ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} />}
                     inputMode="numeric"
@@ -753,7 +767,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                     <Input
                       label="CEP"
                       value={studentData.cep || ''}
-                      onChange={v => handleCepLookup(v, (c, a) => setStudentData({...studentData, cep: c, address: a}))}
+                      onChange={v => handleCepLookup(v, (c, a) => setStudentData(prev => ({...prev, cep: c, address: a})))}
                       placeholder="00000-000"
                       icon={isLoadingCep ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} />}
                     />
@@ -952,7 +966,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                     <Input
                       label="CEP"
                       value={instructorData.cep || ''}
-                      onChange={v => handleCepLookup(v, (c, a) => setInstructorData({...instructorData, cep: c, address: a}))}
+                      onChange={v => handleCepLookup(v, (c, a) => setInstructorData(prev => ({...prev, cep: c, address: a})))}
                       placeholder="00000-000"
                       icon={isLoadingCep ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} />}
                     />

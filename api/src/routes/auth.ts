@@ -74,14 +74,29 @@ router.post('/login', loginLimiter, async (req: Request, res: Response, next: Ne
 
 // POST /api/auth/register/academy — público: cria academia + admin ativo
 router.post('/register/academy', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const { name, ownerName, email, password, logo, cep, address, addressNumber, phone } = req.body;
-  if (!name || !ownerName || !email || !password) {
-    res.status(400).json({ error: 'Campos obrigatórios: name, ownerName, email, password' });
+  // Interceptor do frontend converte camelCase → snake_case antes de enviar
+  const name = req.body.name;
+  const ownerName = req.body.owner_name;
+  const email = req.body.email;
+  const password = req.body.password;
+  const logo = req.body.logo;
+  const cep = req.body.cep;
+  const address = req.body.address;
+  const addressNumber = req.body.address_number;
+  const phone = req.body.phone;
+
+  const missing: string[] = [];
+  if (!ownerName) missing.push('Seu Nome');
+  if (!name) missing.push('Nome da Unidade');
+  if (!email) missing.push('E-mail de Contato');
+  if (!password) missing.push('Senha');
+  if (missing.length) {
+    res.status(400).json({ error: `Preencha os campos obrigatórios: ${missing.join(', ')}.` });
     return;
   }
   try {
     const [existing] = await pool.execute<any[]>('SELECT id FROM users WHERE email = ?', [String(email).toLowerCase().trim()]);
-    if ((existing as any[]).length) { res.status(409).json({ error: 'E-mail já cadastrado' }); return; }
+    if ((existing as any[]).length) { res.status(409).json({ error: 'E-mail já cadastrado.' }); return; }
 
     const academyId = 'acad_' + Math.random().toString(36).substr(2, 9);
     const userId = 'usr_' + Math.random().toString(36).substr(2, 9);
@@ -101,17 +116,43 @@ router.post('/register/academy', async (req: Request, res: Response, next: NextF
 
 // POST /api/auth/register/student — público: cria aluno + user pendente
 router.post('/register/student', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const { academyId, name, email, password, belt, stripes, birthDate, ...rest } = req.body;
+  // Interceptor do frontend converte camelCase → snake_case antes de enviar
+  const academyId = req.body.academy_id;
+  const name = req.body.name;
+  const email = req.body.email;
+  const password = req.body.password;
+  const belt = req.body.belt;
+  const stripes = req.body.stripes;
+  const birthDate = req.body.birth_date;
+  const gender = req.body.gender;
+  const phone = req.body.phone;
+  const cpf = req.body.cpf;
+  const rg = req.body.rg;
+  const weight = req.body.weight;
+  const height = req.body.height;
+  const bloodType = req.body.blood_type;
+  const emergencyContact = req.body.emergency_contact;
+  const emergencyPhone = req.body.emergency_phone;
+  const cep = req.body.cep;
+  const address = req.body.address;
+  const addressNumber = req.body.address_number;
+  const guardianName = req.body.guardian_name;
+  const guardianPhone = req.body.guardian_phone;
+  const guardianRelation = req.body.guardian_relation;
+  const guardianCpf = req.body.guardian_cpf;
+  const medicalNotes = req.body.medical_notes;
+  const photo = req.body.photo;
+
   if (!academyId || !name || !email || !password || !belt || !birthDate) {
-    res.status(400).json({ error: 'Campos obrigatórios: academyId, name, email, password, belt, birthDate' });
+    res.status(400).json({ error: 'Preencha todos os campos obrigatórios.' });
     return;
   }
   try {
     const [acRows] = await pool.execute<any[]>('SELECT id FROM academies WHERE id = ?', [academyId]);
-    if (!(acRows as any[])[0]) { res.status(404).json({ error: 'Academia não encontrada' }); return; }
+    if (!(acRows as any[])[0]) { res.status(404).json({ error: 'Academia não encontrada.' }); return; }
 
     const [existing] = await pool.execute<any[]>('SELECT id FROM users WHERE email = ?', [String(email).toLowerCase().trim()]);
-    if ((existing as any[]).length) { res.status(409).json({ error: 'E-mail já cadastrado' }); return; }
+    if ((existing as any[]).length) { res.status(409).json({ error: 'E-mail já cadastrado.' }); return; }
 
     const studentId = 'stu_' + Math.random().toString(36).substr(2, 9);
     const userId = 'usr_' + Math.random().toString(36).substr(2, 9);
@@ -121,12 +162,12 @@ router.post('/register/student', async (req: Request, res: Response, next: NextF
       `INSERT INTO students (id, academy_id, name, email, belt, stripes, birth_date, gender, phone, cpf, rg, weight, height, blood_type, emergency_contact, emergency_phone, cep, address, address_number, guardian_name, guardian_phone, guardian_relation, guardian_cpf, medical_notes, photo, status, join_date, total_classes, total_hours, absent_count)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW(), 0, 0, 0)`,
       [studentId, academyId, name, String(email).toLowerCase().trim(), belt, stripes || 0, birthDate,
-       rest.gender || null, rest.phone || null, rest.cpf || null, rest.rg || null,
-       rest.weight || null, rest.height || null, rest.bloodType || null,
-       rest.emergencyContact || null, rest.emergencyPhone || null,
-       rest.cep || null, rest.address || null, rest.addressNumber || null,
-       rest.guardianName || null, rest.guardianPhone || null, rest.guardianRelation || null,
-       rest.guardianCpf || null, rest.medicalNotes || null, rest.photo || null]
+       gender || null, phone || null, cpf || null, rg || null,
+       weight || null, height || null, bloodType || null,
+       emergencyContact || null, emergencyPhone || null,
+       cep || null, address || null, addressNumber || null,
+       guardianName || null, guardianPhone || null, guardianRelation || null,
+       guardianCpf || null, medicalNotes || null, photo || null]
     );
     await pool.execute(
       `INSERT INTO users (id, academy_id, role, name, email, password_hash, status) VALUES (?, ?, 'student', ?, ?, ?, 'Pending')`,
@@ -138,17 +179,36 @@ router.post('/register/student', async (req: Request, res: Response, next: NextF
 
 // POST /api/auth/register/instructor — público: cria instrutor + user pendente
 router.post('/register/instructor', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const { academyId, name, email, password, belt, stripes, birthDate, ...rest } = req.body;
+  // Interceptor do frontend converte camelCase → snake_case antes de enviar
+  const academyId = req.body.academy_id;
+  const name = req.body.name;
+  const email = req.body.email;
+  const password = req.body.password;
+  const belt = req.body.belt;
+  const stripes = req.body.stripes;
+  const birthDate = req.body.birth_date;
+  const gender = req.body.gender;
+  const phone = req.body.phone;
+  const cpf = req.body.cpf;
+  const rg = req.body.rg;
+  const maritalStatus = req.body.marital_status;
+  const lastGraduationDate = req.body.last_graduation_date;
+  const specialties = req.body.specialties;
+  const cep = req.body.cep;
+  const address = req.body.address;
+  const addressNumber = req.body.address_number;
+  const photo = req.body.photo;
+
   if (!academyId || !name || !email || !password || !belt || !birthDate) {
-    res.status(400).json({ error: 'Campos obrigatórios: academyId, name, email, password, belt, birthDate' });
+    res.status(400).json({ error: 'Preencha todos os campos obrigatórios.' });
     return;
   }
   try {
     const [acRows] = await pool.execute<any[]>('SELECT id FROM academies WHERE id = ?', [academyId]);
-    if (!(acRows as any[])[0]) { res.status(404).json({ error: 'Academia não encontrada' }); return; }
+    if (!(acRows as any[])[0]) { res.status(404).json({ error: 'Academia não encontrada.' }); return; }
 
     const [existing] = await pool.execute<any[]>('SELECT id FROM users WHERE email = ?', [String(email).toLowerCase().trim()]);
-    if ((existing as any[]).length) { res.status(409).json({ error: 'E-mail já cadastrado' }); return; }
+    if ((existing as any[]).length) { res.status(409).json({ error: 'E-mail já cadastrado.' }); return; }
 
     const instructorId = 'instr_' + Math.random().toString(36).substr(2, 9);
     const userId = 'usr_' + Math.random().toString(36).substr(2, 9);
@@ -158,10 +218,10 @@ router.post('/register/instructor', async (req: Request, res: Response, next: Ne
       `INSERT INTO instructors (id, academy_id, name, email, belt, stripes, birth_date, gender, phone, cpf, rg, marital_status, last_graduation_date, specialties, cep, address, address_number, photo, status, join_date)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())`,
       [instructorId, academyId, name, String(email).toLowerCase().trim(), belt, stripes || 0, birthDate,
-       rest.gender || null, rest.phone || null, rest.cpf || null, rest.rg || null,
-       rest.maritalStatus || 'Solteiro', rest.lastGraduationDate || null,
-       rest.specialties || null, rest.cep || null, rest.address || null,
-       rest.addressNumber || null, rest.photo || null]
+       gender || null, phone || null, cpf || null, rg || null,
+       maritalStatus || 'Solteiro', lastGraduationDate || null,
+       specialties || null, cep || null, address || null,
+       addressNumber || null, photo || null]
     );
     await pool.execute(
       `INSERT INTO users (id, academy_id, role, name, email, password_hash, status) VALUES (?, ?, 'instructor', ?, ?, ?, 'Pending')`,

@@ -285,13 +285,160 @@
   flex-shrink: 0;
 }
 
-.login-wordmark {
-  font-family: 'Anton', Impact, 'Arial Narrow', sans-serif;
-  font-style: italic;
-  letter-spacing: 0.04em;
-  font-weight: 400;
+/* Brand card (logo container) */
+.login-brand-card {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,0.18), transparent 55%),
+    linear-gradient(145deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 100%);
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.15) inset,
+    0 8px 24px rgba(0,0,0,0.35),
+    0 0 0 1px rgba(255,255,255,0.06);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+  position: relative;
+}
+.login-brand-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-conic-gradient(from 45deg, rgba(255,255,255,0.04) 0deg 6deg, transparent 6deg 18deg);
+  opacity: 0.5;
+  mix-blend-mode: overlay;
+}
+.login-brand-logo {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
+}
+
+/* Brand wordmark */
+.login-brand-name {
+  font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  display: flex;
+  align-items: baseline;
+}
+.login-brand-nex {
   color: oklch(0.98 0.005 260);
 }
+.login-brand-dojo {
+  color: oklch(0.72 0.03 260);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SIDEBAR BRAND — versão compacta do card de marca
+═══════════════════════════════════════════════════════════════ */
+
+/* Linha que contém card + nome (sidebar expandida) */
+.sidebar-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+/* Card com logo — sidebar expandida */
+.sidebar-brand-card {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,0.14), transparent 55%),
+    linear-gradient(145deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.03) 100%);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.1) inset,
+    0 4px 12px rgba(0,0,0,0.3);
+  overflow: hidden;
+  position: relative;
+}
+.sidebar-brand-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-conic-gradient(from 45deg, rgba(255,255,255,0.03) 0deg 6deg, transparent 6deg 18deg);
+  opacity: 0.5;
+  mix-blend-mode: overlay;
+}
+.sidebar-brand-logo {
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 1px 4px rgba(0,0,0,0.35));
+}
+
+/* Nome "NexDojo" — sidebar expandida */
+.sidebar-brand-name {
+  font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  display: flex;
+  align-items: baseline;
+}
+.sidebar-brand-nex {
+  color: rgba(255,255,255,0.85);
+}
+.sidebar-brand-dojo {
+  color: rgba(255,255,255,0.38);
+}
+
+/* Card com logo — sidebar recolhida */
+.sidebar-brand-card-sm {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,0.12), transparent 55%),
+    linear-gradient(145deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.08) inset, 0 4px 10px rgba(0,0,0,0.25);
+  overflow: hidden;
+  position: relative;
+}
+.sidebar-brand-card-sm::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-conic-gradient(from 45deg, rgba(255,255,255,0.03) 0deg 6deg, transparent 6deg 18deg);
+  opacity: 0.4;
+  mix-blend-mode: overlay;
+}
+.sidebar-brand-logo-sm {
+  width: 75%;
+  height: 75%;
+  object-fit: contain;
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3));
+}
+
 
 .login-micro {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
