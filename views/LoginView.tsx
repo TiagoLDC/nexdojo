@@ -80,22 +80,22 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const { alias } = useParams<{ alias?: string }>();
 
   const view: AuthView =
-    pathname.includes('/esqueci-senha') ? 'forgot-password' :
-    pathname.includes('/cadastro/academia') ? 'signup-academy' :
-    pathname.includes('/cadastro/aluno') ? 'signup-student' :
-    pathname.includes('/cadastro/instrutor') ? 'signup-instructor' :
-    pathname.includes('/cadastro') ? 'choice' :
+    pathname.includes('/forgot-password') ? 'forgot-password' :
+    pathname.includes('/register/academy') ? 'signup-academy' :
+    pathname.includes('/register/student') ? 'signup-student' :
+    pathname.includes('/register/instructor') ? 'signup-instructor' :
+    pathname.includes('/register') ? 'choice' :
     'login';
 
   const setView = (v: AuthView) => {
     const base = alias ? `/login/${alias}` : '/login';
     const paths: Record<AuthView, string> = {
       login: base,
-      'forgot-password': `${base}/esqueci-senha`,
-      choice: `${base}/cadastro`,
-      'signup-academy': '/login/cadastro/academia',
-      'signup-student': `${base}/cadastro/aluno`,
-      'signup-instructor': `${base}/cadastro/instrutor`,
+      'forgot-password': `${base}/forgot-password`,
+      choice: `${base}/register`,
+      'signup-academy': '/login/register/academy',
+      'signup-student': `${base}/register/student`,
+      'signup-instructor': `${base}/register/instructor`,
     };
     navigate(paths[v]);
   };

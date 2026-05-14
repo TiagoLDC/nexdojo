@@ -17,12 +17,19 @@ router.get('/', requireAuth, requireRole('admin', 'superuser'), async (req: Requ
   if (type) { where += ' AND type = ?'; params.push(type); }
 
   try {
-    const [rows] = await pool.execute<any[]>(
+    const [rawRows] = await pool.execute<any[]>(
       `SELECT id, academy_id, type, deleted_at, JSON_UNQUOTE(JSON_EXTRACT(original_data, '$.name')) AS name
        FROM recycle_bin ${where} ORDER BY deleted_at DESC`,
       params
     );
-    res.json({ data: rows, total: (rows as any[]).length });
+    const rows = (rawRows as any[]).map(row => ({
+      id: row.id,
+      academyId: row.academy_id,
+      type: row.type,
+      deletedAt: row.deleted_at,
+      originalData: { name: row.name },
+    }));
+    res.json({ data: rows, total: rows.length });
   } catch (err) {
     next(err);
   }

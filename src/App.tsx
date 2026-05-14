@@ -35,17 +35,17 @@ const App: React.FC = () => (
     <Routes>
       {/* Public */}
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/login/esqueci-senha" element={<LoginPage />} />
-      <Route path="/login/cadastro" element={<LoginPage />} />
-      <Route path="/login/cadastro/academia" element={<LoginPage />} />
-      <Route path="/login/cadastro/aluno" element={<LoginPage />} />
-      <Route path="/login/cadastro/instrutor" element={<LoginPage />} />
+      <Route path="/login/forgot-password" element={<LoginPage />} />
+      <Route path="/login/register" element={<LoginPage />} />
+      <Route path="/login/register/academy" element={<LoginPage />} />
+      <Route path="/login/register/student" element={<LoginPage />} />
+      <Route path="/login/register/instructor" element={<LoginPage />} />
       {/* Academy alias routes */}
       <Route path="/login/:alias" element={<LoginPage />} />
-      <Route path="/login/:alias/esqueci-senha" element={<LoginPage />} />
-      <Route path="/login/:alias/cadastro" element={<LoginPage />} />
-      <Route path="/login/:alias/cadastro/aluno" element={<LoginPage />} />
-      <Route path="/login/:alias/cadastro/instrutor" element={<LoginPage />} />
+      <Route path="/login/:alias/forgot-password" element={<LoginPage />} />
+      <Route path="/login/:alias/register" element={<LoginPage />} />
+      <Route path="/login/:alias/register/student" element={<LoginPage />} />
+      <Route path="/login/:alias/register/instructor" element={<LoginPage />} />
 
       {/* Protected — requires auth */}
       <Route element={<PrivateRoute />}>
