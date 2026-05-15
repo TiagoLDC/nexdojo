@@ -47,7 +47,7 @@ export interface Student {
   lastGraduationDate?: string;
   graduationHistory?: GraduationHistoryItem[];
   birthDate: string; 
-  gender?: 'M' | 'F' | 'Outro';
+  gender?: 'Masculino' | 'Feminino' | 'Outro';
   phone?: string;
   email?: string;
   cpf?: string;
@@ -88,7 +88,7 @@ export interface Instructor {
   belt: Belt;
   stripes: number;
   birthDate: string;
-  gender?: 'M' | 'F' | 'Outro';
+  gender?: 'Masculino' | 'Feminino' | 'Outro';
   maritalStatus?: 'Solteiro' | 'Casado' | 'Divorciado' | 'Viúvo' | 'Outro';
   phone?: string;
   email?: string;
@@ -112,7 +112,7 @@ export interface Staff {
   name: string;
   photo?: string;
   birthDate: string;
-  gender?: 'M' | 'F' | 'Outro';
+  gender?: 'Masculino' | 'Feminino' | 'Outro';
   phone?: string;
   email?: string;
   cpf?: string;

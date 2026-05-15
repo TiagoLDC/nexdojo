@@ -1133,7 +1133,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                       />
                     </div>
-                    <div className={isNewStudent && !editingStudent.email ? "md:col-span-2" : "md:col-span-1"}>
+                    <div className="md:col-span-1">
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">{t.studentLoginEmail} {isNewStudent && <span className="text-red-500">*</span>}</label>
                       <input
                         type="email"
@@ -1144,25 +1144,23 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-indigo-600"
                       />
                     </div>
-                    {(!isNewStudent || editingStudent.email) && (
-                      <div className="md:col-span-1">
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1 flex items-center justify-between">
-                          <span>{isNewStudent ? 'Senha de Acesso' : 'Redefinir Senha'} {isNewStudent && <span className="text-red-500">*</span>}</span>
-                          <button type="button" onClick={() => setShowPassword(p => !p)} className="text-slate-400">
-                            {showPassword ? <EyeOff size={12} /> : <Eye size={12} />}
-                          </button>
-                        </label>
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          autoComplete="new-password"
-                          value={newStudentPassword}
-                          onChange={(e) => setNewStudentPassword(e.target.value)}
-                          placeholder={isNewStudent ? "Mín. 6 caracteres" : "Nova senha (opcional)"}
-                          className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
-                        />
-                        {!isNewStudent && <p className="text-[9px] text-slate-400 mt-1 ml-1 italic">O aluno será obrigado a trocar na próxima entrada.</p>}
-                      </div>
-                    )}
+                    <div className="md:col-span-1">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1 flex items-center justify-between">
+                        <span>{isNewStudent ? 'Senha de Acesso' : 'Redefinir Senha'} {isNewStudent && <span className="text-red-500">*</span>}</span>
+                        <button type="button" onClick={() => setShowPassword(p => !p)} className="text-slate-400">
+                          {showPassword ? <EyeOff size={12} /> : <Eye size={12} />}
+                        </button>
+                      </label>
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        autoComplete="new-password"
+                        value={newStudentPassword}
+                        onChange={(e) => setNewStudentPassword(e.target.value)}
+                        placeholder={isNewStudent ? "Mín. 6 caracteres" : "Nova senha (opcional)"}
+                        className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                      />
+                      {!isNewStudent && <p className="text-[9px] text-slate-400 mt-1 ml-1 italic">O aluno será obrigado a trocar na próxima entrada.</p>}
+                    </div>
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Sexo <span className="text-red-500">*</span></label>
                       <select
@@ -1171,8 +1169,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-700 dark:text-slate-200"
                       >
                         <option value="">Selecionar</option>
-                        <option value="M">Masculino</option>
-                        <option value="F">Feminino</option>
+                        <option value="Masculino">Masculino</option>
+                        <option value="Feminino">Feminino</option>
                         <option value="Outro">Outro</option>
                       </select>
                     </div>

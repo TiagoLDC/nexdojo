@@ -14,7 +14,7 @@ export enum Belt {
   RED = 'Vermelha',
 }
 
-export type Gender = 'M' | 'F' | 'Outro';
+export type Gender = 'Masculino' | 'Feminino' | 'Outro';
 export type MaritalStatus = 'Solteiro' | 'Casado' | 'Divorciado' | 'Viúvo' | 'Outro';
 export type StudentStatus = 'Active' | 'Inactive' | 'Dropped' | 'Pending';
 export type MemberStatus = 'Active' | 'Inactive' | 'Pending';

@@ -439,8 +439,8 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
                     className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700 dark:text-white transition-all disabled:opacity-60"
                   >
                     <option value="">Selecionar</option>
-                    <option value="M">Masculino</option>
-                    <option value="F">Feminino</option>
+                    <option value="Masculino">Masculino</option>
+                    <option value="Feminino">Feminino</option>
                     <option value="Outro">Outro</option>
                   </select>
                 </div>

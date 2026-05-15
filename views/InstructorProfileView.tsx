@@ -332,8 +332,8 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
                   className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none font-bold text-slate-700 dark:text-white transition-all disabled:opacity-60"
                 >
                   <option value="">Selecionar</option>
-                  <option value="M">{t.male}</option>
-                  <option value="F">{t.female}</option>
+                  <option value="Masculino">{t.male}</option>
+                  <option value="Feminino">{t.female}</option>
                   <option value="Outro">{t.other}</option>
                 </select>
               </div>

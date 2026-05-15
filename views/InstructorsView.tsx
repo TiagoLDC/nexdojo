@@ -520,8 +520,8 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">{t.gender}</label>
                       <select value={editingInstructor.gender || ''} onChange={(e) => setEditingInstructor({...editingInstructor, gender: e.target.value as any})} className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none font-medium text-slate-700 dark:text-slate-200">
                         <option value="">{t.select}</option>
-                        <option value="M">{t.male}</option>
-                        <option value="F">{t.female}</option>
+                        <option value="Masculino">{t.male}</option>
+                        <option value="Feminino">{t.female}</option>
                         <option value="Outro">{t.other}</option>
                       </select>
                     </div>

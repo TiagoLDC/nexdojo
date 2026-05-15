@@ -168,21 +168,21 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     name: '', belt: Belt.WHITE, stripes: 0, birthDate: '', status: 'Pending',
     academyId: '',
     joinDate: new Date().toISOString(), totalClasses: 0, totalHours: 0,
-    absentCount: 0, hasLoanedKimono: false, gender: 'M', weight: '', height: '',
+    absentCount: 0, hasLoanedKimono: false, gender: 'Masculino', weight: '', height: '',
     bloodType: '', emergencyContact: '', emergencyPhone: '', lastGraduationDate: '',
     cep: '', address: '', addressNumber: ''
   });
   const [instructorData, setInstructorData] = useState<Partial<Instructor>>({
     name: '', belt: Belt.BLACK, stripes: 0, birthDate: '', status: 'Pending',
     academyId: '',
-    joinDate: new Date().toISOString(), gender: 'M', cpf: '', rg: '',
+    joinDate: new Date().toISOString(), gender: 'Masculino', cpf: '', rg: '',
     maritalStatus: 'Solteiro', lastGraduationDate: '', specialties: '',
     cep: '', address: '', addressNumber: ''
   });
   const [staffData, setStaffData] = useState<Partial<Staff>>({
     name: '', birthDate: '', status: 'Pending', joinDate: new Date().toISOString(),
     academyId: '',
-    gender: 'M', cpf: '', rg: '', maritalStatus: 'Solteiro',
+    gender: 'Masculino', cpf: '', rg: '', maritalStatus: 'Solteiro',
     emergencyContact: '', emergencyPhone: '', position: '',
     cep: '', address: '', addressNumber: ''
   });
@@ -848,12 +848,12 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   <div>
                     <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 mb-1">Sexo <span className="text-red-500">*</span></label>
                     <select
-                      value={studentData.gender || 'M'}
+                      value={studentData.gender || 'Masculino'}
                       onChange={e => setStudentData({...studentData, gender: e.target.value as any})}
                       className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-slate-800 dark:text-white transition-all font-bold text-sm"
                     >
-                      <option value="M">Masculino</option>
-                      <option value="F">Feminino</option>
+                      <option value="Masculino">Masculino</option>
+                      <option value="Feminino">Feminino</option>
                       <option value="Outro">Outro</option>
                     </select>
                   </div>
@@ -1037,12 +1037,12 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   <div>
                     <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 mb-1">Sexo <span className="text-red-500">*</span></label>
                     <select
-                      value={instructorData.gender || 'M'}
+                      value={instructorData.gender || 'Masculino'}
                       onChange={e => setInstructorData({...instructorData, gender: e.target.value as any})}
                       className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none text-slate-800 dark:text-white transition-all font-bold text-sm"
                     >
-                      <option value="M">Masculino</option>
-                      <option value="F">Feminino</option>
+                      <option value="Masculino">Masculino</option>
+                      <option value="Feminino">Feminino</option>
                       <option value="Outro">Outro</option>
                     </select>
                   </div>
