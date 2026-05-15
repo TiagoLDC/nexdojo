@@ -377,6 +377,17 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     }
   };
 
+  const handleApproveStudent = async (student: Student) => {
+    try {
+      const updated = await studentService.update(student.id, { status: 'Active' } as any);
+      setStudents(prev => prev.map(s => s.id === updated.id ? updated : s));
+      showNotification('Aluno aprovado com sucesso!');
+    } catch (e) {
+      console.error(e);
+      showNotification('Erro ao aprovar aluno.', 'error');
+    }
+  };
+
   const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !editingStudent) return;
@@ -746,22 +757,34 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     </button>
 
                     <div className="flex gap-2">
-                      <a
-                        href={contactPhone ? `https://wa.me/55${contactPhone.replace(/\D/g, '')}` : '#'}
-                        target={contactPhone ? "_blank" : "_self"}
-                        rel="noopener noreferrer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!contactPhone) e.preventDefault();
-                        }}
-                        className={`p-2.5 rounded-xl transition-all ${
-                          contactPhone
-                            ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                            : 'bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed'
-                        }`}
-                      >
-                        <MessageCircle size={18} fill={contactPhone ? "currentColor" : "none"} />
-                      </a>
+                      {student.status === 'Pending' ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleApproveStudent(student);
+                          }}
+                          className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black uppercase rounded-xl transition-all flex items-center gap-1"
+                        >
+                          <Check size={12} /> Aprovar
+                        </button>
+                      ) : (
+                        <a
+                          href={contactPhone ? `https://wa.me/55${contactPhone.replace(/\D/g, '')}` : '#'}
+                          target={contactPhone ? "_blank" : "_self"}
+                          rel="noopener noreferrer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!contactPhone) e.preventDefault();
+                          }}
+                          className={`p-2.5 rounded-xl transition-all ${
+                            contactPhone
+                              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600 cursor-not-allowed'
+                          }`}
+                        >
+                          <MessageCircle size={18} fill={contactPhone ? "currentColor" : "none"} />
+                        </a>
+                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -880,20 +903,30 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <a
-                          href={contactPhone ? `https://wa.me/55${contactPhone.replace(/\D/g, '')}` : '#'}
-                          target={contactPhone ? "_blank" : "_self"}
-                          rel="noopener noreferrer"
-                          onClick={(e) => !contactPhone && e.preventDefault()}
-                          className={`p-2 rounded-xl transition-all shadow-sm ${
-                            contactPhone
-                              ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-200 hover:scale-105 active:scale-95'
-                              : 'bg-slate-100 dark:bg-slate-800/50 text-slate-300 cursor-not-allowed opacity-50'
-                          }`}
-                          title={contactPhone ? `Chamar no WhatsApp (${contactPhone})` : "Nenhum telefone cadastrado"}
-                        >
-                          <MessageCircle size={18} fill={contactPhone ? "currentColor" : "none"} />
-                        </a>
+                        {student.status === 'Pending' ? (
+                          <button
+                            onClick={() => handleApproveStudent(student)}
+                            className="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black uppercase rounded-xl transition-all flex items-center gap-1 shadow-sm"
+                            title="Aprovar cadastro"
+                          >
+                            <Check size={14} /> Aprovar
+                          </button>
+                        ) : (
+                          <a
+                            href={contactPhone ? `https://wa.me/55${contactPhone.replace(/\D/g, '')}` : '#'}
+                            target={contactPhone ? "_blank" : "_self"}
+                            rel="noopener noreferrer"
+                            onClick={(e) => !contactPhone && e.preventDefault()}
+                            className={`p-2 rounded-xl transition-all shadow-sm ${
+                              contactPhone
+                                ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-200 hover:scale-105 active:scale-95'
+                                : 'bg-slate-100 dark:bg-slate-800/50 text-slate-300 cursor-not-allowed opacity-50'
+                            }`}
+                            title={contactPhone ? `Chamar no WhatsApp (${contactPhone})` : "Nenhum telefone cadastrado"}
+                          >
+                            <MessageCircle size={18} fill={contactPhone ? "currentColor" : "none"} />
+                          </a>
+                        )}
                         <button
                           onClick={() => openQRModal(student)}
                           className="text-slate-400 hover:text-indigo-600 p-2 hover:bg-indigo-50 rounded-lg transition-all"

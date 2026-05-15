@@ -8,6 +8,7 @@ import { PrivacyValue } from '../components/PrivacyValue';
 import { studentService } from '@/features/students/services/studentService';
 import { instructorService } from '@/features/instructors/services/instructorService';
 import { staffService } from '@/features/staff/services/staffService';
+import { academyService } from '@/features/settings/services/academyService';
 import { useTranslation } from '../services/LanguageContext';
 
 /**
@@ -185,18 +186,29 @@ const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
-  const handleSaveAcademyPlans = (updatedPlans: AcademyPlan[]) => {
-    const updatedAcademy = { ...academy, plans: updatedPlans };
-    onUpdateAcademy(updatedAcademy);
-    setEditAcademy(updatedAcademy);
+  const handleSaveAcademyPlans = async (updatedPlans: AcademyPlan[]) => {
+    try {
+      const saved = await academyService.update(academy.id, { plans: updatedPlans });
+      onUpdateAcademy(saved);
+      setEditAcademy(saved);
+    } catch (e) {
+      console.error(e);
+      showNotification('Erro ao salvar planos. Tente novamente.', 'error');
+      throw e;
+    }
   };
 
-  const deletePlan = (id: string) => {
+  const deletePlan = async (id: string) => {
     const updated = (editAcademy.plans || []).filter(p => p.id !== id);
-    handleSaveAcademyPlans(updated);
+    try {
+      await handleSaveAcademyPlans(updated);
+      showNotification('Plano removido.', 'delete' as any);
+    } catch {
+      // erro já notificado em handleSaveAcademyPlans
+    }
   };
 
-  const savePlan = () => {
+  const savePlan = async () => {
     if (!editingPlan?.name) return;
 
     const plans = editAcademy.plans || [];
@@ -212,10 +224,14 @@ const SettingsView: React.FC<SettingsViewProps> = ({
       updated = [...plans, newPlanWithId];
     }
 
-    handleSaveAcademyPlans(updated);
-    setIsAddingAcademyPlan(false);
-    setEditingPlan(null);
-    showNotification("Plano salvo com sucesso!");
+    try {
+      await handleSaveAcademyPlans(updated);
+      setIsAddingAcademyPlan(false);
+      setEditingPlan(null);
+      showNotification('Plano salvo com sucesso!');
+    } catch {
+      // erro já notificado em handleSaveAcademyPlans
+    }
   };
 
   return (
