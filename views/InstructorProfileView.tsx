@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Instructor, Academy, Belt, StudentDocument, Staff } from '../types';
 import { instructorService } from '@/features/instructors/services/instructorService';
+import { staffService } from '@/features/staff/services/staffService';
 import {
   User as UserIcon,
   MapPin,
@@ -63,15 +64,14 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
         if (user.role === 'instructor') {
           const res = await instructorService.getAll(academy.id, { limit: 1000 });
           const found = res.data.find(i => i.email?.toLowerCase() === user.email?.toLowerCase()) || null;
-          if (found) {
-            setProfile(found);
-            setEditData(JSON.parse(JSON.stringify(found)));
-          } else {
-            setProfile(null);
-            setEditData(null);
-          }
+          setProfile(found);
+          setEditData(found ? JSON.parse(JSON.stringify(found)) : null);
+        } else if (user.role === 'staff') {
+          const res = await staffService.getAll(academy.id, { limit: 1000 });
+          const found = res.data.find(s => s.email?.toLowerCase() === user.email?.toLowerCase()) || null;
+          setProfile(found);
+          setEditData(found ? JSON.parse(JSON.stringify(found)) : null);
         } else {
-          // staff role: no dedicated staff service yet — show empty state
           setProfile(null);
           setEditData(null);
         }
@@ -114,9 +114,10 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
         const updated = await instructorService.update(editData.id, editData as Instructor);
         setProfile(updated);
         setEditData(JSON.parse(JSON.stringify(updated)));
-      } else {
-        // staff: no service yet, just update local state
-        setProfile(editData);
+      } else if (user.role === 'staff') {
+        const updated = await staffService.update(editData.id, editData as Staff);
+        setProfile(updated);
+        setEditData(JSON.parse(JSON.stringify(updated)));
       }
       setIsEditing(false);
       setMessage({ type: 'success', text: 'Seus dados foram atualizados com sucesso! OSS!' });
