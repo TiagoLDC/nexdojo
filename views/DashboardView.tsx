@@ -184,28 +184,28 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   }, [academy?.planExpirationDate]);
 
   const handleApprove = async (pendingUser: User) => {
-    // Optimistic UI update — activate user/profile in local state
-    const updatedUsersState = users.map(u => u.id === pendingUser.id ? { ...u, status: 'Active' as const } : u);
-    setUsers(updatedUsersState);
-
-    if (pendingUser.role === 'instructor') {
-      const found = instructors.find(i => i.email === pendingUser.email);
-      if (found) {
-        try { await instructorService.update(found.id, { status: 'Active' } as any); } catch {}
-        setInstructors(prev => prev.map(i => i.email === pendingUser.email ? { ...i, status: 'Active' as const } : i));
+    try {
+      if (pendingUser.role === 'instructor') {
+        const found = instructors.find(i => i.email === pendingUser.email);
+        if (!found) throw new Error('Instrutor não encontrado.');
+        const updated = await instructorService.update(found.id, { status: 'Active' } as any);
+        setInstructors(prev => prev.map(i => i.id === updated.id ? updated : i));
+      } else if (pendingUser.role === 'student') {
+        const found = students.find(s => s.email === pendingUser.email);
+        if (!found) throw new Error('Aluno não encontrado.');
+        const updated = await studentService.update(found.id, { status: 'Active' } as any);
+        setStudents(prev => prev.map(s => s.id === updated.id ? updated : s));
+      } else if (pendingUser.role === 'staff') {
+        const found = staff.find(st => st.email === pendingUser.email);
+        if (!found) throw new Error('Staff não encontrado.');
+        const updated = await staffService.update(found.id, { status: 'Active' } as any);
+        setStaff(prev => prev.map(st => st.id === updated.id ? updated : st));
       }
-    } else if (pendingUser.role === 'student') {
-      const found = students.find(s => s.email === pendingUser.email);
-      if (found) {
-        try { await studentService.update(found.id, { status: 'Active' } as any); } catch {}
-        setStudents(prev => prev.map(s => s.email === pendingUser.email ? { ...s, status: 'Active' as const } : s));
-      }
-    } else if (pendingUser.role === 'staff') {
-      const found = staff.find(st => st.email === pendingUser.email);
-      if (found) {
-        try { await staffService.update(found.id, { status: 'Active' } as any); } catch {}
-        setStaff(prev => prev.map(st => st.email === pendingUser.email ? { ...st, status: 'Active' as const } : st));
-      }
+      setUsers(prev => prev.map(u => u.id === pendingUser.id ? { ...u, status: 'Active' as const } : u));
+      showNotification(`${pendingUser.name} aprovado com sucesso!`);
+    } catch (e: any) {
+      console.error(e);
+      showNotification(e?.message || 'Erro ao aprovar cadastro. Tente novamente.', 'error');
     }
   };
 

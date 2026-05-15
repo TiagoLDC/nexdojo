@@ -366,13 +366,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
         await stopScanner();
       } catch (err) {
         console.error('Erro ao excluir sessão:', err);
-        // fallback: remove locally anyway
-        setAllClasses(prev => prev.filter(c => c.id !== currentClass.id));
-        setCurrentClass(null);
-        setIsDiscardModalOpen(false);
-        setCheckedIds(new Set());
-        setEditingClassInitialIds(new Set());
-        await stopScanner();
+        alert(t.errorDeletingClass || 'Erro ao excluir aula. Tente novamente.');
       }
     }
   };

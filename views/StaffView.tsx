@@ -210,13 +210,16 @@ const StaffView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }
     document.body.removeChild(link);
   };
 
-  const deleteDocument = (docId: string) => {
-    if (!editingStaff) return;
-    setEditingStaff({
-      ...editingStaff,
-      documents: editingStaff.documents?.filter(d => d.id !== docId) || []
-    });
-    showNotification("Documento removido.", 'delete');
+  const deleteDocument = async (docId: string) => {
+    if (!editingStaff?.id) return;
+    try {
+      const updated = await staffService.deleteDocument(editingStaff.id, docId);
+      setEditingStaff(updated);
+      showNotification("Documento removido.", 'delete');
+    } catch (e) {
+      console.error(e);
+      showNotification("Erro ao remover documento. Tente novamente.", 'error');
+    }
   };
 
   const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {

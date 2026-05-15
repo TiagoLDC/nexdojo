@@ -82,8 +82,13 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   const [isCheckingOut, setIsCheckingOut] = useState<string | null>(null);
   const [additionalUsers, setAdditionalUsers] = useState<{ instructors: Instructor[]; staff: Staff[] }>({ instructors: [], staff: [] });
   const [showPlanNotification, setShowPlanNotification] = useState(false);
+  const [isSavingAcademy, setIsSavingAcademy] = useState(false);
   const [editAcademy, setEditAcademy] = React.useState<Academy>(academy);
   const logoInputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setEditAcademy(academy);
+  }, [academy.id]);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -153,12 +158,74 @@ const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
-  const handleSaveAcademy = () => {
-    onUpdateAcademy(editAcademy);
-    setIsEditingAcademy(false);
-    setIsEditingNotifications(false);
-    setIsEditingPayment(false);
-    showNotification("Configurações salvas com sucesso!");
+  const handleSaveAcademyData = async () => {
+    setIsSavingAcademy(true);
+    try {
+      const payload = {
+        name: editAcademy.name,
+        ownerName: editAcademy.ownerName,
+        email: editAcademy.email,
+        phone: editAcademy.phone,
+        logo: editAcademy.logo,
+        alias: editAcademy.alias,
+        cep: editAcademy.cep,
+        address: editAcademy.address,
+        addressNumber: editAcademy.addressNumber,
+      };
+      const saved = await academyService.update(academy.id, payload);
+      onUpdateAcademy({ ...academy, ...saved });
+      setEditAcademy({ ...academy, ...saved });
+      setIsEditingAcademy(false);
+      showNotification("Dados da unidade salvos com sucesso!");
+    } catch (e) {
+      console.error(e);
+      showNotification("Erro ao salvar dados da unidade. Tente novamente.", 'error');
+    } finally {
+      setIsSavingAcademy(false);
+    }
+  };
+
+  const handleSaveNotifications = async () => {
+    setIsSavingAcademy(true);
+    try {
+      const payload = {
+        absenceLimit: editAcademy.absenceLimit,
+        paymentWarningDays: editAcademy.paymentWarningDays,
+      };
+      const saved = await academyService.update(academy.id, payload);
+      onUpdateAcademy({ ...academy, ...saved });
+      setEditAcademy({ ...academy, ...saved });
+      setIsEditingNotifications(false);
+      showNotification("Configurações de notificações salvas!");
+    } catch (e) {
+      console.error(e);
+      showNotification("Erro ao salvar notificações. Tente novamente.", 'error');
+    } finally {
+      setIsSavingAcademy(false);
+    }
+  };
+
+  const handleSavePayment = async () => {
+    setIsSavingAcademy(true);
+    try {
+      const payload = {
+        pixKey: editAcademy.pixKey,
+        pixType: editAcademy.pixType,
+        bankName: editAcademy.bankName,
+        bankAgency: editAcademy.bankAgency,
+        bankAccount: editAcademy.bankAccount,
+      };
+      const saved = await academyService.update(academy.id, payload);
+      onUpdateAcademy({ ...academy, ...saved });
+      setEditAcademy({ ...academy, ...saved });
+      setIsEditingPayment(false);
+      showNotification("Dados de pagamento salvos com sucesso!");
+    } catch (e) {
+      console.error(e);
+      showNotification("Erro ao salvar dados de pagamento. Tente novamente.", 'error');
+    } finally {
+      setIsSavingAcademy(false);
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -514,39 +581,23 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="flex items-center justify-between p-5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-left group">
               <div className="flex items-center gap-4">
                 <div className="bg-slate-100 dark:bg-slate-800 w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110">
-                  <Wallet className="text-green-600" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Chave PIX</h4>
-                  <div className="text-xs text-slate-400 dark:text-slate-500">
-                    <PrivacyValue value={academy.pixKey || "Não configurada"} maskType="generic" className="mt-0.5" />
-                  </div>
-                </div>
-              </div>
-              <button 
-                onClick={() => {
-                  setEditAcademy(academy);
-                  setIsEditingPayment(true);
-                }}
-                className="text-indigo-600 dark:text-indigo-400 text-xs font-bold uppercase"
-              >
-                Editar
-              </button>
-            </div>
-            
-            <div className="flex items-center justify-between p-5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-left group">
-              <div className="flex items-center gap-4">
-                <div className="bg-slate-100 dark:bg-slate-800 w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110">
                   <CreditCard className="text-indigo-600" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Dados Bancários</h4>
-                  <div className="text-xs text-slate-400 dark:text-slate-500">
-                    <PrivacyValue value={academy.bankName ? `${academy.bankName} - Ag: ${academy.bankAgency} Conta: ${academy.bankAccount}` : "Não configurados"} maskType="generic" className="mt-0.5" />
+                  <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Dados Bancários & PIX</h4>
+                  <div className="text-xs text-slate-400 dark:text-slate-500 space-y-0.5">
+                    {academy.pixKey
+                      ? <PrivacyValue value={`PIX (${academy.pixType || 'CPF'}): ${academy.pixKey}`} maskType="generic" className="block" />
+                      : <span>PIX: não configurado</span>
+                    }
+                    {academy.bankName
+                      ? <PrivacyValue value={`${academy.bankName} — Ag: ${academy.bankAgency} • Cta: ${academy.bankAccount}`} maskType="generic" className="block" />
+                      : <span>Banco: não configurado</span>
+                    }
                   </div>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => {
                   setEditAcademy(academy);
                   setIsEditingPayment(true);
@@ -608,15 +659,17 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
 
             <div className="flex flex-col gap-2 mt-8">
-              <button 
-                onClick={handleSaveAcademy}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-600/20 active:scale-95 transition-all text-sm uppercase tracking-widest"
+              <button
+                onClick={handleSaveNotifications}
+                disabled={isSavingAcademy}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-600/20 active:scale-95 transition-all text-sm uppercase tracking-widest"
               >
-                Salvar Configurações
+                {isSavingAcademy ? 'Salvando...' : 'Salvar Configurações'}
               </button>
-              <button 
+              <button
                 onClick={() => setIsEditingNotifications(false)}
-                className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-4 rounded-2xl active:scale-95 transition-all text-sm"
+                disabled={isSavingAcademy}
+                className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-4 rounded-2xl active:scale-95 transition-all text-sm disabled:opacity-50"
               >
                 Cancelar
               </button>
@@ -1013,15 +1066,17 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
 
             <div className="flex flex-col gap-2 mt-8">
-              <button 
-                onClick={handleSaveAcademy}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-600/20 active:scale-95 transition-all text-sm uppercase tracking-widest"
+              <button
+                onClick={handleSaveAcademyData}
+                disabled={isSavingAcademy}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-600/20 active:scale-95 transition-all text-sm uppercase tracking-widest"
               >
-                Salvar Alterações
+                {isSavingAcademy ? 'Salvando...' : 'Salvar Alterações'}
               </button>
-              <button 
+              <button
                 onClick={() => setIsEditingAcademy(false)}
-                className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-4 rounded-2xl active:scale-95 transition-all text-sm"
+                disabled={isSavingAcademy}
+                className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-4 rounded-2xl active:scale-95 transition-all text-sm disabled:opacity-50"
               >
                 Cancelar
               </button>
@@ -1288,44 +1343,53 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                 <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Dados Bancários (DOC/TED)</h3>
                 <div className="space-y-3">
                   <div>
-                    <input 
-                      type="text" 
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1.5 block ml-1">Banco</label>
+                    <input
+                      type="text"
                       value={editAcademy.bankName || ''}
                       onChange={(e) => setEditAcademy({ ...editAcademy, bankName: e.target.value })}
                       className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-4 py-4 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
-                      placeholder="Nome do Banco"
+                      placeholder="Ex: Itaú, Bradesco"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <input 
-                      type="text" 
-                      value={editAcademy.bankAgency || ''}
-                      onChange={(e) => setEditAcademy({ ...editAcademy, bankAgency: e.target.value })}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-4 py-4 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
-                      placeholder="Agência"
-                    />
-                    <input 
-                      type="text" 
-                      value={editAcademy.bankAccount || ''}
-                      onChange={(e) => setEditAcademy({ ...editAcademy, bankAccount: e.target.value })}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-4 py-4 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
-                      placeholder="Conta Corrente"
-                    />
+                    <div>
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1.5 block ml-1">Agência</label>
+                      <input
+                        type="text"
+                        value={editAcademy.bankAgency || ''}
+                        onChange={(e) => setEditAcademy({ ...editAcademy, bankAgency: e.target.value })}
+                        className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-4 py-4 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
+                        placeholder="0000"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1.5 block ml-1">Conta</label>
+                      <input
+                        type="text"
+                        value={editAcademy.bankAccount || ''}
+                        onChange={(e) => setEditAcademy({ ...editAcademy, bankAccount: e.target.value })}
+                        className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-4 py-4 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
+                        placeholder="00000-0"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="flex flex-col gap-2 mt-8">
-              <button 
-                onClick={handleSaveAcademy}
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-green-600/20 active:scale-95 transition-all text-xs uppercase tracking-widest"
+              <button
+                onClick={handleSavePayment}
+                disabled={isSavingAcademy}
+                className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-black py-4 rounded-2xl shadow-lg shadow-green-600/20 active:scale-95 transition-all text-xs uppercase tracking-widest"
               >
-                Confirmar Dados
+                {isSavingAcademy ? 'Salvando...' : 'Confirmar Dados'}
               </button>
-              <button 
+              <button
                 onClick={() => setIsEditingPayment(false)}
-                className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-4 rounded-2xl active:scale-95 transition-all text-xs"
+                disabled={isSavingAcademy}
+                className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-4 rounded-2xl active:scale-95 transition-all text-xs disabled:opacity-50"
               >
                 Voltar
               </button>

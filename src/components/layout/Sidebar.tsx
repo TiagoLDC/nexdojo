@@ -116,10 +116,11 @@ export const Sidebar: React.FC = () => {
                   </div>
                   <select
                     value={academy?.id ?? ''}
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const found = allAcademies.find((a) => a.id === e.target.value);
                       if (found) {
-                        setAcademy(found);
+                        const full = await academyService.get(found.id);
+                        setAcademy(full);
                         queryClient.invalidateQueries();
                       }
                     }}

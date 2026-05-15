@@ -1,4 +1,4 @@
-﻿import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import pool from '../db';
 import { requireAuth } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
@@ -6,6 +6,18 @@ import { getAcademyId } from '../utils/academyScope';
 import { validate } from '../utils/validate';
 
 const router = Router();
+
+function mapPlans(rows: any[]) {
+  return rows.map(p => ({
+    id: p.id,
+    name: p.name,
+    durationMonths: p.duration_months,
+    classesPerWeek: p.classes_per_week,
+    price: parseFloat(p.price),
+    category: p.category,
+    description: p.description,
+  }));
+}
 
 // GET /api/academies — superuser: lista todas; admin: apenas a própria
 router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -52,7 +64,13 @@ router.get('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
   try {
     const [rows] = await pool.execute<any[]>('SELECT * FROM academies WHERE id = ?', [req.params.id]);
     if (!rows[0]) { res.status(404).json({ error: 'Academia não encontrada' }); return; }
-    res.json(rows[0]);
+    const academy = rows[0];
+    const [planRows] = await pool.execute<any[]>(
+      'SELECT * FROM academy_plans WHERE academy_id = ? ORDER BY price ASC',
+      [req.params.id]
+    );
+    academy.plans = mapPlans(planRows as any[]);
+    res.json(academy);
   } catch (err) {
     next(err);
   }
@@ -86,7 +104,9 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
     'current_plan', 'plan_status', 'plan_expiration_date', 'payment_warning_days',
   ];
   const fields = Object.keys(req.body).filter(k => ALLOWED.includes(k));
-  if (!fields.length) { res.status(400).json({ error: 'Nenhum campo válido para atualizar' }); return; }
+  const hasPlans = Array.isArray(req.body.plans);
+
+  if (!fields.length && !hasPlans) { res.status(400).json({ error: 'Nenhum campo válido para atualizar' }); return; }
 
   try {
     const [existing] = await pool.execute<any[]>('SELECT id FROM academies WHERE id = ?', [req.params.id]);
@@ -102,15 +122,47 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
       req.body.alias = newAlias;
     }
 
-    const set    = fields.map(f => `${f} = ?`).join(', ');
-    const values = fields.map(f => req.body[f] ?? null);
+    if (fields.length) {
+      const set    = fields.map(f => `${f} = ?`).join(', ');
+      const values = fields.map(f => req.body[f] ?? null);
+      await pool.execute(
+        `UPDATE academies SET ${set} WHERE id = ?`,
+        [...values, req.params.id]
+      );
+    }
 
-    await pool.execute(
-      `UPDATE academies SET ${set} WHERE id = ?`,
-      [...values, req.params.id]
-    );
+    if (hasPlans) {
+      await pool.execute('DELETE FROM academy_plans WHERE academy_id = ?', [req.params.id]);
+      for (const plan of req.body.plans) {
+        const planId = plan.id && plan.id.length > 4 ? plan.id : `plan_${Math.random().toString(36).substr(2, 9)}`;
+        // interceptor converte camelCase→snake_case antes de enviar, então lemos snake_case aqui
+        const durationMonths = plan.duration_months ?? plan.durationMonths ?? null;
+        const classesPerWeek = plan.classes_per_week ?? plan.classesPerWeek ?? null;
+        await pool.execute(
+          `INSERT INTO academy_plans (id, academy_id, name, duration_months, classes_per_week, price, category, description)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            planId,
+            req.params.id,
+            plan.name,
+            durationMonths,
+            classesPerWeek,
+            plan.price ?? null,
+            plan.category ?? null,
+            plan.description ?? null,
+          ]
+        );
+      }
+    }
+
     const [rows] = await pool.execute<any[]>('SELECT * FROM academies WHERE id = ?', [req.params.id]);
-    res.json(rows[0]);
+    const academy = rows[0];
+    const [planRows] = await pool.execute<any[]>(
+      'SELECT * FROM academy_plans WHERE academy_id = ? ORDER BY price ASC',
+      [req.params.id]
+    );
+    academy.plans = mapPlans(planRows as any[]);
+    res.json(academy);
   } catch (err) {
     next(err);
   }

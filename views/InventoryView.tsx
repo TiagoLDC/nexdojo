@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Academy, User, Product } from '../types';
 import { inventoryService } from '@/features/inventory/services/inventoryService';
+import { financeService } from '@/features/finances/services/financeService';
 import { useTranslation } from '../services/LanguageContext';
 import { Search, Package, Plus, Edit2, Trash2, X, Tag, DollarSign, Box, Camera, Image as ImageIcon, ShoppingBag, QrCode, Clipboard, CheckCircle2, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -16,6 +17,7 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
   const [pixCopied, setPixCopied] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isConfirmingPurchase, setIsConfirmingPurchase] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isManagement = user.role === 'superuser' || user.role === 'admin' || user.role === 'staff';
@@ -123,31 +125,49 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
   };
 
   const copyPixKey = () => {
-    const pixKey = "00020126360014BR.GOV.BCB.PIX0114+5511999999999520400005303986540510.005802BR5915AcademyManager6009Sao Paulo62070503***6304E2D1";
-    navigator.clipboard.writeText(pixKey);
+    if (!academy.pixKey) {
+      showNotification("Chave PIX não configurada. Acesse Configurações > Pagamento.", 'error');
+      return;
+    }
+    navigator.clipboard.writeText(academy.pixKey);
     setPixCopied(true);
     setTimeout(() => setPixCopied(false), 2000);
-    showNotification("Código PIX copiado!");
+    showNotification("Chave PIX copiada!");
   };
 
   const confirmPurchase = async () => {
-    if (!selectedProduct) return;
+    if (!selectedProduct || !paymentMethod) return;
 
+    setIsConfirmingPurchase(true);
     try {
       const updatedProduct = await inventoryService.update(selectedProduct.id, {
         stock: Math.max(0, selectedProduct.stock - 1),
       });
       setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
-    } catch {
-      // Continue even if stock update fails
-    }
 
-    setIsPurchaseModalOpen(false);
-    setSelectedProduct(null);
-    showNotification("Pedido realizado com sucesso!");
+      await financeService.create(academy.id, {
+        description: `Venda — ${selectedProduct.name}`,
+        amount: selectedProduct.price,
+        type: 'income',
+        category: selectedProduct.category || 'Produto',
+        date: new Date().toISOString().split('T')[0],
+        paymentMethod: paymentMethod === 'Pix' ? 'PIX' : 'Cartão',
+        status: 'paid',
+        studentId: user.role === 'student' ? user.id : undefined,
+      });
+
+      setIsPurchaseModalOpen(false);
+      setSelectedProduct(null);
+      setPaymentMethod(null);
+      showNotification("Pedido confirmado e registrado no financeiro!");
+    } catch (e) {
+      console.error(e);
+      showNotification("Erro ao processar pedido. Tente novamente.", 'error');
+    } finally {
+      setIsConfirmingPurchase(false);
+    }
   };
 
-  const pixKeySimulated = "00020126360014BR.GOV.BCB.PIX0114+5511999999999520400005303986540510.005802BR5915AcademyManager6009Sao Paulo62070503***6304E2D1";
 
   if (!isManagement) {
     return (
@@ -453,19 +473,25 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
                     </div>
 
                     <div className="space-y-2">
-                       <div className="relative">
-                        <input
-                          readOnly
-                          value={pixKeySimulated}
-                          className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-4 py-3 text-[10px] font-mono text-slate-500 overflow-hidden text-ellipsis whitespace-nowrap pr-12 focus:ring-0"
-                        />
-                        <button
-                          onClick={copyPixKey}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all"
-                        >
-                          {pixCopied ? <CheckCircle2 size={16} /> : <Clipboard size={16} />}
-                        </button>
-                      </div>
+                      {academy.pixKey ? (
+                        <div className="relative">
+                          <input
+                            readOnly
+                            value={academy.pixKey}
+                            className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-4 py-3 text-[10px] font-mono text-slate-500 overflow-hidden text-ellipsis whitespace-nowrap pr-12 focus:ring-0"
+                          />
+                          <button
+                            onClick={copyPixKey}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all"
+                          >
+                            {pixCopied ? <CheckCircle2 size={16} /> : <Clipboard size={16} />}
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest text-center py-2">
+                          Chave PIX não configurada. Acesse Configurações &gt; Pagamento.
+                        </p>
+                      )}
                     </div>
                   </motion.div>
                 )}
@@ -479,11 +505,11 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
                   Cancelar
                 </button>
                 <button
-                  disabled={!paymentMethod}
+                  disabled={!paymentMethod || isConfirmingPurchase}
                   onClick={confirmPurchase}
-                  className={`flex-[2] text-white font-black text-xs uppercase tracking-widest py-5 rounded-2xl shadow-xl transition-all ${paymentMethod ? 'bg-indigo-600 shadow-indigo-600/20 hover:bg-indigo-700 active:scale-95' : 'bg-slate-300 cursor-not-allowed opacity-50'}`}
+                  className={`flex-[2] text-white font-black text-xs uppercase tracking-widest py-5 rounded-2xl shadow-xl transition-all ${paymentMethod && !isConfirmingPurchase ? 'bg-indigo-600 shadow-indigo-600/20 hover:bg-indigo-700 active:scale-95' : 'bg-slate-300 cursor-not-allowed opacity-50'}`}
                 >
-                  {paymentMethod === 'Pix' ? 'Já realizei o PIX' : 'Confirmar Pedido'}
+                  {isConfirmingPurchase ? 'Processando...' : paymentMethod === 'Pix' ? 'Já realizei o PIX' : 'Confirmar Pedido'}
                 </button>
               </div>
             </motion.div>

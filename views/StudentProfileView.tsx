@@ -184,12 +184,19 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
     reader.readAsDataURL(file);
   };
 
-  const deleteDocument = (docId: string) => {
-    if (!editData) return;
-    setEditData({
-      ...editData,
-      documents: editData.documents?.filter(d => d.id !== docId) || []
-    });
+  const deleteDocument = async (docId: string) => {
+    if (!editData?.id) return;
+    try {
+      const updated = await studentService.deleteDocument(editData.id, docId);
+      setProfile(updated);
+      setEditData(JSON.parse(JSON.stringify(updated)));
+      setMessage({ type: 'success', text: 'Documento removido com sucesso.' });
+      setTimeout(() => setMessage(null), 3000);
+    } catch (e) {
+      console.error(e);
+      setMessage({ type: 'error', text: 'Erro ao remover documento. Tente novamente.' });
+      setTimeout(() => setMessage(null), 3000);
+    }
   };
 
   const downloadFile = (doc: StudentDocument) => {
