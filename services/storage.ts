@@ -1,6 +1,6 @@
 
-import { Student, Instructor, Staff, AttendanceRecord, Academy, User, ClassSession, ClassTemplate, ChatMessage, CalendarEvent, RecycleBinItem, FinanceTransaction, SystemConfig, SystemPlan, Language, Product } from '../types';
-import { MOCK_ACADEMY, MOCK_ACADEMIES } from './mockData';
+import { Student, Instructor, Staff, AttendanceRecord, Academy, User, ClassSession, ClassTemplate, ChatMessage, CalendarEvent, RecycleBinItem, FinanceTransaction, SystemConfig, Language, Product } from '../types';
+import { MOCK_ACADEMIES } from './mockData';
 
 const KEYS = {
   ACADEMY: 'oss_academy',

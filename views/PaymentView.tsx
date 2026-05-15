@@ -11,11 +11,7 @@ import {
   AlertCircle,
   Clock,
   DollarSign,
-  Download,
-  ExternalLink,
-  ChevronRight,
-  TrendingUp,
-  X
+  TrendingUp
 } from 'lucide-react';
 
 const PaymentView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {

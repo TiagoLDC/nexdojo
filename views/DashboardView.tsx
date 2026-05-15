@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Academy, Student, Belt, CalendarEvent, User, Instructor, Staff, ClassTemplate, SystemPlan, SystemConfig } from '../types';
@@ -16,10 +16,10 @@ import { academyService } from '@/features/settings/services/academyService';
 import { PrivacyValue } from '../components/PrivacyValue';
 import { calculateAge, isReadyForGraduation } from '../services/graduation';
 import { 
-  Users, 
-  TrendingUp, 
-  AlertTriangle, 
-  Clock, 
+  Users,
+  TrendingUp,
+  AlertTriangle,
+  Clock,
   ChevronRight,
   Search,
   ShieldAlert,
@@ -31,8 +31,6 @@ import {
   Calendar as CalendarIcon,
   AlertCircle,
   UserCheck,
-  UserX,
-  Check,
   X as XIcon,
   Plus,
   Wallet,
@@ -44,7 +42,6 @@ import {
   Zap,
   X,
   Calendar,
-  PieChart as PieChartIcon,
   Share2,
   Smartphone,
   Copy
@@ -78,7 +75,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   const [chatMessages, setChatMessages] = React.useState<any[]>([]);
   const [allAcademies, setAllAcademies] = React.useState<Academy[]>([]);
   const [sessions, setSessions] = React.useState<any[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
+  const [_isLoading, setIsLoading] = React.useState(true);
   const [selectedPending, setSelectedPending] = React.useState<{ user: User; details: any } | null>(null);
   const [lastReadChat, setLastReadChat] = React.useState<string>(academy ? localStorage.getItem(`oss_chat_last_read_${academy.id}`) || '' : '');
 
@@ -390,7 +387,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
 
   const itemVariants = {
     hidden: { y: 20, opacity: 0 },
-    visible: { y: 0, opacity: 1, transition: { type: 'spring', stiffness: 100 } }
+    visible: { y: 0, opacity: 1, transition: { type: 'spring' as const, stiffness: 100 } }
   };
 
   const graduationAlerts = useMemo(() => {
@@ -398,7 +395,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       const { readyForBelt, readyForStripe } = isReadyForGraduation(s);
       return readyForBelt || readyForStripe;
     }).map(s => {
-      const { readyForBelt, readyForStripe } = isReadyForGraduation(s);
+      const { readyForBelt } = isReadyForGraduation(s);
       let type: 'STRIPE' | 'BELT' = readyForBelt ? 'BELT' : 'STRIPE';
       let message = readyForBelt ? 'Elegível para Próxima Faixa' : 'Elegível para Próximo Grau';
       return { ...s, alertType: type, alertMessage: message };
@@ -1034,7 +1031,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       {/* ALERTAS DE CALENDÁRIO */}
       {upcomingOffDays.length > 0 && (
         <motion.div variants={itemVariants} className="space-y-3">
-          {upcomingOffDays.map((offDay, index) => {
+          {upcomingOffDays.map((offDay) => {
             const isToday = offDay.date === todayStr;
             const eventDate = new Date(offDay.date + 'T12:00:00');
             const dayName = eventDate.toLocaleDateString('pt-BR', { weekday: 'long' });
@@ -1710,7 +1707,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                         {att.studentPhoto ? (
                           <img src={att.studentPhoto} className="w-12 h-12 rounded-2xl object-cover" />
                         ) : (
-                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-lg ${BELT_COLORS[att.studentBelt].split(' ')[0]}`}>
+                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-black text-lg ${(BELT_COLORS as Record<string, string>)[att.studentBelt]?.split(' ')[0]}`}>
                             {att.studentName.charAt(0)}
                           </div>
                         )}
@@ -1941,7 +1938,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                       data={[
                         { name: 'Ativos', value: students.filter(s => s.status === 'Active').length },
                         { name: 'Inativos', value: students.filter(s => s.status === 'Inactive').length },
-                        { name: 'Dropout', value: students.filter(s => s.status === 'Dropout').length }
+                        { name: 'Dropped', value: students.filter(s => s.status === 'Dropped').length }
                       ]}
                       cx="50%"
                       cy="50%"
@@ -1954,7 +1951,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                       {[
                         { name: 'Ativos', color: '#22c55e' },
                         { name: 'Inativos', color: '#f59e0b' },
-                        { name: 'Dropout', color: '#ef4444' }
+                        { name: 'Dropped', color: '#ef4444' }
                       ].map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
@@ -1977,7 +1974,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                 {[
                   { label: 'Ativos', count: students.filter(s => s.status === 'Active').length, color: 'bg-green-500', text: 'text-green-600' },
                   { label: 'Inativos', count: students.filter(s => s.status === 'Inactive').length, color: 'bg-amber-500', text: 'text-amber-600' },
-                  { label: 'Dropout', count: students.filter(s => s.status === 'Dropout').length, color: 'bg-red-500', text: 'text-red-500' }
+                  { label: 'Dropped', count: students.filter(s => s.status === 'Dropped').length, color: 'bg-red-500', text: 'text-red-500' }
                 ].map(st => (
                   <div key={st.label} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">

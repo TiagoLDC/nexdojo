@@ -10,7 +10,7 @@ interface PrivacyValueProps {
   label?: string;
 }
 
-export const PrivacyValue: React.FC<PrivacyValueProps> = ({ value, maskType = 'generic', className = '', label }) => {
+export const PrivacyValue: React.FC<PrivacyValueProps> = ({ value, maskType = 'generic', className = '' }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   if (!value) return null;

@@ -76,8 +76,14 @@ export interface Student {
   status: 'Active' | 'Inactive' | 'Dropped' | 'Pending';
   joinDate: string;
   absenceLimit?: number;
+  customAbsenceLimit?: string;
   nextPaymentDate?: string;
   planId?: string;
+  createdAt?: string;
+  degree?: number;
+  addressCep?: string;
+  addressCity?: string;
+  addressState?: string;
 }
 
 export interface Instructor {

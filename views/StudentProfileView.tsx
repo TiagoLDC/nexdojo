@@ -6,12 +6,8 @@ import {
   MapPin,
   Phone,
   Award,
-  Calendar as CalendarIcon,
   CreditCard,
-  Shield,
   Save,
-  ArrowLeft,
-  ChevronRight,
   Camera,
   Heart,
   QrCode,
@@ -22,9 +18,7 @@ import {
   Download,
   Trash2,
   GraduationCap,
-  CalendarClock,
   Activity,
-  Briefcase,
   Users as UsersIcon,
   AlertCircle,
   CheckCircle2,
@@ -33,7 +27,6 @@ import {
   Minus,
   Printer,
   Share2,
-  Shirt,
   TrendingUp
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';

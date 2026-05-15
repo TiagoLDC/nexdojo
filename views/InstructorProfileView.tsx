@@ -4,14 +4,10 @@ import { instructorService } from '@/features/instructors/services/instructorSer
 import { staffService } from '@/features/staff/services/staffService';
 import {
   User as UserIcon,
-  MapPin,
   Phone,
   Award,
-  Calendar as CalendarIcon,
-  Shield,
   Save,
   Camera,
-  Heart,
   UserCheck,
   FileText,
   Upload,
@@ -24,10 +20,7 @@ import {
   Briefcase,
   Plus,
   Minus,
-  X,
-  CheckCircle2,
-  Mail,
-  Users
+  CheckCircle2
 } from 'lucide-react';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
 import { BELT_COLORS } from '../constants';
@@ -45,7 +38,7 @@ interface InstructorProfileViewProps {
 }
 
 const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, academy }) => {
-  const { t, language, showNotification } = useTranslation();
+  const { t, showNotification } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<Instructor | Staff | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -441,7 +434,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
                   <div className={`flex items-center justify-between border-2 transition-all rounded-[32px] px-6 py-4 shadow-inner ${(editData as Instructor).belt ? BELT_COLORS[(editData as Instructor).belt] : 'bg-slate-900 border-slate-800'}`}>
                     <button
                       disabled={!isEditing}
-                      onClick={() => setEditData({ ...editData, stripes: Math.max(0, (editData.stripes || 0) - 1) } as Instructor)}
+                      onClick={() => setEditData({ ...editData, stripes: Math.max(0, ((editData as Instructor).stripes || 0) - 1) } as Instructor)}
                       className="bg-black/30 hover:bg-black/50 border border-white/20 text-white rounded-xl p-2 transition-all outline-none disabled:opacity-40"
                     >
                       <Minus size={20} />
@@ -450,13 +443,13 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
                        {[...Array((editData as Instructor).belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
                         <div
                           key={i}
-                          className={`w-3 h-8 rounded-sm transition-all ${i < (editData.stripes || 0) ? 'bg-white dark:bg-slate-800 shadow-[0_0_12px_rgba(255,255,255,0.7)] scale-y-110' : 'bg-white/10'}`}
+                          className={`w-3 h-8 rounded-sm transition-all ${i < ((editData as Instructor).stripes || 0) ? 'bg-white dark:bg-slate-800 shadow-[0_0_12px_rgba(255,255,255,0.7)] scale-y-110' : 'bg-white/10'}`}
                         />
                       ))}
                     </div>
                     <button
                       disabled={!isEditing}
-                      onClick={() => setEditData({ ...editData, stripes: Math.min((editData as Instructor).belt === Belt.BLACK ? 6 : 4, (editData.stripes || 0) + 1) } as Instructor)}
+                      onClick={() => setEditData({ ...editData, stripes: Math.min((editData as Instructor).belt === Belt.BLACK ? 6 : 4, ((editData as Instructor).stripes || 0) + 1) } as Instructor)}
                       className="bg-black/30 hover:bg-black/50 border border-white/20 text-white rounded-xl p-2 transition-all outline-none disabled:opacity-40"
                     >
                       <Plus size={20} />

@@ -23,20 +23,14 @@ import {
   Upload,
   Download,
   FileIcon,
-  AlertCircle,
-  Printer,
-  Briefcase,
   Filter,
   Check,
   Camera,
   User as UserIcon,
   CalendarClock,
-  CheckCircle2,
   Award,
-  Heart,
   MapPin,
   Mail,
-  Users,
   AlertTriangle,
   Loader2,
   Eye,
@@ -64,7 +58,7 @@ const compressImage = (base64Str: string, maxWidth = 400, maxHeight = 400): Prom
   });
 };
 
-const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
+const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy }) => {
   const { t, showNotification } = useTranslation();
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -77,13 +71,8 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
   const editPhotoInputRef = useRef<HTMLInputElement>(null);
   const [editingInstructor, setEditingInstructor] = useState<Instructor | null>(null);
   const [isLoadingCep, setIsLoadingCep] = useState(false);
-  const [showSensitive, setShowSensitive] = useState<{[key: string]: boolean}>({});
   const [newInstructorPassword, setNewInstructorPassword] = useState('');
   const [showInstructorPassword, setShowInstructorPassword] = useState(false);
-
-  const toggleSensitive = (field: string) => {
-    setShowSensitive(prev => ({ ...prev, [field]: !prev[field] }));
-  };
 
   useEffect(() => {
     if (academy?.id) {
@@ -716,7 +705,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
 
                   <div className="space-y-2">
                     {editingInstructor.graduationHistory && editingInstructor.graduationHistory.length > 0 ? (
-                      editingInstructor.graduationHistory.map((item, index) => (
+                      editingInstructor.graduationHistory.map((item) => (
                          <div key={item.id} className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 p-3 rounded-xl flex items-center justify-between group shadow-sm">
                            <div className="flex items-center gap-4">
                              <div className="text-[10px] font-bold text-slate-400 bg-slate-50 dark:bg-slate-900/50 px-2 py-1 rounded-md">{new Date(item.date).toLocaleDateString()}</div>

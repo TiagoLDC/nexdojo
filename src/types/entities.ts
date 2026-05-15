@@ -86,8 +86,14 @@ export interface Student {
   status: StudentStatus;
   joinDate: string;
   absenceLimit?: number;
+  customAbsenceLimit?: string;
   nextPaymentDate?: string;
   planId?: string;
+  createdAt?: string;
+  degree?: number;
+  addressCep?: string;
+  addressCity?: string;
+  addressState?: string;
 }
 
 // ── Instructor ────────────────────────────────────────────────────────────

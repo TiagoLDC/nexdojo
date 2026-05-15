@@ -52,6 +52,7 @@ export interface SearchParams extends PaginationParams {
 export interface GetStudentsParams extends SearchParams {
   belt?: Belt;
   status?: StudentStatus;
+  email?: string;
 }
 
 export interface CreateStudentDTO {
@@ -85,6 +86,7 @@ export interface CreateStudentDTO {
   guardianProfession?: string;
   medicalNotes?: string;
   password?: string;
+  nextPaymentDate?: string;
 }
 
 export type UpdateStudentDTO = Partial<CreateStudentDTO>;
@@ -172,6 +174,8 @@ export interface CreateClassSessionDTO {
   date: string;
   durationMinutes: number;
   instructorId: string;
+  attendanceIds?: string[];
+  status?: string;
 }
 
 // ── Finance DTOs ──────────────────────────────────────────────────────────

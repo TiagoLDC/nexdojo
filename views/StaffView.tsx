@@ -1,32 +1,19 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Staff, StudentDocument, Academy, User } from '../types';
+import { Staff, Academy, User } from '../types';
 import { staffService } from '@/features/staff/services/staffService';
 import { useTranslation } from '../services/LanguageContext';
-import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
+import { fetchAddressByCep, maskCEP, maskPhone } from '../services/cep';
 import {
   UserPlus,
   Search,
   MoreVertical,
   X,
   Trash2,
-  Save,
-  Phone,
-  MessageCircle,
-  FileText,
   Upload,
-  Download,
-  FileIcon,
   Filter,
-  Check,
   User as UserIcon,
-  CheckCircle2,
-  Briefcase,
-  Mail,
-  MapPin,
-  Loader2,
-  Eye,
-  EyeOff
+  Loader2
 } from 'lucide-react';
 
 const compressImage = (base64Str: string, maxWidth = 400, maxHeight = 400): Promise<string> => {
@@ -46,8 +33,8 @@ const compressImage = (base64Str: string, maxWidth = 400, maxHeight = 400): Prom
   });
 };
 
-const StaffView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
-  const { t, showNotification } = useTranslation();
+const StaffView: React.FC<{ academy: Academy; user: User }> = ({ academy }) => {
+  const { showNotification } = useTranslation();
   const [staff, setStaff] = useState<Staff[]>([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -174,51 +161,6 @@ const StaffView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }
       showNotification("Colaborador removido.", 'delete');
     } catch {
       showNotification("Erro ao remover colaborador.", 'error');
-    }
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !editingStaff) return;
-    if (file.size > 2000000) { alert("Limite de 2MB por arquivo."); return; }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const newDoc: StudentDocument = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        base64: reader.result as string,
-        uploadedAt: new Date().toISOString()
-      };
-      setEditingStaff({
-        ...editingStaff,
-        documents: [...(editingStaff.documents || []), newDoc]
-      });
-      showNotification("Arquivo anexado!");
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const downloadFile = (doc: StudentDocument) => {
-    const link = document.createElement('a');
-    link.href = doc.base64;
-    link.download = doc.name;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const deleteDocument = async (docId: string) => {
-    if (!editingStaff?.id) return;
-    try {
-      const updated = await staffService.deleteDocument(editingStaff.id, docId);
-      setEditingStaff(updated);
-      showNotification("Documento removido.", 'delete');
-    } catch (e) {
-      console.error(e);
-      showNotification("Erro ao remover documento. Tente novamente.", 'error');
     }
   };
 

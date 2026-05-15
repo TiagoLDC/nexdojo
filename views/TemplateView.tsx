@@ -13,22 +13,19 @@ import {
   X,
   Search,
   Clock,
-  Check,
   Calendar,
   Bell,
   Send,
   CheckCircle2,
-  Info,
   Edit2,
   Trash2,
   AlertTriangle,
   Type,
-  AlertCircle,
   Loader2
 } from 'lucide-react';
 
 const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
-  const { t, language, showNotification } = useTranslation();
+  const { language, showNotification } = useTranslation();
   const [templates, setTemplates] = useState<ClassTemplate[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);

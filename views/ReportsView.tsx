@@ -16,14 +16,13 @@ import {
   Pie,
 } from 'recharts';
 import { 
-  Download, 
-  Calendar, 
-  Users, 
-  Clock, 
-  Trophy, 
-  Shirt, 
-  TrendingUp, 
-  Activity, 
+  Download,
+  Users,
+  Clock,
+  Trophy,
+  Shirt,
+  TrendingUp,
+  Activity,
   AlertCircle,
   FileText,
   Printer,
@@ -56,10 +55,10 @@ const PrintHeader: React.FC<{ title: string; academy: Academy }> = ({ title, aca
   );
 };
 
-const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
+const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy }) => {
   const reportRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [_isLoading, setIsLoading] = useState(true);
   const [attendance, setAttendance] = useState<any[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
 
@@ -682,7 +681,7 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
                   contentStyle={{ borderRadius: '16px', border: 'none', backgroundColor: '#1e293b', color: '#fff' }}
                 />
                 <Bar dataKey="value" radius={[10, 10, 0, 0]}>
-                  {ageStats.map((entry, index) => (
+                  {ageStats.map((_entry, index) => (
                     <Cell key={`cell-${index}`} fill={['#4f46e5', '#3b82f6', '#10b981', '#f59e0b'][index % 4]} />
                   ))}
                 </Bar>

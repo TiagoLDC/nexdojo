@@ -19,8 +19,8 @@ import {
   Check
 } from 'lucide-react';
 
-const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
-  const { t, showNotification } = useTranslation();
+const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy }) => {
+  const { showNotification } = useTranslation();
   const [items, setItems] = useState<RecycleBinItem[]>([]);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('All');

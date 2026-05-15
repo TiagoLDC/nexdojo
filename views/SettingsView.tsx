@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Academy, User, Student, Instructor, Staff, AcademyPlan, Language } from '../types';
-import { Settings, Bell, Shield, LogOut, ChevronRight, User as UserIcon, Palette, MapPin, Moon, Sun, X, CreditCard, Wallet, Loader2, Save, Phone, Mail, Eye, EyeOff, CheckCircle2, Crown, Zap, Star as StarIcon, Award, Trophy, Book, Users, Clock, Plus, Trash2, Calendar, Globe, AlertTriangle, Smartphone, Check, Briefcase } from 'lucide-react';
+import { Settings, Bell, Shield, LogOut, ChevronRight, User as UserIcon, Palette, MapPin, Moon, Sun, X, CreditCard, Wallet, Loader2, Save, CheckCircle2, Crown, Zap, Star as StarIcon, Award, Trophy, Book, Users, Plus, Trash2, Globe, AlertTriangle, Smartphone, Check, Briefcase } from 'lucide-react';
 import { fetchAddressByCep, maskCEP, maskPhone } from '../services/cep';
 import { PrivacyValue } from '../components/PrivacyValue';
 import { studentService } from '@/features/students/services/studentService';

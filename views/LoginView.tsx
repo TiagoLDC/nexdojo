@@ -12,7 +12,6 @@ import {
   Mail,
   Lock,
   ArrowRight,
-  Info,
   Users,
   Award,
   ChevronLeft,
@@ -26,7 +25,6 @@ import {
   Phone,
   Activity,
   GraduationCap,
-  CalendarClock,
   Heart,
   Eye,
   EyeOff,
@@ -115,7 +113,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [confirmNewPass, setConfirmNewPass] = useState('');
   const [showNewPass, setShowNewPass] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
-  const [isFromSharedLink, setIsFromSharedLink] = useState(false);
+  const [_isFromSharedLink, setIsFromSharedLink] = useState(false);
   const [linkedAcademy, setLinkedAcademy] = useState<Academy | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
@@ -168,7 +166,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     name: '', belt: Belt.WHITE, stripes: 0, birthDate: '', status: 'Pending',
     academyId: '',
     joinDate: new Date().toISOString(), totalClasses: 0, totalHours: 0,
-    absentCount: 0, hasLoanedKimono: false, gender: 'Masculino', weight: '', height: '',
+    absentCount: 0, gender: 'Masculino', weight: '', height: '',
     bloodType: '', emergencyContact: '', emergencyPhone: '', lastGraduationDate: '',
     cep: '', address: '', addressNumber: ''
   });
@@ -179,12 +177,12 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     maritalStatus: 'Solteiro', lastGraduationDate: '', specialties: '',
     cep: '', address: '', addressNumber: ''
   });
-  const [staffData, setStaffData] = useState<Partial<Staff>>({
+  const [_staffData, setStaffData] = useState<Partial<Staff>>({
     name: '', birthDate: '', status: 'Pending', joinDate: new Date().toISOString(),
     academyId: '',
-    gender: 'Masculino', cpf: '', rg: '', maritalStatus: 'Solteiro',
-    emergencyContact: '', emergencyPhone: '', position: '',
-    cep: '', address: '', addressNumber: ''
+    gender: 'Masculino', cpf: '', rg: '', position: '',
+    cep: '', address: '', addressNumber: '',
+    medicalNotes: ''
   });
 
   const photoRef = useRef<HTMLInputElement>(null);

@@ -1,11 +1,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Student, Belt, StudentDocument, ClassTemplate, Academy, User, GraduationHistoryItem } from '../types';
+import { Student, Belt, StudentDocument, ClassTemplate, Academy, User } from '../types';
 import { studentService } from '@/features/students/services/studentService';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
-import { calculateAge, isReadyForGraduation, getNextRank, BELT_LIST } from '../services/graduation';
+import { calculateAge, isReadyForGraduation, getNextRank } from '../services/graduation';
 import { useTranslation } from '../services/LanguageContext';
-import { PrivacyValue } from '../components/PrivacyValue';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Plus,
@@ -23,10 +22,6 @@ import {
   FileText,
   UserCheck,
   Activity,
-  Calendar,
-  Mail,
-  MapPin,
-  Fingerprint,
   Users as UsersIcon,
   Upload,
   Download,
@@ -41,8 +36,6 @@ import {
   Camera,
   User as UserIcon,
   CalendarClock,
-  Shirt,
-  CheckCircle2,
   AlertTriangle,
   Trophy,
   Medal,
@@ -117,7 +110,7 @@ interface StudentsViewProps {
 const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
   const { t, language, showNotification } = useTranslation();
   const [students, setStudents] = useState<Student[]>([]);
-  const [templates, setTemplates] = useState<ClassTemplate[]>([]);
+  const [templates, _setTemplates] = useState<ClassTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const currentUser = user;
   const canEditTotalClasses = currentUser?.role === 'admin' || currentUser?.role === 'instructor';
@@ -140,7 +133,6 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [isLoadingCep, setIsLoadingCep] = useState(false);
-  const [showSensitive, setShowSensitive] = useState<{[key: string]: boolean}>({});
   const [birthDateInput, setBirthDateInput] = useState('');
   const [gradDateInput, setGradDateInput] = useState('');
   const [newStudentPassword, setNewStudentPassword] = useState('');
@@ -206,9 +198,6 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     }
   };
 
-  const toggleSensitive = (field: string) => {
-    setShowSensitive(prev => ({ ...prev, [field]: !prev[field] }));
-  };
 
   useEffect(() => {
     if (academy?.id) {
@@ -862,9 +851,9 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
                               return (
                                 <>
-                                  {readyForBelt && <Trophy size={14} className="text-indigo-600 animate-bounce" title="Pronto para trocar de faixa!" />}
-                                  {readyForStripe && <Medal size={14} className="text-amber-500 animate-pulse" title="Pronto para ganhar grau!" />}
-                                  {isAbsentee && <AlertTriangle size={14} className="text-red-500 animate-pulse" title={`Alerta: ${student.absentCount}/${effectiveLimit} faltas consecutivas!`} />}
+                                  {readyForBelt && <Trophy size={14} className="text-indigo-600 animate-bounce" />}
+                                  {readyForStripe && <Medal size={14} className="text-amber-500 animate-pulse" />}
+                                  {isAbsentee && <AlertTriangle size={14} className="text-red-500 animate-pulse" />}
                                 </>
                               );
                             })()}
@@ -1830,7 +1819,6 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       })
                       .sort((a, b) => b.totalClasses - a.totalClasses)
                       .map(student => {
-                        const { readyForBelt, readyForStripe } = isReadyForGraduation(student);
                         const { nextBelt, nextStripes } = getNextRank(student.belt, student.stripes);
 
                         return (

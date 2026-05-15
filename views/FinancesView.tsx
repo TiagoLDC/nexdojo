@@ -9,27 +9,19 @@ import {
   TrendingUp,
   TrendingDown,
   DollarSign,
-  Calendar,
   Search,
   X,
-  CheckCircle2,
   AlertCircle,
-  Filter,
   ArrowUpRight,
   ArrowDownRight,
   Wallet,
-  CreditCard,
-  Banknote,
   PieChart as PieChartIcon,
   Trash2,
   AlertTriangle,
   Loader2,
   Copy,
-  ExternalLink,
   Share2,
   QrCode,
-  Download,
-  Printer,
   FileText
 } from 'lucide-react';
 import {
@@ -62,7 +54,7 @@ const PrintHeader: React.FC<{ title: string; academy: Academy }> = ({ title, aca
   );
 };
 
-const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
+const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy }) => {
   const { t, language, showNotification } = useTranslation();
   const financeRef = useRef<HTMLDivElement>(null);
 
@@ -400,7 +392,7 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                   cursor={{ fill: '#f8fafc' }}
                 />
                 <Bar dataKey="value" radius={[10, 10, 0, 0]} barSize={40} isAnimationActive={false}>
-                  {chartData.map((entry, index) => (
+                  {chartData.map((_entry, index) => (
                     <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#4f46e5' : '#10b981'} />
                   ))}
                 </Bar>

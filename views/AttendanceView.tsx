@@ -1,14 +1,12 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Student, AttendanceRecord, ClassSession, User, ClassTemplate, Belt, Academy } from '../types';
+import { Student, ClassSession, User, ClassTemplate, Belt, Academy } from '../types';
 import { useTranslation } from '../services/LanguageContext';
 import { attendanceService } from '@/features/attendance/services/attendanceService';
 import { templateService } from '@/features/schedules/services/templateService';
 import { studentService } from '@/features/students/services/studentService';
-import { useAuthStore } from '@/stores/authStore';
 import {
   Search,
-  UserCheck,
   CheckCircle,
   Plus,
   ChevronLeft,
@@ -22,8 +20,6 @@ import {
   Timer,
   RefreshCw,
   Globe,
-  Filter,
-  AlertTriangle,
   Loader2,
   User as UserIcon,
   History
@@ -65,7 +61,6 @@ const getGraduationMilestone = (student: Student, t: any) => {
 
 const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
   const { t, language } = useTranslation();
-  const { token } = useAuthStore();
   const [students, setStudents] = useState<Student[]>([]);
   const [templates, setTemplates] = useState<ClassTemplate[]>([]);
   const [allClasses, setAllClasses] = useState<ClassSession[]>([]);
@@ -86,7 +81,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
 
   const [search, setSearch] = useState('');
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
-  const [editingClassInitialIds, setEditingClassInitialIds] = useState<Set<string>>(new Set());
+  const [_editingClassInitialIds, setEditingClassInitialIds] = useState<Set<string>>(new Set());
   const [isDiscardModalOpen, setIsDiscardModalOpen] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
 
@@ -385,7 +380,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
       const currentAttendanceIds = Array.from(checkedIds) as string[];
 
       // Update session to Finalized with final attendanceIds
-      const updatedSession = await attendanceService.updateSession(currentClass.id, {
+      await attendanceService.updateSession(currentClass.id, {
         attendanceIds: currentAttendanceIds,
         status: 'Finalized',
       });
