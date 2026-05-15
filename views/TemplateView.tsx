@@ -6,6 +6,7 @@ import { useTranslation } from '../services/LanguageContext';
 import { BeltBadge } from '../components/BeltBadge';
 import { templateService } from '@/features/schedules/services/templateService';
 import { studentService } from '@/features/students/services/studentService';
+import { chatService } from '@/features/chat/services/chatService';
 import {
   Plus,
   Users,
@@ -22,7 +23,8 @@ import {
   Trash2,
   AlertTriangle,
   Type,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 
 const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
@@ -51,6 +53,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
 
   const [search, setSearch] = useState('');
   const [notificationMsg, setNotificationMsg] = useState('');
+  const [isSendingNotification, setIsSendingNotification] = useState(false);
 
   const DAYS = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
@@ -235,11 +238,25 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
     setNotificationMsg(`Olá pessoal da turma ${template.name}, passando para avisar que...`);
   };
 
-  const handleSendNotification = () => {
-    if (!notifyingTemplate) return;
-    console.log(`Enviando para ${notifyingTemplate.assignedStudentIds.length} alunos: ${notificationMsg}`);
-    setIsNotifyModalOpen(false);
-    showNotification("Notificação enviada para os alunos!");
+  const handleSendNotification = async () => {
+    if (!notifyingTemplate || !notificationMsg.trim()) return;
+    setIsSendingNotification(true);
+    try {
+      await chatService.sendMessage(academy.id, {
+        content: `[Aviso — ${notifyingTemplate.name}] ${notificationMsg.trim()}`,
+        senderId: user.id,
+        senderName: user.name,
+        senderRole: user.role as any,
+      });
+      setIsNotifyModalOpen(false);
+      setNotificationMsg('');
+      showNotification("Aviso publicado no mural da turma!");
+    } catch (e) {
+      console.error(e);
+      showNotification("Erro ao enviar aviso. Tente novamente.", 'error');
+    } finally {
+      setIsSendingNotification(false);
+    }
   };
 
   if (isLoading) {
@@ -650,11 +667,11 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
 
             <button
               onClick={handleSendNotification}
-              disabled={!notificationMsg}
+              disabled={!notificationMsg.trim() || isSendingNotification}
               className="w-full bg-slate-900 hover:bg-slate-800 text-white font-black py-6 rounded-[32px] shadow-2xl shadow-slate-900/20 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
             >
-              <Send size={20} />
-              Disparar Aviso OSS!
+              {isSendingNotification ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+              {isSendingNotification ? 'Enviando...' : 'Disparar Aviso OSS!'}
             </button>
           </div>
         </div>
