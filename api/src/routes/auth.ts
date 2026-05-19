@@ -67,6 +67,16 @@ router.post('/login', loginMiddleware, async (req: Request, res: Response, next:
       { expiresIn: '7d' }
     );
 
+    let photo: string | null = null;
+    const profileTable: Record<string, string> = { student: 'students', instructor: 'instructors', staff: 'staff' };
+    if (profileTable[user.role]) {
+      const [photoRows] = await pool.execute<any[]>(
+        `SELECT photo FROM ${profileTable[user.role]} WHERE academy_id = ? AND email = ? LIMIT 1`,
+        [user.academy_id, String(email).toLowerCase().trim()]
+      );
+      photo = (photoRows as any[])[0]?.photo ?? null;
+    }
+
     res.json({
       token,
       user: {
@@ -75,6 +85,7 @@ router.post('/login', loginMiddleware, async (req: Request, res: Response, next:
         role: user.role,
         name: user.name,
         email: user.email,
+        photo: photo || undefined,
         requiresPasswordChange: !!user.requires_password_change,
       },
     });
@@ -113,9 +124,23 @@ router.post('/register/academy', async (req: Request, res: Response, next: NextF
     const userId = 'usr_' + Math.random().toString(36).substr(2, 9);
     const passwordHash = await bcrypt.hash(String(password), 10);
 
+    const baseAlias = String(name)
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    // garante unicidade acrescentando sufixo numérico se necessário
+    let alias = baseAlias;
+    let suffix = 1;
+    while (true) {
+      const [conflict] = await pool.execute<any[]>('SELECT id FROM academies WHERE alias = ?', [alias]);
+      if (!(conflict as any[]).length) break;
+      alias = `${baseAlias}-${suffix++}`;
+    }
+
     await pool.execute(
-      `INSERT INTO academies (id, name, owner_name, email, logo, cep, address, address_number, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [academyId, name, ownerName, String(email).toLowerCase().trim(), logo || null, cep || null, address || null, addressNumber || null, phone || null]
+      `INSERT INTO academies (id, name, alias, owner_name, email, logo, cep, address, address_number, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [academyId, name, alias, ownerName, String(email).toLowerCase().trim(), logo || null, cep || null, address || null, addressNumber || null, phone || null]
     );
     await pool.execute(
       `INSERT INTO users (id, academy_id, role, name, email, password_hash, status) VALUES (?, ?, 'admin', ?, ?, ?, 'Active')`,

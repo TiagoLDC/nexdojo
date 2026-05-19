@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Settings, ShieldCheck, Sun, Moon, ChevronLeft, ChevronRight, Award } from 'lucide-react';
+import { Settings, ShieldCheck, Sun, Moon, ChevronLeft, ChevronRight, ChevronDown, Award } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -15,6 +15,15 @@ const LANGUAGES: { code: Language; label: string; flag: string }[] = [
   { code: 'en', label: 'EN', flag: '🇺🇸' },
   { code: 'es', label: 'ES', flag: '🇪🇸' },
 ];
+
+const ROLE_META: Record<string, { label: string; className: string }> = {
+  superuser:  { label: 'Super Usuário',  className: 'bg-indigo-500/20 text-indigo-300' },
+  admin:      { label: 'Administrador',  className: 'bg-violet-500/20 text-violet-300' },
+  instructor: { label: 'Instrutor',      className: 'bg-sky-500/20 text-sky-300' },
+  staff:      { label: 'Staff',          className: 'bg-teal-500/20 text-teal-300' },
+  student:    { label: 'Aluno',          className: 'bg-emerald-500/20 text-emerald-300' },
+  guest:      { label: 'Convidado',      className: 'bg-slate-500/20 text-slate-400' },
+};
 
 export const Sidebar: React.FC = () => {
   const location = useLocation();
@@ -89,6 +98,27 @@ export const Sidebar: React.FC = () => {
                 {academy?.name ?? '—'}
               </span>
             </div>
+            {/* User info row */}
+            {(() => {
+              const roleMeta = ROLE_META[user.role] ?? { label: user.role, className: 'bg-slate-500/20 text-slate-400' };
+              return (
+                <div className="flex items-start gap-2 bg-slate-800/40 rounded-xl px-2 py-2 border border-slate-700/30">
+                  <div className="w-8 h-8 rounded-full shrink-0 overflow-hidden border border-slate-600/50 bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center text-[12px] font-black text-white uppercase mt-0.5">
+                    {user.photo
+                      ? <img src={user.photo} alt={user.name} className="w-full h-full object-cover" />
+                      : user.name.charAt(0)
+                    }
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-bold text-slate-100 leading-tight truncate">{user.name}</p>
+                    <span className={`inline-block text-[8px] font-black uppercase tracking-wider px-1.5 py-px rounded-full mt-0.5 ${roleMeta.className}`}>
+                      {roleMeta.label}
+                    </span>
+                    <p className="text-[9px] text-slate-500 font-medium truncate mt-0.5">{user.email}</p>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>
@@ -217,78 +247,69 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       {/* Footer */}
-      <div className="mt-auto space-y-1 p-4 border-t border-slate-800 bg-slate-900/50">
-        {/* Language switcher */}
-        {!collapsed && (
-          <div className="flex items-center justify-around mb-3 bg-slate-800/50 p-2 rounded-2xl border border-slate-700/50">
-            {LANGUAGES.map((lang) => (
-              <button
-                key={lang.code}
-                onClick={() => setLanguage(lang.code)}
-                className={[
-                  'flex flex-col items-center gap-1 transition-all',
-                  language === lang.code ? 'scale-110' : 'opacity-40 grayscale hover:grayscale-0 hover:opacity-100',
-                ].join(' ')}
-              >
-                <span className="text-xl leading-none">{lang.flag}</span>
-                <span className="text-[7px] font-black uppercase tracking-widest">{lang.label}</span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Settings link */}
-        <Link
-          to="/settings"
-          title={collapsed ? String(t.settings ?? 'Configurações') : ''}
-          className={[
-            'flex items-center rounded-xl h-10 transition-all',
-            isActive('/settings')
-              ? 'bg-indigo-600 text-white shadow-lg'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800',
-            collapsed ? 'justify-center w-10 mx-auto' : 'px-4 gap-3',
-          ].join(' ')}
-        >
-          <Settings size={18} />
-          {!collapsed && <span className="font-bold text-xs">{String(t.settings ?? 'Configurações')}</span>}
-        </Link>
-
-        {/* Theme toggle */}
-        {!collapsed ? (
-          <div className="flex items-center bg-slate-800 rounded-xl p-1 gap-1">
-            <button
-              onClick={() => theme !== 'light' && toggleTheme()}
+      <div className="mt-auto p-3 border-t border-slate-800 bg-slate-900/50">
+        {collapsed ? (
+          <div className="space-y-1">
+            <Link
+              to="/settings"
+              title={String(t.settings ?? 'Configurações')}
               className={[
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg flex-1 justify-center transition-all text-xs font-bold',
-                theme === 'light'
-                  ? 'bg-amber-400 text-slate-900 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200',
+                'flex items-center justify-center rounded-xl h-10 w-10 mx-auto transition-all',
+                isActive('/settings') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800',
               ].join(' ')}
             >
-              <Sun size={13} />
-              Claro
-            </button>
+              <Settings size={18} />
+            </Link>
             <button
-              onClick={() => theme !== 'dark' && toggleTheme()}
-              className={[
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg flex-1 justify-center transition-all text-xs font-bold',
-                theme === 'dark'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200',
-              ].join(' ')}
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+              className="flex items-center justify-center rounded-xl h-10 w-10 mx-auto transition-all text-slate-400 hover:text-white hover:bg-slate-800"
             >
-              <Moon size={13} />
-              Escuro
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
           </div>
         ) : (
-          <button
-            onClick={toggleTheme}
-            title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
-            className="flex items-center justify-center rounded-xl h-10 transition-all w-10 mx-auto text-slate-400 hover:text-white hover:bg-slate-800"
-          >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
+          <div className="flex items-center gap-1.5">
+            {/* Settings */}
+            <Link
+              to="/settings"
+              className={[
+                'flex items-center gap-1.5 px-2.5 py-2 rounded-xl transition-all flex-1 min-w-0',
+                isActive('/settings') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white hover:bg-slate-800',
+              ].join(' ')}
+            >
+              <Settings size={14} className="shrink-0" />
+              <span className="font-bold text-[10px] truncate">{String(t.settings ?? 'Configurações')}</span>
+            </Link>
+
+            {/* Language combobox */}
+            <div className="relative shrink-0">
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value as Language)}
+                className="bg-slate-800 border-none rounded-xl text-[10px] font-bold text-slate-300 py-2 pl-2 pr-5 outline-none focus:ring-1 focus:ring-indigo-500 appearance-none cursor-pointer"
+              >
+                {LANGUAGES.map((l) => (
+                  <option key={l.code} value={l.code}>{l.flag} {l.label}</option>
+                ))}
+              </select>
+              <ChevronDown size={10} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            </div>
+
+            {/* Theme toggle */}
+            <button
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+              className={[
+                'shrink-0 flex items-center justify-center rounded-xl h-8 w-8 transition-all',
+                theme === 'dark'
+                  ? 'bg-indigo-600/30 text-indigo-300 hover:bg-indigo-600/50'
+                  : 'bg-amber-400/20 text-amber-400 hover:bg-amber-400/30',
+              ].join(' ')}
+            >
+              {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+          </div>
         )}
       </div>
     </aside>

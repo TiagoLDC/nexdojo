@@ -7,6 +7,7 @@ export interface User {
   role: UserRole;
   name: string;
   email: string;
+  photo?: string;
   status: UserAccountStatus;
   requiresPasswordChange?: boolean;
 }
