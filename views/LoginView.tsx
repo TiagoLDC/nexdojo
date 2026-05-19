@@ -730,10 +730,17 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   />
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Logo da sua Academia</p>
                 </div>
-                <Input label="Seu Nome" value={academyData.owner} onChange={v => setAcademyData({...academyData, owner: v})} placeholder="Mestre Hélio" />
-                <Input label="Nome da Unidade" value={academyData.name} onChange={v => setAcademyData({...academyData, name: v})} placeholder="Ex: NexDojo" />
-                <Input label="E-mail de Contato" type="email" value={academyData.email} onChange={v => setAcademyData({...academyData, email: v})} placeholder="ct@oss.com" />
-                <Input label="WhatsApp / Telefone" value={academyData.phone} onChange={v => setAcademyData({...academyData, phone: maskPhone(v)})} placeholder="(00) 00000-0000" icon={<Phone size={16} />} inputMode="numeric" />
+                <Input label="Seu Nome" value={academyData.owner} onChange={v => setAcademyData({...academyData, owner: v})} placeholder="Mestre Hélio" autoComplete="name" />
+                <Input label="Nome da Unidade" value={academyData.name} onChange={v => setAcademyData({...academyData, name: v})} placeholder="Ex: NexDojo" autoComplete="organization" />
+                <div className="space-y-1">
+                  <Input label="E-mail de Contato" type="email" value={academyData.email} onChange={v => setAcademyData({...academyData, email: v})} placeholder="ct@oss.com" autoComplete="email" />
+                  <p className="text-[10px] text-slate-400 ml-1 font-bold">Usado para fazer login no sistema</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input label="Definir Senha" type="password" value={academyData.password} onChange={v => setAcademyData({...academyData, password: v})} placeholder="••••••••" icon={<Lock size={18} />} autoComplete="new-password" />
+                  <Input label="Confirmar Senha" type="password" value={confirmPassword} onChange={setConfirmPassword} placeholder="••••••••" icon={<Lock size={18} />} autoComplete="new-password" />
+                </div>
+                <Input label="WhatsApp / Telefone" value={academyData.phone} onChange={v => setAcademyData({...academyData, phone: maskPhone(v)})} placeholder="(00) 00000-0000" icon={<Phone size={16} />} inputMode="numeric" autoComplete="tel" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
                     label="CEP"
@@ -742,6 +749,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                     placeholder="00000-000"
                     icon={isLoadingCep ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} />}
                     inputMode="numeric"
+                    autoComplete="postal-code"
                   />
                   <Input
                     label="Número"
@@ -749,6 +757,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                     onChange={v => setAcademyData({...academyData, addressNumber: v})}
                     placeholder="Ex: 123"
                     inputMode="numeric"
+                    autoComplete="off"
                   />
                 </div>
                 <Input
@@ -756,11 +765,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   value={academyData.address || ''}
                   onChange={v => setAcademyData({...academyData, address: v})}
                   placeholder="Rua, Bairro, Cidade..."
+                  autoComplete="street-address"
                 />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input label="Definir Senha Admin" type="password" value={academyData.password} onChange={v => setAcademyData({...academyData, password: v})} placeholder="••••••••" icon={<Lock size={18} />} />
-                  <Input label="Confirmar Senha" type="password" value={confirmPassword} onChange={setConfirmPassword} placeholder="••••••••" icon={<Lock size={18} />} />
-                </div>
               </div>
 
               <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 space-y-4">

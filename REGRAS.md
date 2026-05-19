@@ -211,6 +211,11 @@ GEMINI_API_KEY=<!-- PREENCHER -->
 8. **Tag de Versão QAS**: **A CADA ALTERAÇÃO DE CÓDIGO** feita no projeto, você DEVE obrigatoriamente atualizar a etiqueta de versão localizada em `src/components/layout/AppLayout.tsx`, dentro da div com comentário `{/* Version tag */}`. Substitua o texto `VERSÃO QAS DD/MM/AAAA HH:MM:SS` com a data e hora reais do sistema (usar `Get-Date -Format "dd/MM/yyyy HH:mm:ss"` no PowerShell). Deve existir **apenas UMA** etiqueta de versão no sistema. Não concluir nenhuma tarefa sem atualizar a etiqueta.
 9. **Testes no Navegador**: NÃO abrir o navegador para testes, a menos que solicitado explicitamente pelo usuário. O usuário realizará os testes manualmente para agilizar as entregas.
 10. **Subir servidores locais**: Quando o usuário pedir para rodar/iniciar/subir o projeto localmente, verificar primeiro se as portas 3002 e 3005 já estão em uso (`netstat -ano | findstr "3002 3005"`). Se não estiverem, executar `cd d:\DEV_WEB\nexdojo && npm run dev:all`. Nunca subir o servidor para testes sem o usuário pedir explicitamente.
+11. **Consistência de formulários (3 camadas)**: Sempre que editar um modal de formulário em `views/SettingsView.tsx` (ou qualquer view com formulário de entidade), verificar obrigatoriamente a consistência entre:
+    - **Tipo** (`src/types/entities.ts`) — campos definidos na interface
+    - **Payload de save** (função `handleSave*`) — campos enviados ao backend
+    - **Formulário** (campos `<input>` no modal) — campos visíveis ao usuário
+    Os três devem estar em sincronia. Campos presentes no tipo e no payload mas **ausentes no formulário** são o bug mais comum e silencioso. Cada modal crítico possui um comentário `CAMPOS OBRIGATÓRIOS` — conferir antes de qualquer edição.
 
 ---
 
@@ -222,4 +227,4 @@ GEMINI_API_KEY=<!-- PREENCHER -->
 
 ---
 
-*Última atualização: 12/05/2026*
+*Última atualização: 19/05/2026*

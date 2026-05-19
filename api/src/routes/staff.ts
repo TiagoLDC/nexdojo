@@ -110,7 +110,7 @@ router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Req
 });
 
 // PUT /api/staff/:id
-router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -121,15 +121,28 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
   });
   if (errors.length) { res.status(400).json({ error: errors[0] }); return; }
 
-  const fields = Object.keys(req.body).filter(k => UPDATABLE_FIELDS.includes(k));
-  if (!fields.length) { res.status(400).json({ error: 'Nenhum campo válido para atualizar' }); return; }
-
   try {
     const [existing] = await pool.execute<any[]>(
-      'SELECT id FROM staff WHERE id = ? AND academy_id = ?',
+      'SELECT id, user_id FROM staff WHERE id = ? AND academy_id = ?',
       [req.params.id, academyId]
     );
     if (!existing[0]) { res.status(404).json({ error: 'Colaborador não encontrado' }); return; }
+
+    const isAdmin = ['admin', 'superuser'].includes(req.user!.role);
+    const isSelf = req.user!.role === 'staff' && String(existing[0].user_id) === String(req.user!.userId);
+
+    if (!isAdmin && !isSelf) {
+      res.status(403).json({ error: 'Sem permissão para esta ação' });
+      return;
+    }
+
+    // Staff não pode alterar campos administrativos
+    if (!isAdmin) {
+      ['status', 'join_date', 'user_id'].forEach(f => delete req.body[f]);
+    }
+
+    const fields = Object.keys(req.body).filter(k => UPDATABLE_FIELDS.includes(k));
+    if (!fields.length) { res.status(400).json({ error: 'Nenhum campo válido para atualizar' }); return; }
 
     const set = fields.map(f => `${f} = ?`).join(', ');
     const values = fields.map(f => req.body[f] ?? null);

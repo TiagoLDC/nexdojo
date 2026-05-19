@@ -206,7 +206,7 @@ router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Req
 });
 
 // PUT /api/students/:id
-router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -224,15 +224,35 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
     return;
   }
 
-  const fields = Object.keys(req.body).filter(k => UPDATABLE_FIELDS.includes(k));
-  if (!fields.length && !newPassword) { res.status(400).json({ error: 'Nenhum campo válido para atualizar' }); return; }
-
   try {
     const [existing] = await pool.execute<any[]>(
       'SELECT id, user_id, name, email FROM students WHERE id = ? AND academy_id = ?',
       [req.params.id, academyId]
     );
     if (!existing[0]) { res.status(404).json({ error: 'Aluno não encontrado' }); return; }
+
+    const isAdmin = ['admin', 'superuser'].includes(req.user!.role);
+    const isInstructor = req.user!.role === 'instructor';
+    const isSelf = req.user!.role === 'student' && String(existing[0].user_id) === String(req.user!.userId);
+
+    if (!isAdmin && !isInstructor && !isSelf) {
+      res.status(403).json({ error: 'Sem permissão para esta ação' });
+      return;
+    }
+
+    if (isInstructor) {
+      // Instrutor pode editar dados do aluno, mas não campos financeiros/administrativos
+      ['status', 'plan_id', 'join_date', 'next_payment_date', 'absence_limit',
+       'last_graduation_date', 'user_id'].forEach(f => delete req.body[f]);
+    } else if (!isAdmin) {
+      // Aluno editando o próprio cadastro: sem acesso a campos administrativos nem faixa
+      ['status', 'belt', 'stripes', 'plan_id', 'join_date',
+       'next_payment_date', 'absence_limit', 'last_graduation_date', 'user_id']
+        .forEach(f => delete req.body[f]);
+    }
+
+    const fields = Object.keys(req.body).filter(k => UPDATABLE_FIELDS.includes(k));
+    if (!fields.length && !newPassword) { res.status(400).json({ error: 'Nenhum campo válido para atualizar' }); return; }
 
     if (fields.length) {
       const set = fields.map(f => `${f} = ?`).join(', ');
@@ -270,6 +290,11 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
           }
         }
       }
+    }
+
+    if (newPassword && !isAdmin) {
+      res.status(403).json({ error: 'Apenas administradores podem definir senha de aluno' });
+      return;
     }
 
     if (newPassword) {

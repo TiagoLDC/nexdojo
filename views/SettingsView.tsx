@@ -958,7 +958,18 @@ const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       )}
 
-      {/* Modal de Edição da Academia */}
+      {/* Modal de Edição da Academia
+          CAMPOS OBRIGATÓRIOS — ao editar este modal, garanta que todos estão presentes como <input>:
+          - logo         (upload de imagem)
+          - name         (Nome da Unidade)
+          - alias        (Apelido / Link da Academia → /login/:alias)
+          - ownerName    (Responsável Técnico)
+          - cep          (CEP com autocomplete de endereço)
+          - address      (Endereço)
+          - addressNumber (Número)
+          - phone        (Telefone / WhatsApp)
+          Payload de save: handleSaveAcademyData() — manter em sincronia com esta lista.
+      */}
       {isEditingAcademy && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
           <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[32px] p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto custom-scrollbar">
@@ -1008,9 +1019,20 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                 />
               </div>
               <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Apelido / Link da Academia</label>
+                <input
+                  type="text"
+                  value={editAcademy.alias || ''}
+                  onChange={(e) => setEditAcademy({ ...editAcademy, alias: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
+                  placeholder="ex: nexdojo"
+                />
+                <p className="text-[10px] text-slate-400 mt-1 ml-1">Link: <span className="font-mono">/login/{editAcademy.alias || '<apelido>'}</span></p>
+              </div>
+              <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Responsável Técnico</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={editAcademy.ownerName}
                   onChange={(e) => setEditAcademy({ ...editAcademy, ownerName: e.target.value })}
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
