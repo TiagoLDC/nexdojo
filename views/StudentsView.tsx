@@ -340,6 +340,17 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
         const payload: any = { ...editingStudent };
         if (newStudentPassword) payload.password = newStudentPassword;
         const updated = await studentService.update(editingStudent.id, payload);
+
+        const newDocs = (editingStudent.documents || []).filter(d => d.id.length < 32);
+        for (const doc of newDocs) {
+          await studentService.addDocument(editingStudent.id, {
+            name: doc.name,
+            type: doc.type,
+            size: doc.size,
+            base64: doc.base64,
+          });
+        }
+
         setStudents(prev => prev.map(s => s.id === updated.id ? updated : s));
         showNotification(language === 'pt' ? "Ficha atualizada com sucesso!" : "Profile updated successfully!");
       }
@@ -464,8 +475,16 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     document.body.removeChild(link);
   };
 
-  const deleteDocument = (docId: string) => {
+  const deleteDocument = async (docId: string) => {
     if (!editingStudent) return;
+    if (docId.length >= 32) {
+      try {
+        await studentService.deleteDocument(editingStudent.id, docId);
+      } catch {
+        showNotification("Erro ao remover documento.", 'error');
+        return;
+      }
+    }
     setEditingStudent({
       ...editingStudent,
       documents: editingStudent.documents?.filter(d => d.id !== docId) || []
@@ -473,9 +492,15 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     showNotification("Documento removido.", 'delete');
   };
 
-  const handleOpenEdit = (student: Student) => {
+  const handleOpenEdit = async (student: Student) => {
     setEditingStudent({ ...student });
     setIsEditModalOpen(true);
+    try {
+      const full = await studentService.getById(student.id);
+      setEditingStudent(full as any);
+    } catch {
+      // mantém os dados básicos já setados
+    }
   };
 
   const openQRModal = (student: Student) => {
@@ -1187,11 +1212,11 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         {editingStudent.userId ? (
                           <div className="flex flex-wrap items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
                             <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-tight ${
-                              editingStudent.userStatus === 'Active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                              editingStudent.userStatus === 'Blocked' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
                               editingStudent.userStatus === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                              'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                              'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                             }`}>
-                              {editingStudent.userStatus === 'Active' ? 'Conta ativa' : editingStudent.userStatus === 'Pending' ? 'Conta pendente' : 'Conta bloqueada'}
+                              {editingStudent.userStatus === 'Blocked' ? 'Conta bloqueada' : editingStudent.userStatus === 'Pending' ? 'Conta pendente' : 'Conta ativa'}
                             </span>
                             {(['admin', 'superuser'] as const).includes(user.role as any) && (
                               <button
@@ -1491,7 +1516,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                           <div className="overflow-hidden">
                             <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate max-w-[150px]">{doc.name}</p>
                             <p className="text-[10px] text-slate-400 font-medium">
-                              {(doc.size / 1024).toFixed(1)} KB • {new Date(doc.uploadedAt).toLocaleDateString()}
+                              {doc.size ? `${(doc.size / 1024).toFixed(1)} KB • ` : ''}{new Date((doc as any).uploadedAt || (doc as any).createdAt || Date.now()).toLocaleDateString()}
                             </p>
                           </div>
                         </div>

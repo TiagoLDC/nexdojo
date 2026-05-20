@@ -32,6 +32,7 @@ const pool = mysql.createPool({
   timezone: '+00:00',
   enableKeepAlive: true,
   keepAliveInitialDelay: 30000,
+  dateStrings: ['DATE'],
 });
 
 export default pool;

@@ -69,14 +69,17 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
     if (!academy?.id) return;
 
     setIsLoading(true);
-    studentService.getAll(academy.id, { email: user.email, limit: 1 })
+    studentService.getAll(academy.id, { userId: (user as any).id, email: user.email, limit: 1 })
       .then(res => {
-        const found = res.data[0] || null;
-        if (found) {
-          setProfile(found);
-          setEditData(JSON.parse(JSON.stringify(found)));
+        const found = res.data[0];
+        if (!found) return null;
+        return studentService.getById(found.id);
+      })
+      .then(fullStudent => {
+        if (fullStudent) {
+          setProfile(fullStudent);
+          setEditData(JSON.parse(JSON.stringify(fullStudent)));
         } else {
-          // Profile not found in API — show empty state
           setProfile(null);
           setEditData(null);
         }
@@ -630,7 +633,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
               <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2">
                 <FileText size={16} /> 4. DOCUMENTAÇÃO E ANEXOS
               </h3>
-              {isEditing && (
+              {isEditing && user.role !== 'student' && (
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2"
@@ -652,7 +655,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
                       <div className="overflow-hidden">
                         <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate max-w-[150px]">{doc.name}</p>
                         <p className="text-[10px] text-slate-400 font-medium">
-                          {(doc.size / 1024).toFixed(1)} KB • {new Date(doc.uploadedAt).toLocaleDateString()}
+                          {doc.size ? `${(doc.size / 1024).toFixed(1)} KB • ` : ''}{new Date((doc as any).uploadedAt || (doc as any).createdAt).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
@@ -664,7 +667,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
                       >
                         <Download size={18} />
                       </button>
-                      {isEditing && (
+                      {isEditing && user.role !== 'student' && (
                         <button
                           onClick={() => deleteDocument(doc.id)}
                           className="p-2 text-slate-400 hover:text-red-500 hover:bg-white dark:hover:bg-slate-800 rounded-lg transition-all"

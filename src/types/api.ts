@@ -53,6 +53,7 @@ export interface GetStudentsParams extends SearchParams {
   belt?: Belt;
   status?: StudentStatus;
   email?: string;
+  userId?: string;
 }
 
 export interface CreateStudentDTO {

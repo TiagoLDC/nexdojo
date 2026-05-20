@@ -31,7 +31,7 @@ router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunct
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
-  const { search, belt, status, page = '1', limit = '20' } = req.query;
+  const { search, email, userId, belt, status, page = '1', limit = '20' } = req.query;
   const pageNum = Math.max(1, parseInt(String(page), 10));
   const limitNum = Math.min(100, Math.max(1, parseInt(String(limit), 10)));
   const offset = (pageNum - 1) * limitNum;
@@ -39,6 +39,13 @@ router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunct
   let where = 'WHERE s.academy_id = ?';
   const params: any[] = [academyId];
 
+  if (userId) {
+    where += ' AND s.user_id = ?';
+    params.push(userId);
+  } else if (email) {
+    where += ' AND s.email = ?';
+    params.push(email);
+  }
   if (search) {
     where += ' AND (s.name LIKE ? OR s.email LIKE ?)';
     params.push(`%${search}%`, `%${search}%`);
@@ -95,7 +102,15 @@ router.get('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
       [req.params.id]
     );
 
-    res.json({ ...rows[0], documents: docs, graduationHistory: grad });
+    const mapDoc = (d: any) => ({
+      id: d.id,
+      name: d.name,
+      type: d.type || 'application/octet-stream',
+      size: d.size || 0,
+      base64: d.url,
+      uploadedAt: d.created_at,
+    });
+    res.json({ ...rows[0], documents: (docs as any[]).map(mapDoc), graduationHistory: grad });
   } catch (err) {
     next(err);
   }
@@ -346,7 +361,19 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
     }
 
     const [rows] = await pool.execute<any[]>('SELECT * FROM students WHERE id = ?', [req.params.id]);
-    res.json(rows[0]);
+    const [docs] = await pool.execute<any[]>(
+      'SELECT * FROM student_documents WHERE student_id = ? ORDER BY created_at DESC',
+      [req.params.id]
+    );
+    const mapDoc = (d: any) => ({
+      id: d.id,
+      name: d.name,
+      type: d.type || 'application/octet-stream',
+      size: d.size || 0,
+      base64: d.url,
+      uploadedAt: d.created_at,
+    });
+    res.json({ ...rows[0], documents: (docs as any[]).map(mapDoc) });
   } catch (err) {
     next(err);
   }
@@ -439,8 +466,8 @@ router.post('/:id/documents', requireAuth, requireRole('admin', 'superuser'), as
   if (!academyId) return;
 
   const errors = validate(req.body, {
-    name: { required: true, type: 'string', maxLength: 255 },
-    url:  { required: true, type: 'string' },
+    name:   { required: true, type: 'string', maxLength: 255 },
+    base64: { required: true, type: 'string' },
   });
   if (errors.length) { res.status(400).json({ error: errors[0] }); return; }
 
@@ -454,11 +481,12 @@ router.post('/:id/documents', requireAuth, requireRole('admin', 'superuser'), as
     const docId = crypto.randomUUID();
     await pool.execute(
       'INSERT INTO student_documents (id, student_id, name, url) VALUES (?,?,?,?)',
-      [docId, req.params.id, req.body.name, req.body.url]
+      [docId, req.params.id, req.body.name, req.body.base64]
     );
 
     const [rows] = await pool.execute<any[]>('SELECT * FROM student_documents WHERE id = ?', [docId]);
-    res.status(201).json(rows[0]);
+    const doc = (rows as any[])[0];
+    res.status(201).json({ ...doc, base64: doc.url });
   } catch (err) {
     next(err);
   }
@@ -483,7 +511,21 @@ router.delete('/:id/documents/:docId', requireAuth, requireRole('admin', 'superu
     if (!doc[0]) { res.status(404).json({ error: 'Documento não encontrado' }); return; }
 
     await pool.execute('DELETE FROM student_documents WHERE id = ?', [req.params.docId]);
-    res.json({ message: 'Documento removido' });
+
+    const [studentRows] = await pool.execute<any[]>('SELECT * FROM students WHERE id = ?', [req.params.id]);
+    const [docs] = await pool.execute<any[]>(
+      'SELECT * FROM student_documents WHERE student_id = ? ORDER BY created_at DESC',
+      [req.params.id]
+    );
+    const mapDoc = (d: any) => ({
+      id: d.id,
+      name: d.name,
+      type: d.type || 'application/octet-stream',
+      size: d.size || 0,
+      base64: d.url,
+      uploadedAt: d.created_at,
+    });
+    res.json({ ...studentRows[0], documents: (docs as any[]).map(mapDoc) });
   } catch (err) {
     next(err);
   }
