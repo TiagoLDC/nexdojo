@@ -92,6 +92,16 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
     }
   }, [academy?.id]);
 
+  const handleOpenEditModal = async (instructor: Instructor) => {
+    try {
+      const full = await instructorService.getById(instructor.id);
+      setEditingInstructor(full);
+    } catch {
+      setEditingInstructor({ ...instructor });
+    }
+    setIsEditModalOpen(true);
+  };
+
   const handleOpenNewInstructor = () => {
     const newInstructor: Instructor = {
       id: '',
@@ -394,7 +404,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                       <MessageCircle size={18} />
                     </a>
                   )}
-                  <button onClick={() => { setEditingInstructor({...instructor}); setIsEditModalOpen(true); }} className="text-slate-400 p-2 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg">
+                  <button onClick={() => handleOpenEditModal(instructor)} className="text-slate-400 p-2 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg">
                     <MoreVertical size={20} />
                   </button>
                 </div>
@@ -482,7 +492,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                             <MessageCircle size={18} fill={instructor.phone ? "currentColor" : "none"} />
                           </a>
                         )}
-                        <button onClick={() => { setEditingInstructor({...instructor}); setIsEditModalOpen(true); }} className="text-slate-400 hover:text-indigo-600 p-2 hover:bg-indigo-50 rounded-lg transition-all" title="Editar Ficha">
+                        <button onClick={() => handleOpenEditModal(instructor)} className="text-slate-400 hover:text-indigo-600 p-2 hover:bg-indigo-50 rounded-lg transition-all" title="Editar Ficha">
                           <MoreVertical size={20} />
                         </button>
                       </div>
