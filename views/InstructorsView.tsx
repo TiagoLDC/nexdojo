@@ -157,6 +157,17 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
         const payload: any = { ...editingInstructor };
         if (newInstructorPassword) payload.password = newInstructorPassword;
         const updated = await instructorService.update(editingInstructor.id, payload);
+
+        const newDocs = (editingInstructor.documents || []).filter(d => d.id.length < 32);
+        for (const doc of newDocs) {
+          await instructorService.addDocument(editingInstructor.id, {
+            name: doc.name,
+            type: doc.type,
+            size: doc.size,
+            base64: doc.base64,
+          });
+        }
+
         setInstructors(prev => prev.map(i => i.id === updated.id ? updated : i));
         showNotification(t.profileUpdated);
       }
@@ -247,8 +258,16 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
     document.body.removeChild(link);
   };
 
-  const deleteDocument = (docId: string) => {
+  const deleteDocument = async (docId: string) => {
     if (!editingInstructor) return;
+    if (docId.length >= 32) {
+      try {
+        await instructorService.deleteDocument(editingInstructor.id, docId);
+      } catch {
+        showNotification(t.savingError, 'error');
+        return;
+      }
+    }
     setEditingInstructor({
       ...editingInstructor,
       documents: editingInstructor.documents?.filter(d => d.id !== docId) || []

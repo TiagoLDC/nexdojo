@@ -17,6 +17,7 @@ const DDL_STATEMENTS = [
   'DROP TABLE IF EXISTS class_template_schedules',
   'DROP TABLE IF EXISTS class_templates',
   'DROP TABLE IF EXISTS graduation_history',
+  'DROP TABLE IF EXISTS instructor_documents',
   'DROP TABLE IF EXISTS student_documents',
   'DROP TABLE IF EXISTS students',
   'DROP TABLE IF EXISTS instructors',
@@ -178,8 +179,19 @@ const DDL_STATEMENTS = [
     medical_notes TEXT,
     status ENUM('Active','Inactive','Dropped','Pending') DEFAULT 'Active',
     join_date DATE,
+    last_graduation_date DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE
+  )`,
+
+  // Documentos dos instrutores
+  `CREATE TABLE instructor_documents (
+    id VARCHAR(36) PRIMARY KEY,
+    instructor_id VARCHAR(36) NOT NULL,
+    name VARCHAR(255),
+    url LONGTEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (instructor_id) REFERENCES instructors(id) ON DELETE CASCADE
   )`,
 
   // Staff

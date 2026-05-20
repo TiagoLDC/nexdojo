@@ -102,6 +102,11 @@ export interface Instructor {
   email?: string;
   cpf?: string;
   rg?: string;
+  weight?: string;
+  height?: string;
+  bloodType?: string;
+  emergencyContact?: string;
+  emergencyPhone?: string;
   cep?: string;
   address?: string;
   addressNumber?: string;

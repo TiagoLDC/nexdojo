@@ -20,7 +20,8 @@ import {
   Briefcase,
   Plus,
   Minus,
-  CheckCircle2
+  Heart,
+  MapPin
 } from 'lucide-react';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
 import { BELT_COLORS } from '../constants';
@@ -45,7 +46,6 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
   const [editData, setEditData] = useState<Instructor | Staff | null>(null);
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -57,8 +57,14 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
         if (user.role === 'instructor') {
           const res = await instructorService.getAll(academy.id, { limit: 1000 });
           const found = res.data.find(i => i.email?.toLowerCase() === user.email?.toLowerCase()) || null;
-          setProfile(found);
-          setEditData(found ? JSON.parse(JSON.stringify(found)) : null);
+          if (found) {
+            const full = await instructorService.getById(found.id);
+            setProfile(full);
+            setEditData(JSON.parse(JSON.stringify(full)));
+          } else {
+            setProfile(null);
+            setEditData(null);
+          }
         } else if (user.role === 'staff') {
           const res = await staffService.getAll(academy.id, { limit: 1000 });
           const found = res.data.find(s => s.email?.toLowerCase() === user.email?.toLowerCase()) || null;
@@ -104,21 +110,31 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
     setIsSaving(true);
     try {
       if (user.role === 'instructor') {
-        const updated = await instructorService.update(editData.id, editData as Instructor);
-        setProfile(updated);
-        setEditData(JSON.parse(JSON.stringify(updated)));
+        await instructorService.update(editData.id, editData as Instructor);
+
+        const newDocs = ((editData as Instructor).documents || []).filter(d => d.id.length < 32);
+        for (const doc of newDocs) {
+          await instructorService.addDocument(editData.id, {
+            name: doc.name,
+            type: doc.type,
+            size: doc.size,
+            base64: doc.base64,
+          });
+        }
+
+        const full = await instructorService.getById(editData.id);
+        setProfile(full);
+        setEditData(JSON.parse(JSON.stringify(full)));
       } else if (user.role === 'staff') {
         const updated = await staffService.update(editData.id, editData as Staff);
         setProfile(updated);
         setEditData(JSON.parse(JSON.stringify(updated)));
       }
       setIsEditing(false);
-      setMessage({ type: 'success', text: 'Seus dados foram atualizados com sucesso! OSS!' });
-      setTimeout(() => setMessage(null), 3000);
+      showNotification('Seus dados foram atualizados com sucesso! OSS!', 'success');
     } catch (err) {
       console.error('Erro ao salvar perfil:', err);
-      setMessage({ type: 'error', text: 'Erro ao salvar. Tente novamente.' });
-      setTimeout(() => setMessage(null), 3000);
+      showNotification('Erro ao salvar. Tente novamente.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -159,7 +175,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
         ...editData,
         documents: [...(editData.documents || []), newDoc]
       });
-      showNotification("Arquivo anexado!");
+      showNotification("Arquivo anexado! Salve para confirmar.");
     };
     reader.readAsDataURL(file);
   };
@@ -175,12 +191,10 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
       } else return;
       setProfile(updated);
       setEditData(JSON.parse(JSON.stringify(updated)));
-      setMessage({ type: 'success', text: 'Documento removido.' });
-      setTimeout(() => setMessage(null), 3000);
+      showNotification('Documento removido.', 'delete');
     } catch (e) {
       console.error(e);
-      setMessage({ type: 'error', text: 'Erro ao remover documento. Tente novamente.' });
-      setTimeout(() => setMessage(null), 3000);
+      showNotification('Erro ao remover documento. Tente novamente.', 'error');
     }
   };
 
@@ -262,25 +276,16 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
         </div>
       </div>
 
-      {message && (
-        <div className={`mx-1 p-5 rounded-[28px] flex items-center gap-4 animate-in zoom-in duration-300 mb-8 ${
-          message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'
-        }`}>
-          <CheckCircle2 size={24} />
-          <span className="font-bold uppercase text-[10px] tracking-widest">{message.text}</span>
-        </div>
-      )}
+<div className="space-y-8 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[40px] p-4 sm:p-6 md:p-10 shadow-sm transition-colors">
 
-      <div className="space-y-8 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[40px] p-4 sm:p-6 md:p-10 shadow-sm transition-colors">
-
-        {/* Profile Info Section */}
+        {/* Dados Pessoais */}
         <section className="space-y-8">
           <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2">
             <UserCheck size={16} /> DADOS PESSOAIS
           </h3>
 
           <div className="flex flex-col md:flex-row gap-10 items-start">
-            {/* Photo Column */}
+            {/* Foto */}
             <div className="flex flex-col items-center gap-4 shrink-0 mx-auto md:mx-0">
                <div className="w-40 h-40 rounded-[48px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden relative group shadow-inner transition-colors">
                 {editData.photo ? (
@@ -304,16 +309,12 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
               <input type="file" ref={photoInputRef} accept="image/*" className="hidden" onChange={handlePhotoCapture} />
             </div>
 
-            {/* Fields Column */}
+            {/* Campos */}
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
               <div className="md:col-span-2">
-                <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Nome Completo *</label>
-                <input
-                  disabled={!isEditing}
-                  type="text"
+                <FieldInput label="Nome Completo *" disabled={!isEditing}
                   value={editData.name}
-                  onChange={(e) => setEditData({...editData, name: e.target.value})}
-                  className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none font-bold text-slate-800 dark:text-white transition-all disabled:opacity-60"
+                  onChange={v => setEditData({...editData, name: v})}
                 />
               </div>
               <div>
@@ -331,35 +332,60 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1 text-indigo-500">Nascimento *</label>
-                <input
-                  disabled={!isEditing}
-                  type="date"
-                  value={editData.birthDate}
-                  onChange={(e) => setEditData({...editData, birthDate: e.target.value})}
-                  className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none font-black text-slate-800 dark:text-white transition-all disabled:opacity-60"
+                <FieldInput label="Nascimento *" type="date" disabled={!isEditing}
+                  value={editData.birthDate || ''}
+                  onChange={v => setEditData({...editData, birthDate: v})}
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">CPF</label>
-                <input
+                <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Estado Civil</label>
+                <select
                   disabled={!isEditing}
-                  type="text"
+                  value={(editData as Instructor).maritalStatus || ''}
+                  onChange={(e) => setEditData({...editData, maritalStatus: e.target.value as any})}
+                  className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none font-bold text-slate-700 dark:text-white transition-all disabled:opacity-60"
+                >
+                  <option value="">Selecionar</option>
+                  <option value="Solteiro">Solteiro(a)</option>
+                  <option value="Casado">Casado(a)</option>
+                  <option value="Divorciado">Divorciado(a)</option>
+                  <option value="Viúvo">Viúvo(a)</option>
+                  <option value="Outro">Outro</option>
+                </select>
+              </div>
+              <div>
+                <FieldInput label="CPF" disabled={!isEditing}
                   value={editData.cpf || ''}
-                  onChange={(e) => setEditData({...editData, cpf: maskCPF(e.target.value)})}
+                  onChange={v => setEditData({...editData, cpf: maskCPF(v)})}
                   placeholder="000.000.000-00"
-                  className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none font-bold text-slate-800 dark:text-white transition-all disabled:opacity-60"
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">RG</label>
-                <input
-                  disabled={!isEditing}
-                  type="text"
+                <FieldInput label="RG" disabled={!isEditing}
                   value={editData.rg || ''}
-                  onChange={(e) => setEditData({...editData, rg: maskRG(e.target.value)})}
+                  onChange={v => setEditData({...editData, rg: maskRG(v)})}
                   placeholder="00.000.000-0"
-                  className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none font-bold text-slate-800 dark:text-white transition-all disabled:opacity-60"
+                />
+              </div>
+              <div>
+                <FieldInput label="Peso (kg)" disabled={!isEditing}
+                  value={String((editData as any).weight || '')}
+                  onChange={v => setEditData({...editData, weight: v} as any)}
+                  placeholder="Ex: 80"
+                />
+              </div>
+              <div>
+                <FieldInput label="Altura (cm)" disabled={!isEditing}
+                  value={String((editData as any).height || '')}
+                  onChange={v => setEditData({...editData, height: v} as any)}
+                  placeholder="Ex: 180"
+                />
+              </div>
+              <div>
+                <FieldInput label="Tipo Sanguíneo" disabled={!isEditing}
+                  value={(editData as any).bloodType || ''}
+                  onChange={v => setEditData({...editData, bloodType: v} as any)}
+                  placeholder="Ex: O+"
                 />
               </div>
               <div className="md:col-span-2 lg:col-span-3">
@@ -376,51 +402,72 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
           </div>
         </section>
 
-        {/* Contact info */}
+        {/* Contato & Localização */}
         <section className="space-y-8 pt-12 border-t border-slate-100 dark:border-slate-800">
           <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2">
             <Phone size={16} /> CONTATO & LOCALIZAÇÃO
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
-               <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">WhatsApp</label>
-               <input
-                  disabled={!isEditing}
-                  type="tel"
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="md:col-span-2 lg:col-span-3">
+               <FieldInput label="WhatsApp" type="tel" disabled={!isEditing}
                   value={editData.phone || ''}
-                  onChange={(e) => setEditData({...editData, phone: maskPhone(e.target.value)})}
+                  onChange={v => setEditData({...editData, phone: maskPhone(v)})}
                   placeholder="(00) 00000-0000"
-                  className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none font-bold text-slate-800 dark:text-white transition-all disabled:opacity-60"
                 />
             </div>
             <div>
               <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1 flex items-center justify-between">
                 CEP {isLoadingCep && <Loader2 size={12} className="animate-spin text-indigo-500" />}
               </label>
-              <input
-                disabled={!isEditing}
-                type="text"
-                value={editData.cep || ''}
-                onChange={(e) => handleCepLookup(e.target.value)}
-                placeholder="00000-000"
-                className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none font-bold text-slate-800 dark:text-white transition-all disabled:opacity-60"
+              <div className="relative">
+                <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  disabled={!isEditing}
+                  type="text"
+                  value={editData.cep || ''}
+                  onChange={(e) => handleCepLookup(e.target.value)}
+                  placeholder="00000-000"
+                  className="w-full pl-10 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none font-bold text-slate-800 dark:text-white transition-all disabled:opacity-60"
+                />
+              </div>
+            </div>
+            <div>
+              <FieldInput label="Número" disabled={!isEditing}
+                value={editData.addressNumber || ''}
+                onChange={v => setEditData({...editData, addressNumber: v})}
+                placeholder="Ex: 123"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Endereço Completo</label>
-              <input
-                disabled={!isEditing}
-                type="text"
+              <FieldInput label="Endereço Completo" disabled={!isEditing}
                 value={editData.address || ''}
-                onChange={(e) => setEditData({...editData, address: e.target.value})}
-                placeholder="Rua, Número, Bairro, Cidade - UF"
-                className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none font-bold text-slate-800 dark:text-white transition-all disabled:opacity-60"
+                onChange={v => setEditData({...editData, address: v})}
+                placeholder="Rua, Bairro, Cidade - UF"
               />
             </div>
           </div>
         </section>
 
-        {/* Career Section for Instructors */}
+        {/* Contato de Emergência */}
+        <section className="space-y-8 pt-12 border-t border-slate-100 dark:border-slate-800">
+          <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2">
+            <Activity size={16} /> EMERGÊNCIA
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FieldInput label="Contato de Emergência" disabled={!isEditing}
+              value={(editData as any).emergencyContact || ''}
+              onChange={v => setEditData({...editData, emergencyContact: v} as any)}
+              placeholder="Nome do contato"
+            />
+            <FieldInput label="Telefone de Emergência" type="tel" disabled={!isEditing}
+              value={(editData as any).emergencyPhone || ''}
+              onChange={v => setEditData({...editData, emergencyPhone: maskPhone(v)} as any)}
+              placeholder="(00) 00000-0000"
+            />
+          </div>
+        </section>
+
+        {/* Carreira & Graduação — somente instrutor */}
         {isInstructor && (
           <section className="space-y-8 pt-12 border-t border-slate-100 dark:border-slate-800">
             <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2">
@@ -457,17 +504,16 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
                   </div>
                 </div>
 
-                <div>
-                   <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">Minhas Especialidades</label>
-                   <input
-                      disabled={!isEditing}
-                      type="text"
-                      value={(editData as Instructor).specialties || ''}
-                      onChange={(e) => setEditData({...editData, specialties: e.target.value} as Instructor)}
-                      placeholder="Ex: Kids, No-Gi, Competição..."
-                      className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none font-bold text-slate-800 dark:text-white transition-all disabled:opacity-60"
-                    />
-                </div>
+                <FieldInput label="Data da Última Graduação" type="date" disabled={!isEditing}
+                  value={((editData as Instructor).lastGraduationDate || '').split('T')[0]}
+                  onChange={v => setEditData({...editData, lastGraduationDate: v} as Instructor)}
+                />
+
+                <FieldInput label="Minhas Especialidades" disabled={!isEditing}
+                  value={(editData as Instructor).specialties || ''}
+                  onChange={v => setEditData({...editData, specialties: v} as Instructor)}
+                  placeholder="Ex: Kids, No-Gi, Competição..."
+                />
               </div>
 
               <div className="space-y-4">
@@ -493,7 +539,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
           </section>
         )}
 
-        {/* Documentation section */}
+        {/* Documentos */}
         <section className="space-y-8 pt-12 border-t border-slate-100 dark:border-slate-800">
            <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2">
@@ -521,7 +567,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
                     <div className="overflow-hidden">
                       <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate max-w-[150px]">{doc.name}</p>
                       <p className="text-[10px] text-slate-400 font-medium">
-                        {(doc.size / 1024).toFixed(1)} KB • {new Date(doc.uploadedAt).toLocaleDateString()}
+                        {doc.size ? `${(doc.size / 1024).toFixed(1)} KB • ` : ''}{new Date(doc.uploadedAt).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
@@ -553,10 +599,10 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
           </div>
         </section>
 
-        {/* Health Info */}
+        {/* Saúde */}
         <section className="space-y-8 pt-12 border-t border-slate-100 dark:border-slate-800">
           <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2">
-            <Activity size={16} /> OBSERVAÇÕES DE SAÚDE
+            <Heart size={16} /> OBSERVAÇÕES DE SAÚDE
           </h3>
           <textarea
             disabled={!isEditing}
@@ -568,7 +614,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
           />
         </section>
 
-        {/* Histórico de Graduação */}
+        {/* Histórico de Graduação — somente instrutor */}
         {isInstructor && (
           <section className="space-y-8 pt-12 border-t border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between mb-4">
@@ -637,9 +683,62 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
           </section>
         )}
 
+        {/* Botões de ação */}
+        <div className="flex flex-col md:flex-row gap-4 pt-10 border-t border-slate-100 dark:border-slate-800">
+          {isEditing ? (
+            <>
+              <button
+                onClick={() => {
+                  setEditData(JSON.parse(JSON.stringify(profile)));
+                  setIsEditing(false);
+                }}
+                className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 py-5 rounded-3xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all"
+              >
+                Cancelar Edição
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="flex-[2] bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-3xl font-black uppercase text-xs tracking-widest shadow-xl shadow-indigo-600/20 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {isSaving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
+                Salvar Ficha Completa
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="flex-[2] bg-indigo-600 hover:bg-indigo-700 text-white py-5 rounded-3xl font-black uppercase text-xs tracking-widest shadow-xl shadow-indigo-600/20 active:scale-95 transition-all"
+            >
+              Editar Meus Dados
+            </button>
+          )}
+        </div>
+
       </div>
     </div>
   );
 };
+
+const FieldInput: React.FC<{
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  placeholder?: string;
+  disabled?: boolean;
+}> = ({ label, value, onChange, type = 'text', placeholder, disabled }) => (
+  <div className="space-y-1">
+    <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">{label}</label>
+    <input
+      disabled={disabled}
+      type={type}
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none font-bold text-slate-800 dark:text-white transition-all disabled:opacity-60"
+    />
+  </div>
+);
 
 export default InstructorProfileView;

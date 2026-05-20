@@ -21,7 +21,17 @@ const UPDATABLE_FIELDS = [
   'cpf', 'rg', 'weight', 'height', 'blood_type', 'marital_status',
   'emergency_contact', 'emergency_phone', 'cep', 'address', 'address_number',
   'specialties', 'medical_notes', 'status', 'join_date', 'user_id',
+  'last_graduation_date',
 ];
+
+const mapDoc = (d: any) => ({
+  id: d.id,
+  name: d.name,
+  type: d.type || 'application/octet-stream',
+  size: d.size || 0,
+  base64: d.url,
+  uploadedAt: d.created_at,
+});
 
 // GET /api/instructors
 router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -78,7 +88,12 @@ router.get('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
       [req.params.id, academyId]
     );
     if (!rows[0]) { res.status(404).json({ error: 'Instrutor não encontrado' }); return; }
-    res.json(rows[0]);
+
+    const [docs] = await pool.execute<any[]>(
+      'SELECT * FROM instructor_documents WHERE instructor_id = ? ORDER BY created_at DESC',
+      [req.params.id]
+    );
+    res.json({ ...rows[0], documents: (docs as any[]).map(mapDoc) });
   } catch (err) {
     next(err);
   }
@@ -156,7 +171,20 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
     if (!existing[0]) { res.status(404).json({ error: 'Instrutor não encontrado' }); return; }
 
     const isAdmin = ['admin', 'superuser'].includes(req.user!.role);
-    const isSelf = req.user!.role === 'instructor' && String(existing[0].user_id) === String(req.user!.userId);
+    let isSelf = req.user!.role === 'instructor' && String(existing[0].user_id) === String(req.user!.userId);
+
+    // Fallback: user_id não vinculado ainda — verifica por email e vincula
+    if (!isSelf && req.user!.role === 'instructor' && !existing[0].user_id) {
+      const [userRows] = await pool.execute<any[]>('SELECT id, email FROM users WHERE id = ?', [req.user!.userId]);
+      if (
+        userRows[0] && existing[0].email &&
+        String(userRows[0].email).toLowerCase() === String(existing[0].email).toLowerCase()
+      ) {
+        isSelf = true;
+        await pool.execute('UPDATE instructors SET user_id = ? WHERE id = ?', [req.user!.userId, req.params.id]);
+        existing[0].user_id = req.user!.userId;
+      }
+    }
 
     if (!isAdmin && !isSelf) {
       res.status(403).json({ error: 'Sem permissão para esta ação' });
@@ -250,7 +278,94 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
     }
 
     const [rows] = await pool.execute<any[]>('SELECT * FROM instructors WHERE id = ?', [req.params.id]);
-    res.json(rows[0]);
+    const [docs] = await pool.execute<any[]>(
+      'SELECT * FROM instructor_documents WHERE instructor_id = ? ORDER BY created_at DESC',
+      [req.params.id]
+    );
+    res.json({ ...rows[0], documents: (docs as any[]).map(mapDoc) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/instructors/:id/documents
+router.post('/:id/documents', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const academyId = getAcademyId(req, res);
+  if (!academyId) return;
+
+  const errors = validate(req.body, {
+    name:   { required: true, type: 'string', maxLength: 255 },
+    base64: { required: true, type: 'string' },
+  });
+  if (errors.length) { res.status(400).json({ error: errors[0] }); return; }
+
+  try {
+    const [rows] = await pool.execute<any[]>(
+      'SELECT id, user_id, email FROM instructors WHERE id = ? AND academy_id = ?',
+      [req.params.id, academyId]
+    );
+    if (!rows[0]) { res.status(404).json({ error: 'Instrutor não encontrado' }); return; }
+
+    const isAdmin = ['admin', 'superuser'].includes(req.user!.role);
+    let isSelf = req.user!.role === 'instructor' && String(rows[0].user_id) === String(req.user!.userId);
+    if (!isSelf && req.user!.role === 'instructor' && !rows[0].user_id) {
+      const [uRows] = await pool.execute<any[]>('SELECT email FROM users WHERE id = ?', [req.user!.userId]);
+      if (uRows[0] && rows[0].email && String(uRows[0].email).toLowerCase() === String(rows[0].email).toLowerCase()) {
+        isSelf = true;
+      }
+    }
+    if (!isAdmin && !isSelf) { res.status(403).json({ error: 'Sem permissão para esta ação' }); return; }
+
+    const docId = crypto.randomUUID();
+    await pool.execute(
+      'INSERT INTO instructor_documents (id, instructor_id, name, url) VALUES (?,?,?,?)',
+      [docId, req.params.id, req.body.name, req.body.base64]
+    );
+
+    const [docRows] = await pool.execute<any[]>('SELECT * FROM instructor_documents WHERE id = ?', [docId]);
+    const doc = (docRows as any[])[0];
+    res.status(201).json({ ...doc, base64: doc.url });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/instructors/:id/documents/:docId
+router.delete('/:id/documents/:docId', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const academyId = getAcademyId(req, res);
+  if (!academyId) return;
+
+  try {
+    const [rows] = await pool.execute<any[]>(
+      'SELECT id, user_id, email FROM instructors WHERE id = ? AND academy_id = ?',
+      [req.params.id, academyId]
+    );
+    if (!rows[0]) { res.status(404).json({ error: 'Instrutor não encontrado' }); return; }
+
+    const isAdmin = ['admin', 'superuser'].includes(req.user!.role);
+    let isSelf = req.user!.role === 'instructor' && String(rows[0].user_id) === String(req.user!.userId);
+    if (!isSelf && req.user!.role === 'instructor' && !rows[0].user_id) {
+      const [uRows] = await pool.execute<any[]>('SELECT email FROM users WHERE id = ?', [req.user!.userId]);
+      if (uRows[0] && rows[0].email && String(uRows[0].email).toLowerCase() === String(rows[0].email).toLowerCase()) {
+        isSelf = true;
+      }
+    }
+    if (!isAdmin && !isSelf) { res.status(403).json({ error: 'Sem permissão para esta ação' }); return; }
+
+    const [doc] = await pool.execute<any[]>(
+      'SELECT id FROM instructor_documents WHERE id = ? AND instructor_id = ?',
+      [req.params.docId, req.params.id]
+    );
+    if (!doc[0]) { res.status(404).json({ error: 'Documento não encontrado' }); return; }
+
+    await pool.execute('DELETE FROM instructor_documents WHERE id = ?', [req.params.docId]);
+
+    const [instructorRows] = await pool.execute<any[]>('SELECT * FROM instructors WHERE id = ?', [req.params.id]);
+    const [docs] = await pool.execute<any[]>(
+      'SELECT * FROM instructor_documents WHERE instructor_id = ? ORDER BY created_at DESC',
+      [req.params.id]
+    );
+    res.json({ ...instructorRows[0], documents: (docs as any[]).map(mapDoc) });
   } catch (err) {
     next(err);
   }
