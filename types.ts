@@ -84,6 +84,8 @@ export interface Student {
   addressCep?: string;
   addressCity?: string;
   addressState?: string;
+  userId?: string | null;
+  userStatus?: 'Active' | 'Pending' | 'Blocked' | null;
 }
 
 export interface Instructor {
@@ -110,6 +112,8 @@ export interface Instructor {
   specialties?: string;
   lastGraduationDate?: string;
   graduationHistory?: GraduationHistoryItem[];
+  userId?: string | null;
+  userStatus?: 'Active' | 'Pending' | 'Blocked' | null;
 }
 
 export interface Staff {

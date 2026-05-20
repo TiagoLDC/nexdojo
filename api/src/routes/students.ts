@@ -6,6 +6,7 @@ import { requireRole } from '../middleware/requireRole';
 import { getAcademyId } from '../utils/academyScope';
 import { validate } from '../utils/validate';
 import { withTransaction } from '../utils/withTransaction';
+import { autoLinkEntityToUser } from '../utils/linkEntityUser';
 
 const router = Router();
 
@@ -35,31 +36,31 @@ router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunct
   const limitNum = Math.min(100, Math.max(1, parseInt(String(limit), 10)));
   const offset = (pageNum - 1) * limitNum;
 
-  let where = 'WHERE academy_id = ?';
+  let where = 'WHERE s.academy_id = ?';
   const params: any[] = [academyId];
 
   if (search) {
-    where += ' AND (name LIKE ? OR email LIKE ?)';
+    where += ' AND (s.name LIKE ? OR s.email LIKE ?)';
     params.push(`%${search}%`, `%${search}%`);
   }
   if (belt) {
-    where += ' AND belt = ?';
+    where += ' AND s.belt = ?';
     params.push(belt);
   }
   if (status) {
-    where += ' AND status = ?';
+    where += ' AND s.status = ?';
     params.push(status);
   }
 
   try {
     const [countRows] = await pool.execute<any[]>(
-      `SELECT COUNT(*) as total FROM students ${where}`,
+      `SELECT COUNT(*) as total FROM students s ${where}`,
       params
     );
     const total = (countRows[0] as any).total;
 
     const [rows] = await pool.execute<any[]>(
-      `SELECT * FROM students ${where} ORDER BY name ASC LIMIT ${limitNum} OFFSET ${offset}`,
+      `SELECT s.*, u.status as user_status FROM students s LEFT JOIN users u ON u.id = s.user_id ${where} ORDER BY s.name ASC LIMIT ${limitNum} OFFSET ${offset}`,
       params
     );
 
@@ -115,10 +116,16 @@ router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Req
 
   const b = req.body;
 
-  // Se email informado, senha é obrigatória para criar o acesso do aluno
+  // Se email sem senha: só é permitido se já existir um usuário com esse email (vincula)
   if (b.email && !b.password) {
-    res.status(400).json({ error: 'password é obrigatório quando email é informado' });
-    return;
+    const [userCheck] = await pool.execute<any[]>(
+      'SELECT id FROM users WHERE LOWER(email) = LOWER(?) AND academy_id = ?',
+      [String(b.email).toLowerCase().trim(), academyId]
+    );
+    if (!userCheck[0]) {
+      res.status(400).json({ error: 'password é obrigatório para criar conta de acesso' });
+      return;
+    }
   }
   if (b.password && String(b.password).length < 6) {
     res.status(400).json({ error: 'password deve ter no mínimo 6 caracteres' });
@@ -146,10 +153,9 @@ router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Req
 
     let createdStudent: any;
 
-    if (b.email) {
+    if (b.email && b.password) {
       // Cria user + student atomicamente
       createdStudent = await withTransaction(async (conn) => {
-        // Garante que o email não está em uso
         const [existing] = await conn.execute<any[]>(
           'SELECT id FROM users WHERE email = ?',
           [String(b.email).toLowerCase().trim()]
@@ -180,7 +186,7 @@ router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Req
         return rows[0];
       });
     } else {
-      // Sem email: insere student sem user
+      // Sem senha: insere student e vincula a usuário existente pelo email (se houver)
       await pool.execute(
         `INSERT INTO students (
           id, academy_id, name, email, phone, belt, stripes, birth_date, gender, photo,
@@ -191,6 +197,9 @@ router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Req
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         studentValues
       );
+      if (b.email) {
+        await autoLinkEntityToUser('students', studentId, b.email, academyId);
+      }
       const [rows] = await pool.execute<any[]>('SELECT * FROM students WHERE id = ?', [studentId]);
       createdStudent = rows[0];
     }
@@ -328,6 +337,12 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
           );
         }
       }
+    }
+
+    // Auto-vínculo: se ainda sem user_id, tenta vincular pelo email
+    if (!existing[0].user_id) {
+      const emailToLink = req.body.email || existing[0].email;
+      if (emailToLink) await autoLinkEntityToUser('students', req.params.id, emailToLink, academyId);
     }
 
     const [rows] = await pool.execute<any[]>('SELECT * FROM students WHERE id = ?', [req.params.id]);

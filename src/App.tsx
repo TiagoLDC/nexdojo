@@ -10,6 +10,7 @@ const DashboardPage        = React.lazy(() => import('@/pages/DashboardPage'));
 const StudentsPage         = React.lazy(() => import('@/pages/StudentsPage'));
 const InstructorsPage      = React.lazy(() => import('@/pages/InstructorsPage'));
 const StaffPage            = React.lazy(() => import('@/pages/StaffPage'));
+const UsersPage            = React.lazy(() => import('@/pages/UsersPage'));
 const AttendancePage       = React.lazy(() => import('@/pages/AttendancePage'));
 const FinancesPage         = React.lazy(() => import('@/pages/FinancesPage'));
 const TemplatesPage        = React.lazy(() => import('@/pages/TemplatesPage'));
@@ -75,6 +76,7 @@ const App: React.FC = () => (
             <Route path="/finances"    element={<FinancesPage />} />
             <Route path="/instructors" element={<InstructorsPage />} />
             <Route path="/staff"       element={<StaffPage />} />
+            <Route path="/users"       element={<UsersPage />} />
             <Route path="/reports"     element={<ReportsPage />} />
             <Route path="/recycle-bin" element={<RecycleBinPage />} />
           </Route>

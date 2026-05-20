@@ -71,6 +71,8 @@ const DDL_STATEMENTS = [
     role ENUM('superuser','admin','instructor','staff','student','guest') NOT NULL,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
+    photo LONGTEXT,
+    profile_data JSON,
     password_hash VARCHAR(255) NOT NULL,
     status ENUM('Active','Pending','Blocked') DEFAULT 'Active',
     requires_password_change TINYINT(1) DEFAULT 0,

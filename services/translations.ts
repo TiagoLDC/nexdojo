@@ -268,8 +268,9 @@ export const translations = {
     productSaved: 'Produto salvo com sucesso!',
     deleteProductQuestion: 'Excluir Produto?',
     deleteProductText: 'Deseja realmente remover este item do estoque?',
-    // Staff
+    // Staff / Users
     staff: 'Colaboradores',
+    users: 'Usuários',
     myData: 'Meus Dados',
     // InstructorsView
     other: 'Outro',
@@ -580,8 +581,9 @@ export const translations = {
     productSaved: 'Product saved successfully!',
     deleteProductQuestion: 'Delete Product?',
     deleteProductText: 'Do you really want to remove this item from inventory?',
-    // Staff
+    // Staff / Users
     staff: 'Staff',
+    users: 'Users',
     myData: 'My Data',
     noTrainingsYet: 'No trainings recorded yet.',
     // InstructorsView
@@ -893,8 +895,9 @@ export const translations = {
     productSaved: '¡Producto guardado con éxito!',
     deleteProductQuestion: '¿Eliminar Producto?',
     deleteProductText: '¿Realmente desea eliminar este artículo del inventario?',
-    // Staff
+    // Staff / Users
     staff: 'Colaboradores',
+    users: 'Usuarios',
     myData: 'Mis Datos',
     noTrainingsYet: 'No hay entrenamientos registrados.',
     // InstructorsView

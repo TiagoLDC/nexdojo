@@ -5,6 +5,7 @@ import { requireAuth } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
 import { getAcademyId } from '../utils/academyScope';
 import { validate } from '../utils/validate';
+import { autoLinkEntityToUser } from '../utils/linkEntityUser';
 
 const router = Router();
 
@@ -32,31 +33,31 @@ router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunct
   const limitNum = Math.min(100, Math.max(1, parseInt(String(limit), 10)));
   const offset = (pageNum - 1) * limitNum;
 
-  let where = 'WHERE academy_id = ?';
+  let where = 'WHERE i.academy_id = ?';
   const params: any[] = [academyId];
 
   if (search) {
-    where += ' AND (name LIKE ? OR email LIKE ?)';
+    where += ' AND (i.name LIKE ? OR i.email LIKE ?)';
     params.push(`%${search}%`, `%${search}%`);
   }
   if (belt) {
-    where += ' AND belt = ?';
+    where += ' AND i.belt = ?';
     params.push(belt);
   }
   if (status) {
-    where += ' AND status = ?';
+    where += ' AND i.status = ?';
     params.push(status);
   }
 
   try {
     const [countRows] = await pool.execute<any[]>(
-      `SELECT COUNT(*) as total FROM instructors ${where}`,
+      `SELECT COUNT(*) as total FROM instructors i ${where}`,
       params
     );
     const total = (countRows[0] as any).total;
 
     const [rows] = await pool.execute<any[]>(
-      `SELECT * FROM instructors ${where} ORDER BY name ASC LIMIT ${limitNum} OFFSET ${offset}`,
+      `SELECT i.*, u.status as user_status FROM instructors i LEFT JOIN users u ON u.id = i.user_id ${where} ORDER BY i.name ASC LIMIT ${limitNum} OFFSET ${offset}`,
       params
     );
 
@@ -118,6 +119,8 @@ router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Req
         b.status ?? 'Active', b.join_date ?? null,
       ]
     );
+
+    if (b.email) await autoLinkEntityToUser('instructors', id, b.email, academyId);
 
     const [rows] = await pool.execute<any[]>('SELECT * FROM instructors WHERE id = ?', [id]);
     res.status(201).json(rows[0]);
@@ -238,6 +241,12 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
           );
         }
       }
+    }
+
+    // Auto-vínculo: se ainda sem user_id, tenta vincular pelo email
+    if (!existing[0].user_id) {
+      const emailToLink = req.body.email || existing[0].email;
+      if (emailToLink) await autoLinkEntityToUser('instructors', req.params.id, emailToLink, academyId);
     }
 
     const [rows] = await pool.execute<any[]>('SELECT * FROM instructors WHERE id = ?', [req.params.id]);

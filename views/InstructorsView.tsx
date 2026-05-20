@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Instructor, Belt, StudentDocument, Academy, User, GraduationHistoryItem } from '../types';
 import { instructorService } from '@/features/instructors/services/instructorService';
+import { usersService } from '@/features/users/services/usersService';
 import { useTranslation } from '../services/LanguageContext';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
 import {
@@ -34,7 +35,10 @@ import {
   AlertTriangle,
   Loader2,
   Eye,
-  EyeOff
+  EyeOff,
+  LockKeyhole,
+  ShieldOff,
+  ShieldCheck as ShieldCheckIcon
 } from 'lucide-react';
 import { BeltBadge } from '../components/BeltBadge';
 import { BELT_COLORS } from '../constants';
@@ -58,7 +62,7 @@ const compressImage = (base64Str: string, maxWidth = 400, maxHeight = 400): Prom
   });
 };
 
-const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy }) => {
+const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
   const { t, showNotification } = useTranslation();
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -73,6 +77,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy }
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [newInstructorPassword, setNewInstructorPassword] = useState('');
   const [showInstructorPassword, setShowInstructorPassword] = useState(false);
+  const [accountActionLoading, setAccountActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     if (academy?.id) {
@@ -173,6 +178,22 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy }
     } catch (e) {
       console.error(e);
       showNotification('Erro ao aprovar instrutor.', 'error');
+    }
+  };
+
+  const handleToggleInstructorAccess = async (instructor: Instructor) => {
+    if (!instructor.userId) return;
+    const newStatus = instructor.userStatus === 'Blocked' ? 'Active' : 'Blocked';
+    setAccountActionLoading(instructor.userId);
+    try {
+      await usersService.update(instructor.userId, { status: newStatus });
+      setInstructors(prev => prev.map(i => i.id === instructor.id ? { ...i, userStatus: newStatus } : i));
+      setEditingInstructor(prev => prev?.id === instructor.id ? { ...prev, userStatus: newStatus } : prev);
+      showNotification(newStatus === 'Blocked' ? 'Acesso bloqueado' : 'Acesso ativado', 'success');
+    } catch {
+      showNotification('Erro ao alterar acesso', 'error');
+    } finally {
+      setAccountActionLoading(null);
     }
   };
 
@@ -324,6 +345,10 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy }
                       <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-black uppercase ${instructor.status === 'Active' ? 'bg-green-100 text-green-700' : instructor.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200'}`}>
                         {instructor.status === 'Active' ? t.activeTitle : instructor.status === 'Pending' ? t.pendingTitle : t.inactiveTitle}
                       </span>
+                      {instructor.userId
+                        ? <span title="Tem conta de acesso"><LockKeyhole size={11} className="text-green-500" /></span>
+                        : <span className="text-[9px] px-1.5 py-0.5 rounded-full font-black uppercase bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">Sem usuário</span>
+                      }
                     </div>
                   </div>
                 </div>
@@ -394,7 +419,13 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy }
                         </div>
                         <div>
                           <div className="font-bold text-slate-800 dark:text-slate-100">{instructor.name || t.noName}</div>
-                          <BeltBadge belt={instructor.belt} stripes={instructor.stripes} />
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <BeltBadge belt={instructor.belt} stripes={instructor.stripes} />
+                            {instructor.userId
+                              ? <span title="Tem conta de acesso"><LockKeyhole size={11} className="text-green-500" /></span>
+                              : <span className="text-[9px] px-1.5 py-0.5 rounded-full font-black uppercase bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">Sem usuário</span>
+                            }
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -594,6 +625,52 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy }
                         className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
                       />
                       <p className="text-[9px] text-slate-400 mt-1 ml-1 italic">O instrutor será obrigado a trocar na próxima entrada.</p>
+                    </div>
+                  )}
+                  {editingInstructor.id && (
+                    <div className="md:col-span-2">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1 flex items-center gap-1.5">
+                        <ShieldCheckIcon size={10} /> Acesso ao Sistema
+                      </label>
+                      {editingInstructor.userId ? (
+                        <div className="flex flex-wrap items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                          <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-tight ${
+                            editingInstructor.userStatus === 'Active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                            editingInstructor.userStatus === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                            'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                          }`}>
+                            {editingInstructor.userStatus === 'Active' ? 'Conta ativa' : editingInstructor.userStatus === 'Pending' ? 'Conta pendente' : 'Conta bloqueada'}
+                          </span>
+                          {(['admin', 'superuser'] as const).includes(user.role as any) && (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleInstructorAccess(editingInstructor)}
+                              disabled={accountActionLoading === editingInstructor.userId}
+                              className={`ml-auto text-[10px] font-black uppercase tracking-tight px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors ${
+                                editingInstructor.userStatus === 'Blocked'
+                                  ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400'
+                                  : 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400'
+                              }`}
+                            >
+                              {accountActionLoading === editingInstructor.userId ? (
+                                <Loader2 size={11} className="animate-spin" />
+                              ) : editingInstructor.userStatus === 'Blocked' ? (
+                                <><ShieldCheckIcon size={11} /> Ativar acesso</>
+                              ) : (
+                                <><ShieldOff size={11} /> Bloquear acesso</>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                          <LockKeyhole size={13} className="text-slate-300 dark:text-slate-600 shrink-0" />
+                          <span className="text-xs text-slate-400 font-medium">Sem conta de acesso</span>
+                          {(['admin', 'superuser'] as const).includes(user.role as any) && editingInstructor.email && (
+                            <span className="ml-auto text-[10px] text-slate-400 italic">Defina uma senha acima para criar o acesso</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                   <div className="md:col-span-2">

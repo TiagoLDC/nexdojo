@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Student, Belt, StudentDocument, ClassTemplate, Academy, User } from '../types';
 import { studentService } from '@/features/students/services/studentService';
+import { usersService } from '@/features/users/services/usersService';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
 import { calculateAge, isReadyForGraduation, getNextRank } from '../services/graduation';
 import { useTranslation } from '../services/LanguageContext';
@@ -45,7 +46,10 @@ import {
   EyeOff,
   Book,
   ChevronRight,
-  Clipboard
+  Clipboard,
+  LockKeyhole,
+  ShieldOff,
+  ShieldCheck as ShieldCheckIcon
 } from 'lucide-react';
 import { BeltBadge } from '../components/BeltBadge';
 import { BELT_COLORS } from '../constants';
@@ -137,6 +141,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
   const [gradDateInput, setGradDateInput] = useState('');
   const [newStudentPassword, setNewStudentPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [accountActionLoading, setAccountActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     if (editingStudent?.birthDate) {
@@ -345,6 +350,22 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     } catch (e) {
       console.error(e);
       showNotification(language === 'pt' ? "Erro ao salvar atleta." : "Error saving athlete.", 'error');
+    }
+  };
+
+  const handleToggleStudentAccess = async (student: Student) => {
+    if (!student.userId) return;
+    const newStatus = student.userStatus === 'Blocked' ? 'Active' : 'Blocked';
+    setAccountActionLoading(student.userId);
+    try {
+      await usersService.update(student.userId, { status: newStatus });
+      setStudents(prev => prev.map(s => s.id === student.id ? { ...s, userStatus: newStatus } : s));
+      setEditingStudent(prev => prev?.id === student.id ? { ...prev, userStatus: newStatus } : prev);
+      showNotification(newStatus === 'Blocked' ? 'Acesso bloqueado' : 'Acesso ativado', 'success');
+    } catch {
+      showNotification('Erro ao alterar acesso', 'error');
+    } finally {
+      setAccountActionLoading(null);
     }
   };
 
@@ -702,6 +723,10 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         }`}>
                           {student.status === 'Active' ? 'Ativo' : student.status === 'Pending' ? 'Pendente' : student.status === 'Inactive' ? 'Inativo' : 'Desistente'}
                         </span>
+                        {student.userId
+                          ? <span title="Tem conta de acesso"><LockKeyhole size={11} className="text-green-500" /></span>
+                          : <span className="text-[9px] px-1.5 py-0.5 rounded-full font-black uppercase bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">Sem usuário</span>
+                        }
                       </div>
                       {student.planId && (
                         <div className="mt-2 flex items-center gap-1.5">
@@ -866,6 +891,10 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                                 {academy.plans?.find(p => p.id === student.planId)?.name}
                               </span>
                             )}
+                            {student.userId
+                              ? <span title="Tem conta de acesso"><LockKeyhole size={11} className="text-green-500" /></span>
+                              : <span className="text-[9px] px-1.5 py-0.5 rounded-full font-black uppercase bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">Sem usuário</span>
+                            }
                           </div>
                         </div>
                       </div>
@@ -1150,6 +1179,52 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       />
                       {!isNewStudent && <p className="text-[9px] text-slate-400 mt-1 ml-1 italic">O aluno será obrigado a trocar na próxima entrada.</p>}
                     </div>
+                    {!isNewStudent && (
+                      <div className="md:col-span-2">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1 flex items-center gap-1.5">
+                          <ShieldCheckIcon size={10} /> Acesso ao Sistema
+                        </label>
+                        {editingStudent.userId ? (
+                          <div className="flex flex-wrap items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                            <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-tight ${
+                              editingStudent.userStatus === 'Active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                              editingStudent.userStatus === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                              'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                            }`}>
+                              {editingStudent.userStatus === 'Active' ? 'Conta ativa' : editingStudent.userStatus === 'Pending' ? 'Conta pendente' : 'Conta bloqueada'}
+                            </span>
+                            {(['admin', 'superuser'] as const).includes(user.role as any) && (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleStudentAccess(editingStudent)}
+                                disabled={accountActionLoading === editingStudent.userId}
+                                className={`ml-auto text-[10px] font-black uppercase tracking-tight px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors ${
+                                  editingStudent.userStatus === 'Blocked'
+                                    ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400'
+                                    : 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400'
+                                }`}
+                              >
+                                {accountActionLoading === editingStudent.userId ? (
+                                  <Loader2 size={11} className="animate-spin" />
+                                ) : editingStudent.userStatus === 'Blocked' ? (
+                                  <><ShieldCheckIcon size={11} /> Ativar acesso</>
+                                ) : (
+                                  <><ShieldOff size={11} /> Bloquear acesso</>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                            <LockKeyhole size={13} className="text-slate-300 dark:text-slate-600 shrink-0" />
+                            <span className="text-xs text-slate-400 font-medium">Sem conta de acesso</span>
+                            {(['admin', 'superuser'] as const).includes(user.role as any) && editingStudent.email && (
+                              <span className="ml-auto text-[10px] text-slate-400 italic">Defina uma senha acima para criar o acesso</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Sexo <span className="text-red-500">*</span></label>
                       <select

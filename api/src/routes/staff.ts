@@ -4,6 +4,7 @@ import { requireAuth } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
 import { getAcademyId } from '../utils/academyScope';
 import { validate } from '../utils/validate';
+import { autoLinkEntityToUser } from '../utils/linkEntityUser';
 
 const router = Router();
 
@@ -102,6 +103,8 @@ router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Req
       ]
     );
 
+    if (b.email) await autoLinkEntityToUser('staff', id, b.email, academyId);
+
     const [rows] = await pool.execute<any[]>('SELECT * FROM staff WHERE id = ?', [id]);
     res.status(201).json(rows[0]);
   } catch (err) {
@@ -151,6 +154,12 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
       `UPDATE staff SET ${set} WHERE id = ? AND academy_id = ?`,
       [...values, req.params.id, academyId]
     );
+
+    // Auto-vínculo: se ainda sem user_id, tenta vincular pelo email
+    if (!existing[0].user_id) {
+      const emailToLink = req.body.email || existing[0].email;
+      if (emailToLink) await autoLinkEntityToUser('staff', req.params.id, emailToLink, academyId);
+    }
 
     const [rows] = await pool.execute<any[]>('SELECT * FROM staff WHERE id = ?', [req.params.id]);
     res.json(rows[0]);
