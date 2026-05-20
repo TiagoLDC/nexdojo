@@ -15,7 +15,7 @@ import { chatService } from '@/features/chat/services/chatService';
 import { academyService } from '@/features/settings/services/academyService';
 import { PrivacyValue } from '../components/PrivacyValue';
 import { calculateAge, isReadyForGraduation } from '../services/graduation';
-import { 
+import {
   Users,
   TrendingUp,
   AlertTriangle,
@@ -44,8 +44,14 @@ import {
   Calendar,
   Share2,
   Smartphone,
-  Copy
+  Copy,
+  Eye,
+  EyeOff,
+  Lock,
+  Loader2,
+  KeyRound
 } from 'lucide-react';
+import { authService } from '@/features/auth/services/authService';
 import { 
   PieChart, 
   Pie, 
@@ -317,6 +323,43 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
 
   const [refreshKey, setRefreshKey] = useState(0);
   const triggerRefresh = () => setRefreshKey(prev => prev + 1);
+
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [newPass, setNewPass] = useState('');
+  const [confirmNewPass, setConfirmNewPass] = useState('');
+  const [showPassVisibility, setShowPassVisibility] = useState(false);
+  const [isSavingPass, setIsSavingPass] = useState(false);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPass.length < 6) {
+      showNotification('A nova senha deve ter no mínimo 6 caracteres.', 'error');
+      return;
+    }
+    if (newPass !== confirmNewPass) {
+      showNotification('As senhas não coincidem.', 'error');
+      return;
+    }
+    setIsSavingPass(true);
+    try {
+      await authService.changePassword(newPass);
+      showNotification('Senha alterada com sucesso!');
+      setShowPasswordModal(false);
+      setNewPass('');
+      setConfirmNewPass('');
+    } catch (err: any) {
+      showNotification(err?.response?.data?.error || 'Erro ao alterar senha.', 'error');
+    } finally {
+      setIsSavingPass(false);
+    }
+  };
+
+  const getGreeting = () => {
+    const h = new Date().getHours();
+    if (h >= 4 && h < 12) return t.goodMorning;
+    if (h >= 12 && h < 19) return t.goodAfternoon;
+    return t.goodEvening;
+  };
 
   const handleShare = async () => {
     const shareData = {
@@ -629,7 +672,8 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     };
     
     return (
-      <motion.div 
+      <>
+      <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -638,20 +682,27 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
         <motion.header variants={itemVariants} className="px-2 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tighter uppercase italic leading-none">
-              {t.goodMorning}, {user.name.split(' ')[0]}!
+              {getGreeting()}, {user.name.split(' ')[0]}!
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-bold mt-2 uppercase text-[10px] tracking-[0.2em]">{t.trainingJourney} {academy?.name}</p>
           </div>
           <div className="flex items-center gap-2">
-            <button 
+            <button
               onClick={handleShare}
               className="flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:border-emerald-200 transition-all shadow-sm cursor-pointer"
             >
               <Share2 size={14} />
               <span className="hidden sm:inline">{language === 'pt' ? 'Compartilhar Sistema' : 'Share System'}</span>
             </button>
+            <button
+              onClick={() => setShowPasswordModal(true)}
+              className="hidden md:flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:border-slate-300 transition-all shadow-sm cursor-pointer"
+            >
+              <KeyRound size={14} />
+              <span>Alterar Senha</span>
+            </button>
             <Link to="/profile" className="hidden md:flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:border-indigo-200 transition-all shadow-sm">
-              {t.profile}
+              Meus Dados
               <ChevronRight size={14} />
             </Link>
           </div>
@@ -792,20 +843,85 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
           </div>
         </div>
       </motion.div>
+
+      {/* Modal: Alterar Senha */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[9000] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl p-8 flex flex-col gap-6 animate-in zoom-in duration-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
+                  <KeyRound size={20} className="text-indigo-600" />
+                </div>
+                <h2 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Alterar Minha Senha</h2>
+              </div>
+              <button onClick={() => { setShowPasswordModal(false); setNewPass(''); setConfirmNewPass(''); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1 flex items-center justify-between">
+                  <span>Nova Senha <span className="text-red-500">*</span></span>
+                  <button type="button" onClick={() => setShowPassVisibility(p => !p)} className="text-slate-400">
+                    {showPassVisibility ? <EyeOff size={12} /> : <Eye size={12} />}
+                  </button>
+                </label>
+                <div className="relative">
+                  <Lock size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type={showPassVisibility ? 'text' : 'password'}
+                    value={newPass}
+                    onChange={e => setNewPass(e.target.value)}
+                    placeholder="Mín. 6 caracteres"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-900 dark:text-white placeholder:text-slate-400"
+                    autoFocus
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">
+                  Confirmar Nova Senha <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Lock size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type={showPassVisibility ? 'text' : 'password'}
+                    value={confirmNewPass}
+                    onChange={e => setConfirmNewPass(e.target.value)}
+                    placeholder="Repita a senha"
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-900 dark:text-white placeholder:text-slate-400"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={isSavingPass}
+                className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white font-black py-3 rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-[11px] mt-2"
+              >
+                {isSavingPass ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                {isSavingPass ? 'Salvando...' : 'Salvar Nova Senha'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+      </>
     );
   }
 
   return (
-    <motion.div 
+    <>
+    <motion.div
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="space-y-6 max-w-5xl mx-auto transition-colors pb-10 p-2"
+      className="space-y-6 transition-colors pb-10 p-2"
     >
       <motion.header variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2">
         <div>
           <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tighter uppercase italic leading-none">
-            {t.goodMorning}, {user.role === 'superuser' ? 'MASTER' : user.role === 'admin' ? academy?.ownerName?.split(' ')[0] : user.name.split(' ')[0]}!
+            {getGreeting()}, {user.role === 'superuser' ? 'MASTER' : user.role === 'admin' ? academy?.ownerName?.split(' ')[0] : user.name.split(' ')[0]}!
           </h1>
           <p className="text-slate-500 dark:text-slate-400 font-bold mt-2 uppercase text-[10px] tracking-[0.2em]">
             {user.role === 'superuser' ? t.activeMasterMode : `${t.manageAccess} ${academy?.name}`}
@@ -845,13 +961,29 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
               <span className="sm:hidden">{t.calendar}</span>
             </Link>
           )}
-          <button 
+          <button
             onClick={handleShare}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition-all active:scale-95 cursor-pointer"
+            className="flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:border-emerald-200 transition-all shadow-sm cursor-pointer"
           >
-            <Share2 size={16} />
+            <Share2 size={14} />
             <span className="hidden sm:inline">{language === 'pt' ? 'Compartilhar Sistema' : 'Share System'}</span>
           </button>
+          <button
+            onClick={() => setShowPasswordModal(true)}
+            className="hidden md:flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:border-slate-300 transition-all shadow-sm cursor-pointer"
+          >
+            <KeyRound size={14} />
+            <span>Alterar Senha</span>
+          </button>
+          {user.role === 'instructor' && (
+            <Link
+              to="/instructor-profile"
+              className="hidden md:flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:border-indigo-200 transition-all shadow-sm"
+            >
+              Meus Dados
+              <ChevronRight size={14} />
+            </Link>
+          )}
         </div>
       </motion.header>
 
@@ -2039,6 +2171,70 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
         </div>
       )}
     </motion.div>
+
+    {/* Modal: Alterar Senha */}
+    {showPasswordModal && (
+      <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[9000] flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl p-8 flex flex-col gap-6 animate-in zoom-in duration-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
+                <KeyRound size={20} className="text-indigo-600" />
+              </div>
+              <h2 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Alterar Minha Senha</h2>
+            </div>
+            <button onClick={() => { setShowPasswordModal(false); setNewPass(''); setConfirmNewPass(''); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 transition-colors">
+              <X size={20} />
+            </button>
+          </div>
+          <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1 flex items-center justify-between">
+                <span>Nova Senha <span className="text-red-500">*</span></span>
+                <button type="button" onClick={() => setShowPassVisibility(p => !p)} className="text-slate-400">
+                  {showPassVisibility ? <EyeOff size={12} /> : <Eye size={12} />}
+                </button>
+              </label>
+              <div className="relative">
+                <Lock size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type={showPassVisibility ? 'text' : 'password'}
+                  value={newPass}
+                  onChange={e => setNewPass(e.target.value)}
+                  placeholder="Mín. 6 caracteres"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-900 dark:text-white placeholder:text-slate-400"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">
+                Confirmar Nova Senha <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <Lock size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type={showPassVisibility ? 'text' : 'password'}
+                  value={confirmNewPass}
+                  onChange={e => setConfirmNewPass(e.target.value)}
+                  placeholder="Repita a senha"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-900 dark:text-white placeholder:text-slate-400"
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={isSavingPass}
+              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white font-black py-3 rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-[11px] mt-2"
+            >
+              {isSavingPass ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+              {isSavingPass ? 'Salvando...' : 'Salvar Nova Senha'}
+            </button>
+          </form>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 

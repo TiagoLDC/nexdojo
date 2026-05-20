@@ -41,6 +41,8 @@ export const translations = {
     
     // Dashboard strings
     goodMorning: 'Bom dia',
+    goodAfternoon: 'Boa tarde',
+    goodEvening: 'Boa noite',
     activeMasterMode: 'Modo de Gestão Master Ativo',
     totalStudents: 'Total de Alunos',
     activeStudents: 'Alunos Ativos',
@@ -355,6 +357,8 @@ export const translations = {
 
     // Dashboard strings
     goodMorning: 'Good morning',
+    goodAfternoon: 'Good afternoon',
+    goodEvening: 'Good evening',
     activeMasterMode: 'Master Management Mode Active',
     totalStudents: 'Total Students',
     activeStudents: 'Active Students',
@@ -669,6 +673,8 @@ export const translations = {
 
     // Dashboard strings
     goodMorning: 'Buenos días',
+    goodAfternoon: 'Buenas tardes',
+    goodEvening: 'Buenas noches',
     activeMasterMode: 'Modo de Gestión Master Ativo',
     totalStudents: 'Total de Alumnos',
     activeStudents: 'Alumnos Activos',

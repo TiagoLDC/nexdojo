@@ -442,7 +442,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   value={newPass}
                   onChange={e => setNewPass(e.target.value)}
                   placeholder="Mín. 6 caracteres"
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-900 dark:text-white placeholder:text-slate-400"
                   autoFocus
                 />
               </div>
@@ -455,7 +455,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   value={confirmNewPass}
                   onChange={e => setConfirmNewPass(e.target.value)}
                   placeholder="Repita a senha"
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-slate-900 dark:text-white placeholder:text-slate-400"
                 />
               </div>
               <button
