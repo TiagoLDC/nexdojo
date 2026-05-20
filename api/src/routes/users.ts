@@ -202,7 +202,7 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
       ? String(req.body.email).toLowerCase().trim()
       : existing[0].email;
     if (finalEmail && academyId) {
-      await autoLinkUserToEntities(req.params.id, finalEmail, academyId);
+      await autoLinkUserToEntities(String(req.params.id), finalEmail, academyId);
     }
 
     const [rows] = await pool.execute<any[]>(

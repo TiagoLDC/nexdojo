@@ -342,7 +342,7 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
     // Auto-vínculo: se ainda sem user_id, tenta vincular pelo email
     if (!existing[0].user_id) {
       const emailToLink = req.body.email || existing[0].email;
-      if (emailToLink) await autoLinkEntityToUser('students', req.params.id, emailToLink, academyId);
+      if (emailToLink) await autoLinkEntityToUser('students', String(req.params.id), emailToLink, academyId);
     }
 
     const [rows] = await pool.execute<any[]>('SELECT * FROM students WHERE id = ?', [req.params.id]);
