@@ -121,6 +121,7 @@ const ChatView: React.FC<ChatViewProps> = ({ academy, user }) => {
             const isSystem = msg.senderId === 'system';
 
             if (isSystem) {
+              if (user.role !== 'admin') return null;
               return (
                 <div key={msg.id} className="flex flex-col items-center justify-center py-4 animate-in zoom-in duration-500">
                   <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 p-6 rounded-[32px] max-w-[85%] relative overflow-hidden group">

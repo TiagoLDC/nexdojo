@@ -136,10 +136,13 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   }, [academy?.id, user.role]);
   
   const hasNewMessages = useMemo(() => {
-    if (chatMessages.length === 0) return false;
-    const latestTimestamp = chatMessages[chatMessages.length - 1].timestamp;
+    const visibleMessages = user.role === 'student'
+      ? chatMessages.filter(m => m.senderId !== 'system')
+      : chatMessages;
+    if (visibleMessages.length === 0) return false;
+    const latestTimestamp = visibleMessages[visibleMessages.length - 1].timestamp;
     return latestTimestamp > lastReadChat;
-  }, [chatMessages, lastReadChat]);
+  }, [chatMessages, lastReadChat, user.role]);
 
   const getBeltColor = (belt: Belt) => {
     switch (belt) {
@@ -707,6 +710,75 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
             </Link>
           </div>
         </motion.header>
+
+        {/* AVISO DE MENSAGENS NO MURAL */}
+        {hasNewMessages && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="px-2"
+          >
+            <Link
+              to="/chat"
+              className="bg-indigo-600 p-6 rounded-[32px] text-white shadow-xl shadow-indigo-500/20 flex items-center justify-between group hover:bg-indigo-700 transition-all border border-indigo-500 relative overflow-hidden"
+            >
+              <div className="flex items-center gap-5 relative z-10">
+                <div className="bg-white/20 p-4 rounded-2xl group-hover:scale-110 transition-transform relative">
+                  <MessageSquare size={28} />
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping" />
+                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
+                </div>
+                <div>
+                  <h3 className="font-black text-lg uppercase italic tracking-tight leading-none">{t.muralNewMessagesTitle}</h3>
+                  <p className="text-[11px] text-indigo-100 font-bold uppercase tracking-wider mt-1 opacity-80">{t.muralNewMessagesDesc}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 relative z-10 shrink-0 ml-4">
+                <span className="hidden sm:block text-[10px] font-black uppercase tracking-widest bg-white/20 px-4 py-2 rounded-full">{t.seeNow}</span>
+                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center group-hover:translate-x-1 transition-transform">
+                  <ChevronRight size={20} />
+                </div>
+              </div>
+              <div className="absolute -right-10 -bottom-10 opacity-10 pointer-events-none group-hover:scale-110 transition-transform duration-1000">
+                <MessageSquare size={160} />
+              </div>
+            </Link>
+          </motion.div>
+        )}
+
+        {/* ALERTAS DE CALENDÁRIO */}
+        {upcomingOffDays.length > 0 && (
+          <motion.div variants={itemVariants} className="space-y-3 px-2">
+            {upcomingOffDays.map((offDay) => {
+              const isToday = offDay.date === todayStr;
+              const eventDate = new Date(offDay.date + 'T12:00:00');
+              const dayName = eventDate.toLocaleDateString('pt-BR', { weekday: 'long' });
+              return (
+                <div
+                  key={offDay.id}
+                  className={`bg-gradient-to-r ${isToday ? 'from-red-600 to-red-700' : 'from-amber-500 to-amber-600'} p-6 rounded-[32px] text-white shadow-xl flex items-center justify-between`}
+                >
+                  <div className="flex items-center gap-5">
+                    <div className="bg-white/20 p-4 rounded-2xl">
+                      <AlertCircle size={32} />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-xl uppercase tracking-tight">
+                        {isToday ? t.noClassesToday : t.noClassesDay.replace('{day}', dayName)}
+                      </h3>
+                      <p className={`${isToday ? 'text-red-100' : 'text-amber-50'} font-medium opacity-90`}>
+                        {offDay.reason} ({new Date(offDay.date + 'T12:00:00').toLocaleDateString(language === 'pt' ? 'pt-BR' : language === 'en' ? 'en-US' : 'es-ES')})
+                      </p>
+                    </div>
+                  </div>
+                  <div className="hidden md:block">
+                    <CalendarIcon size={48} className="opacity-20" />
+                  </div>
+                </div>
+              );
+            })}
+          </motion.div>
+        )}
 
         {/* BENTO GRID - STUDENT */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 px-2">
