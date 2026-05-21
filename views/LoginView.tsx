@@ -101,6 +101,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [forgotEmail, setForgotEmail] = useState('');
+  const [isSendingReset, setIsSendingReset] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
   const [regPassword, setRegPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoadingCep, setIsLoadingCep] = useState(false);
@@ -117,6 +119,24 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [linkedAcademy, setLinkedAcademy] = useState<Academy | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) {
+      showNotification('Informe o e-mail cadastrado', 'error');
+      return;
+    }
+    setIsSendingReset(true);
+    try {
+      await authService.forgotPassword(forgotEmail.trim());
+      setForgotSent(true);
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || 'Não foi possível enviar o link agora. Tente novamente em alguns minutos.';
+      showNotification(msg, 'error');
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
 
   // Redireciona cadastro de aluno/instrutor sem alias (academia obrigatória na URL)
   React.useEffect(() => {
@@ -622,40 +642,77 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         {/* VIEW: FORGOT PASSWORD */}
         {view === 'forgot-password' && (
           <div className="max-w-md mx-auto space-y-6 animate-in fade-in zoom-in duration-300">
-            <button onClick={() => setView('login')} className="text-white flex items-center gap-2 mb-4 hover:text-indigo-400 transition-colors font-bold text-xs uppercase tracking-[0.2em]">
+            <button
+              onClick={() => { setView('login'); setForgotSent(false); }}
+              className="text-white flex items-center gap-2 mb-4 hover:text-indigo-400 transition-colors font-bold text-xs uppercase tracking-[0.2em]"
+            >
               <ChevronLeft size={18} /> {t.backToLogin}
             </button>
 
             <div className="bg-white dark:bg-slate-900 rounded-[40px] p-8 md:p-10 shadow-2xl space-y-6">
-              <div className="text-center space-y-2">
-                <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">{t.createOrRecoverPassword}</h2>
-                <p className="text-sm text-slate-400 font-medium leading-relaxed">Para redefinir sua senha, entre em contato com o administrador da sua academia.</p>
-              </div>
+              {!forgotSent ? (
+                <>
+                  <div className="text-center space-y-2">
+                    <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Recuperar Senha</h2>
+                    <p className="text-sm text-slate-400 font-medium leading-relaxed">
+                      Informe o e-mail cadastrado e enviaremos um link para você criar uma nova senha.
+                    </p>
+                  </div>
 
-              <div className="space-y-4">
-                <Input
-                  label="E-mail Cadastrado"
-                  type="email"
-                  value={forgotEmail}
-                  onChange={setForgotEmail}
-                  placeholder="seu@email.com"
-                  icon={<Mail size={18} />}
-                />
-              </div>
+                  <form onSubmit={handleForgotPassword} className="space-y-4">
+                    <Input
+                      label="E-mail Cadastrado"
+                      type="email"
+                      value={forgotEmail}
+                      onChange={setForgotEmail}
+                      placeholder="seu@email.com"
+                      icon={<Mail size={18} />}
+                      autoComplete="email"
+                      required
+                    />
 
-              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-2xl p-4 flex items-start gap-3">
-                <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={18} />
-                <p className="text-sm text-amber-800 dark:text-amber-400 font-medium">
-                  Solicite ao administrador da academia que redefina sua senha no painel de gestão. OSS!
-                </p>
-              </div>
+                    <button
+                      type="submit"
+                      disabled={isSendingReset}
+                      className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-400 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:cursor-not-allowed"
+                    >
+                      {isSendingReset ? (
+                        <><Loader2 size={20} className="animate-spin" /> Enviando…</>
+                      ) : (
+                        <>Enviar link de recuperação <ArrowRight size={20} /></>
+                      )}
+                    </button>
+                  </form>
+                </>
+              ) : (
+                <div className="space-y-6 text-center">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <CheckCircle2 className="text-green-600 dark:text-green-400" size={36} />
+                  </div>
 
-              <button
-                onClick={() => { setView('login'); setEmail(forgotEmail); }}
-                className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95"
-              >
-                Voltar ao Login <ArrowRight size={20} />
-              </button>
+                  <div className="space-y-2">
+                    <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Verifique seu E-mail</h2>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+                      Se o e-mail informado estiver cadastrado, você receberá um link de recuperação em instantes.
+                      O link é válido por <strong>30 minutos</strong>.
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 text-left">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                      <strong className="text-slate-700 dark:text-slate-300">Não recebeu o e-mail?</strong><br />
+                      Confira a caixa de spam ou aguarde alguns minutos antes de tentar novamente.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => { setView('login'); setForgotSent(false); setEmail(forgotEmail); }}
+                    className="w-full py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95"
+                  >
+                    Voltar ao Login <ArrowRight size={20} />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

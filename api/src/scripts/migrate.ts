@@ -6,6 +6,8 @@ dotenv.config({ path: `${__dirname}/../../.env` });
 const DDL_STATEMENTS = [
   // Limpar banco
   'SET FOREIGN_KEY_CHECKS = 0',
+  'DROP TABLE IF EXISTS password_reset_tokens',
+  'DROP TABLE IF EXISTS system_config',
   'DROP TABLE IF EXISTS recycle_bin',
   'DROP TABLE IF EXISTS products',
   'DROP TABLE IF EXISTS chat_messages',
@@ -340,6 +342,27 @@ const DDL_STATEMENTS = [
     deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE
   )`,
+
+  // Configurações globais do sistema (superuser)
+  `CREATE TABLE system_config (
+    \`key\`      VARCHAR(100) NOT NULL,
+    value      TEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (\`key\`)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+  // Tokens de recuperação de senha
+  `CREATE TABLE password_reset_tokens (
+    id         VARCHAR(36) NOT NULL,
+    user_id    VARCHAR(36) NOT NULL,
+    token_hash VARCHAR(64) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    used       TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    INDEX idx_token_hash (token_hash),
+    INDEX idx_user_id (user_id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 ];
 
 async function migrate() {

@@ -1,9 +1,11 @@
 ﻿import { Router, Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import rateLimit from 'express-rate-limit';
 import pool from '../db';
 import { requireAuth } from '../middleware/auth';
+import { sendMail } from '../utils/mailer';
 
 const router = Router();
 
@@ -15,10 +17,24 @@ const loginLimiter = rateLimit({
   message: { error: 'Muitas tentativas de login. Tente novamente em 15 minutos.' },
 });
 
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas solicitações de recuperação. Tente novamente em 15 minutos.' },
+});
+
 // Rate limiting só ativo em produção (NODE_ENV=production)
 const loginMiddleware = process.env.NODE_ENV === 'production'
   ? loginLimiter
   : (_req: Request, _res: Response, next: NextFunction) => next();
+
+const forgotPasswordMiddleware = process.env.NODE_ENV === 'production'
+  ? forgotPasswordLimiter
+  : (_req: Request, _res: Response, next: NextFunction) => next();
+
+const sha256 = (input: string): string => crypto.createHash('sha256').update(input).digest('hex');
 
 // POST /api/auth/login
 router.post('/login', loginMiddleware, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -326,6 +342,128 @@ router.get('/me', requireAuth, async (req: Request, res: Response, next: NextFun
       status: user.status,
       createdAt: user.created_at,
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/forgot-password — solicita link de redefinição por e-mail
+router.post('/forgot-password', forgotPasswordMiddleware, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const email = String(req.body?.email ?? '').toLowerCase().trim();
+  const GENERIC_MESSAGE = 'Se o e-mail informado estiver cadastrado, você receberá um link de recuperação em instantes.';
+
+  if (!email) {
+    res.status(400).json({ error: 'E-mail é obrigatório' });
+    return;
+  }
+
+  try {
+    // Limpa tokens expirados (housekeeping)
+    await pool.execute('DELETE FROM password_reset_tokens WHERE expires_at < NOW()');
+
+    const [rows] = await pool.execute<any[]>(
+      'SELECT id, name, email, status FROM users WHERE email = ?',
+      [email]
+    );
+    const user = rows[0];
+
+    // Anti-enumeração: resposta sempre 200 com a mesma mensagem
+    if (!user || user.status === 'Blocked') {
+      res.json({ message: GENERIC_MESSAGE });
+      return;
+    }
+
+    // Invalida tokens anteriores ainda válidos do mesmo usuário
+    await pool.execute(
+      'UPDATE password_reset_tokens SET used = 1 WHERE user_id = ? AND used = 0',
+      [user.id]
+    );
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const tokenHash = sha256(token);
+    const tokenId = 'prt_' + Math.random().toString(36).substr(2, 9);
+
+    await pool.execute(
+      `INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at)
+       VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 30 MINUTE))`,
+      [tokenId, user.id, tokenHash]
+    );
+
+    const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:3002').replace(/\/$/, '');
+    const link = `${frontendUrl}/reset-password?token=${token}`;
+
+    try {
+      await sendMail({
+        to: user.email,
+        subject: 'NexDojo — Recuperação de Senha',
+        html: `
+          <div style="font-family: Arial, sans-serif; padding: 24px; color: #1f2937; max-width: 560px; margin: 0 auto;">
+            <h2 style="color: #4f46e5;">Recuperação de Senha</h2>
+            <p>Olá, <strong>${user.name}</strong>.</p>
+            <p>Recebemos uma solicitação para redefinir a senha da sua conta no NexDojo.</p>
+            <p>Para criar uma nova senha, clique no botão abaixo. Este link é válido por <strong>30 minutos</strong>.</p>
+            <p style="text-align: center; margin: 32px 0;">
+              <a href="${link}" style="background: #4f46e5; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">Redefinir Senha</a>
+            </p>
+            <p style="font-size: 13px; color: #6b7280;">Se o botão não funcionar, copie e cole este endereço no navegador:</p>
+            <p style="font-size: 12px; color: #4f46e5; word-break: break-all;">${link}</p>
+            <hr style="border:none; border-top:1px solid #e5e7eb; margin: 24px 0;" />
+            <p style="font-size: 12px; color: #6b7280;">Se você não solicitou esta recuperação, ignore este e-mail. Sua senha permanecerá inalterada.</p>
+            <p style="font-size: 12px; color: #6b7280;">NexDojo — Sistema de Gestão para Academias</p>
+          </div>
+        `,
+      });
+    } catch (mailErr: any) {
+      console.error('[forgot-password] Falha ao enviar e-mail:', mailErr?.message);
+      // Não revelar falha de envio ao cliente — mantém resposta genérica
+    }
+
+    res.json({ message: GENERIC_MESSAGE });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/reset-password — redefine senha usando o token recebido por e-mail
+router.post('/reset-password', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const token = String(req.body?.token ?? '').trim();
+  const newPassword = req.body?.new_password ?? req.body?.newPassword;
+
+  if (!token) {
+    res.status(400).json({ error: 'Token é obrigatório' });
+    return;
+  }
+  if (!newPassword || String(newPassword).length < 6) {
+    res.status(400).json({ error: 'A nova senha deve ter no mínimo 6 caracteres' });
+    return;
+  }
+
+  try {
+    const tokenHash = sha256(token);
+    const [rows] = await pool.execute<any[]>(
+      `SELECT id, user_id FROM password_reset_tokens
+       WHERE token_hash = ? AND used = 0 AND expires_at > NOW() LIMIT 1`,
+      [tokenHash]
+    );
+    const record = rows[0];
+
+    if (!record) {
+      res.status(400).json({ error: 'Link inválido ou expirado. Solicite um novo link de recuperação.' });
+      return;
+    }
+
+    const hash = await bcrypt.hash(String(newPassword), 10);
+
+    await pool.execute(
+      'UPDATE users SET password_hash = ?, requires_password_change = 0 WHERE id = ?',
+      [hash, record.user_id]
+    );
+    await pool.execute(
+      'UPDATE password_reset_tokens SET used = 1 WHERE id = ?',
+      [record.id]
+    );
+
+    res.json({ message: 'Senha alterada com sucesso. Faça login com sua nova senha.' });
   } catch (err) {
     next(err);
   }

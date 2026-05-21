@@ -13,4 +13,10 @@ export const authService = {
 
   changePassword: (newPassword: string) =>
     api.post<{ message: string }>('/auth/change-password', { newPassword }).then((r) => r.data),
+
+  forgotPassword: (email: string) =>
+    api.post<{ message: string }>('/auth/forgot-password', { email }).then((r) => r.data),
+
+  resetPassword: (token: string, newPassword: string) =>
+    api.post<{ message: string }>('/auth/reset-password', { token, newPassword }).then((r) => r.data),
 };

@@ -24,6 +24,8 @@ const SettingsPage         = React.lazy(() => import('@/pages/SettingsPage'));
 const StudentProfilePage   = React.lazy(() => import('@/pages/StudentProfilePage'));
 const InstructorProfilePage = React.lazy(() => import('@/pages/InstructorProfilePage'));
 const PaymentPage          = React.lazy(() => import('@/pages/PaymentPage'));
+const SystemConfigPage     = React.lazy(() => import('@/pages/SystemConfigPage'));
+const ResetPasswordPage    = React.lazy(() => import('@/pages/ResetPasswordPage'));
 
 const PageLoader: React.FC = () => (
   <div className="flex items-center justify-center h-full min-h-[200px]">
@@ -37,6 +39,7 @@ const App: React.FC = () => (
       {/* Public */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/login/forgot-password" element={<LoginPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/login/register" element={<LoginPage />} />
       <Route path="/login/register/academy" element={<LoginPage />} />
       <Route path="/login/register/student" element={<LoginPage />} />
@@ -79,6 +82,11 @@ const App: React.FC = () => (
             <Route path="/users"       element={<UsersPage />} />
             <Route path="/reports"     element={<ReportsPage />} />
             <Route path="/recycle-bin" element={<RecycleBinPage />} />
+          </Route>
+
+          {/* Superuser only */}
+          <Route element={<RoleGuard roles={['superuser']} />}>
+            <Route path="/system-config" element={<SystemConfigPage />} />
           </Route>
 
           {/* Student only */}

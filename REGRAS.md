@@ -128,7 +128,14 @@ client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 client.connect('162.240.167.149', port=22022, username='qasnexdojo', password='@Tmd4738@', timeout=30)
 
 stdin, stdout, stderr = client.exec_command(
-    'cd /home/qasnexdojo/nexdojo && git fetch origin && git reset --hard origin/main && sed -i "s/DB_HOST=.*/DB_HOST=host.docker.internal/" api/.env && docker compose down && docker compose up -d --build 2>&1',
+    'cd /home/qasnexdojo/nexdojo && '
+    'git fetch origin && git reset --hard origin/main && '
+    'sed -i "s/DB_HOST=.*/DB_HOST=host.docker.internal/" api/.env && '
+    # Garante FRONTEND_URL no api/.env (idempotente: atualiza se existir, adiciona se não)
+    '(grep -q "^FRONTEND_URL=" api/.env '
+    '&& sed -i "s|^FRONTEND_URL=.*|FRONTEND_URL=https://qas.nexdojo.com.br|" api/.env '
+    '|| echo "FRONTEND_URL=https://qas.nexdojo.com.br" >> api/.env) && '
+    'docker compose down && docker compose up -d --build 2>&1',
     timeout=300
 )
 
@@ -162,7 +169,7 @@ sys.exit(exit_code)
 **Observações:**
 - Usar `git fetch + reset --hard` em vez de `git pull` para evitar conflitos de branches divergidas no servidor
 - O arquivo `api/.env` **não está no git** — se precisar recriar, usar SFTP via paramiko com o conteúdo do `api/.env` local
-- `api/.env` no servidor contém: `PORT=3005`, `DATABASE_URL` e `JWT_SECRET`
+- `api/.env` no servidor contém: `PORT=3005`, `DATABASE_URL`, `JWT_SECRET` e `FRONTEND_URL` (sincronizado automaticamente pelo deploy)
 
 ---
 
@@ -227,4 +234,4 @@ GEMINI_API_KEY=<!-- PREENCHER -->
 
 ---
 
-*Última atualização: 19/05/2026*
+*Última atualização: 21/05/2026*

@@ -13,6 +13,7 @@ import chatRouter from './chat';
 import inventoryRouter from './inventory';
 import academiesRouter from './academies';
 import recycleBinRouter from './recycleBin';
+import systemConfigRouter from './systemConfig';
 
 const router = Router();
 
@@ -34,5 +35,6 @@ router.use('/chat', chatRouter);
 router.use('/products', inventoryRouter);
 router.use('/academies', academiesRouter);
 router.use('/recycle-bin', recycleBinRouter);
+router.use('/system-config', systemConfigRouter);
 
 export default router;
