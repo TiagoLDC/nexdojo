@@ -33,7 +33,7 @@ router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunct
 });
 
 // POST /api/calendar
-router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -60,7 +60,7 @@ router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Req
 });
 
 // PUT /api/calendar/:id
-router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.put('/:id', requireAuth, requireRole('admin', 'superuser', 'instructor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -97,7 +97,7 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
 });
 
 // DELETE /api/calendar/:id
-router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.delete('/:id', requireAuth, requireRole('admin', 'superuser', 'instructor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
