@@ -365,7 +365,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
             <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2 mb-8">
               <UserCheck size={16} /> DADOS PESSOAIS
             </h3>
-            <div className="flex flex-col md:flex-row gap-10 items-start">
+            <div className="flex flex-col md:flex-row gap-6 md:gap-10 items-start">
               <div className="flex flex-col items-center gap-4 shrink-0 mx-auto md:mx-0">
                 <div className="w-40 h-40 rounded-[48px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden relative group shadow-inner">
                   {editData.photo ? (
@@ -693,7 +693,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
               <Award size={16} /> GRADUAÇÃO & FAIXA ATUAL
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
               <div className="space-y-6">
                 <div className="space-y-3">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Graus na Faixa</label>

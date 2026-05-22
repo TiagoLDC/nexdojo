@@ -86,7 +86,7 @@ const PaymentView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-32 animate-in fade-in duration-700 px-2">
       <header>
-        <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tighter uppercase italic leading-none">
+        <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white tracking-tighter uppercase italic leading-none">
           Pagamento & Mensalidade
         </h1>
         <p className="text-slate-500 dark:text-slate-400 font-bold mt-2 uppercase text-[10px] tracking-[0.2em]">

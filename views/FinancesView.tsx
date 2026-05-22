@@ -42,7 +42,7 @@ const PrintHeader: React.FC<{ title: string; academy: Academy }> = ({ title, aca
     <div className="hidden print:block mb-8 border-b-2 border-slate-900 pb-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">{academy?.name || 'Academia'}</h1>
+          <h1 className="text-2xl md:text-3xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">{academy?.name || 'Academia'}</h1>
           <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{academy?.address || ''}</p>
         </div>
         <div className="text-right">
@@ -453,7 +453,7 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =
             </div>
           ))}
           {filteredTransactions.length === 0 && (
-            <div className="p-12 text-center text-slate-400 italic text-sm">{t.noTransactionsFound}</div>
+            <div className="p-6 md:p-12 text-center text-slate-400 italic text-sm">{t.noTransactionsFound}</div>
           )}
         </div>
 

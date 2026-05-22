@@ -684,7 +684,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       >
         <motion.header variants={itemVariants} className="px-2 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tighter uppercase italic leading-none">
+            <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white tracking-tighter uppercase italic leading-none">
               {getGreeting()}, {user.name.split(' ')[0]}!
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-bold mt-2 uppercase text-[10px] tracking-[0.2em]">{t.trainingJourney} {academy?.name}</p>
@@ -992,7 +992,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     >
       <motion.header variants={itemVariants} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2">
         <div>
-          <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tighter uppercase italic leading-none">
+          <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white tracking-tighter uppercase italic leading-none">
             {getGreeting()}, {user.role === 'superuser' ? 'MASTER' : user.role === 'admin' ? academy?.ownerName?.split(' ')[0] : user.name.split(' ')[0]}!
           </h1>
           <p className="text-slate-500 dark:text-slate-400 font-bold mt-2 uppercase text-[10px] tracking-[0.2em]">
@@ -1969,7 +1969,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                   </div>
                 ))
               ) : (
-                <div className="col-span-2 bg-slate-50 dark:bg-slate-900/50 p-10 rounded-[40px] text-center text-slate-400 dark:text-slate-600 text-xs border border-dashed border-slate-200 dark:border-slate-800">
+                <div className="col-span-2 bg-slate-50 dark:bg-slate-900/50 p-5 md:p-10 rounded-[32px] md:rounded-[40px] text-center text-slate-400 dark:text-slate-600 text-xs border border-dashed border-slate-200 dark:border-slate-800">
                   Nenhum atleta atingiu a meta de frequência ainda. OSS!
                 </div>
               )}
@@ -2096,7 +2096,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                   </div>
                 ))
               ) : (
-                <div className="bg-slate-50 dark:bg-slate-900/50 p-10 rounded-[40px] text-center text-slate-400 dark:text-slate-600 text-xs border border-dashed border-slate-200 dark:border-slate-800 italic">
+                <div className="bg-slate-50 dark:bg-slate-900/50 p-5 md:p-10 rounded-[32px] md:rounded-[40px] text-center text-slate-400 dark:text-slate-600 text-xs border border-dashed border-slate-200 dark:border-slate-800 italic">
                   Todos os atletas estão vindo treinar. Que beleza! OSS!
                 </div>
               )}

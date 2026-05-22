@@ -622,7 +622,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                       <Award className="text-white" size={40} />
                     )}
                   </div>
-                  <h1 className="text-4xl font-black text-white tracking-tighter uppercase leading-none">{linkedAcademy.name}</h1>
+                  <h1 className="text-2xl md:text-4xl font-black text-white tracking-tighter uppercase leading-none">{linkedAcademy.name}</h1>
                   <p className="text-slate-400 mt-3 font-bold text-xs uppercase tracking-[0.3em] opacity-80">{t.legacyContinues}</p>
                 </div>
               </div>

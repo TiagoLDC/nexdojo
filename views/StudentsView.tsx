@@ -94,7 +94,7 @@ const PrintHeader: React.FC<{ title: string; academy: Academy }> = ({ title, aca
     <div className="hidden print:block mb-8 border-b-2 border-slate-900 pb-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-black uppercase italic tracking-tighter">{academy.name}</h1>
+          <h1 className="text-2xl md:text-3xl font-black uppercase italic tracking-tighter">{academy.name}</h1>
           <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{academy.address}</p>
         </div>
         <div className="text-right">
@@ -580,7 +580,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print px-1">
         <div>
-          <h1 className="text-3xl font-black text-slate-800 dark:text-white uppercase italic tracking-tighter">{t.students}</h1>
+          <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white uppercase italic tracking-tighter">{t.students}</h1>
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t.manageAccess}</p>
         </div>
         <div className="grid grid-cols-3 md:flex gap-2">
@@ -1078,7 +1078,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
       {/* Modal de Ficha Completa */}
       {isEditModalOpen && editingStudent && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[150] flex items-end md:items-center justify-center p-0 md:p-4">
-          <div className="bg-white dark:bg-slate-800 w-full max-w-4xl rounded-t-3xl md:rounded-3xl p-6 md:p-8 animate-in slide-in-from-bottom duration-300 max-h-[95vh] overflow-y-auto custom-scrollbar">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-4xl rounded-t-3xl md:rounded-3xl p-4 md:p-8 animate-in slide-in-from-bottom duration-300 max-h-[95vh] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between mb-8 sticky top-0 bg-white dark:bg-slate-800 py-2 z-10 border-b border-slate-50">
               <div className="flex items-center gap-3">
                 <div className="bg-indigo-100 p-2 rounded-xl text-indigo-600">

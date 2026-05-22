@@ -512,7 +512,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
       {/* Modal Unificado: Ficha do Instrutor */}
       {isEditModalOpen && editingInstructor && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-end md:items-center justify-center p-0 md:p-4">
-          <div className="bg-white dark:bg-slate-800 w-full max-w-4xl rounded-t-3xl md:rounded-3xl p-6 md:p-8 animate-in slide-in-from-bottom duration-300 max-h-[95vh] overflow-y-auto">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-4xl rounded-t-3xl md:rounded-3xl p-4 md:p-8 animate-in slide-in-from-bottom duration-300 max-h-[95vh] overflow-y-auto">
              <div className="flex items-center justify-between mb-8 sticky top-0 bg-white dark:bg-slate-800 py-2 z-20 border-b border-slate-50">
               <div className="flex items-center gap-3">
                 <div className="bg-slate-900 p-2 rounded-xl text-white">

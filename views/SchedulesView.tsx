@@ -137,7 +137,7 @@ const SchedulesView: React.FC<{ academy: Academy | null; user: User }> = ({ acad
         })}
 
         {templates.filter(t => (t.schedules || []).length > 0).length === 0 && (
-          <div className="bg-white dark:bg-slate-900 p-12 rounded-[40px] border border-dashed border-slate-200 dark:border-slate-800 text-center">
+          <div className="bg-white dark:bg-slate-900 p-6 md:p-12 rounded-[32px] md:rounded-[40px] border border-dashed border-slate-200 dark:border-slate-800 text-center">
             <Clock size={48} className="mx-auto text-slate-200 mb-4" />
             <h3 className="text-slate-400 font-bold uppercase tracking-widest italic text-sm">Nenhum horário configurado</h3>
             <p className="text-[10px] text-slate-400 mt-2">Vá em "Turmas" para definir os dias e horas de cada aula.</p>

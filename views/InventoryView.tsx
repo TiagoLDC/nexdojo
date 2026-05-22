@@ -173,7 +173,7 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
     return (
       <div className="max-w-6xl mx-auto space-y-8 pb-32 transition-colors">
         <header className="flex flex-col gap-2">
-          <h1 className="text-4xl font-black text-slate-800 dark:text-white tracking-tight uppercase italic flex items-center gap-3">
+          <h1 className="text-2xl md:text-4xl font-black text-slate-800 dark:text-white tracking-tight uppercase italic flex items-center gap-3">
             <ShoppingBag className="text-indigo-600" size={32} />
             {t.inventory}
           </h1>
@@ -256,7 +256,7 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
     <div className="max-w-4xl mx-auto space-y-8 pb-32 transition-colors">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight uppercase italic">{t.inventory}</h1>
+          <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white tracking-tight uppercase italic">{t.inventory}</h1>
           <p className="text-slate-500 dark:text-slate-400 font-bold text-xs uppercase tracking-widest">{t.inventoryTitle}</p>
         </div>
         <button
@@ -398,10 +398,10 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[40px] p-8 shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]"
+              className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[32px] md:rounded-[40px] p-4 md:p-8 shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="flex items-center justify-between mb-8 shrink-0">
-                <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase italic tracking-tight">Finalizar Compra</h2>
+              <div className="flex items-center justify-between mb-4 md:mb-8 shrink-0">
+                <h2 className="text-xl md:text-2xl font-black text-slate-800 dark:text-white uppercase italic tracking-tight">Finalizar Compra</h2>
                 <button onClick={() => setIsPurchaseModalOpen(false)} className="bg-slate-100 dark:bg-slate-800 text-slate-400 rounded-full p-2 hover:bg-red-50 hover:text-red-500 transition-all">
                   <X size={20} />
                 </button>
@@ -524,10 +524,10 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[40px] p-8 md:p-10 shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]"
+              className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[32px] md:rounded-[40px] p-4 md:p-10 shadow-2xl relative overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="flex items-center justify-between mb-8 shrink-0">
-                <h2 className="text-3xl font-black text-slate-800 dark:text-white uppercase italic tracking-tight">
+              <div className="flex items-center justify-between mb-4 md:mb-8 shrink-0">
+                <h2 className="text-xl md:text-3xl font-black text-slate-800 dark:text-white uppercase italic tracking-tight">
                   {editingProduct?.id ? t.edit : t.add} {t.products}
                 </h2>
                 <button
@@ -677,9 +677,9 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[32px] p-8 text-center shadow-2xl"
+            className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[28px] md:rounded-[32px] p-5 md:p-8 text-center shadow-2xl"
           >
-            <div className="bg-red-50 dark:bg-red-950/20 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="bg-red-50 dark:bg-red-950/20 w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6">
               <Trash2 className="text-red-500" size={32} />
             </div>
             <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase italic tracking-tight mb-2">{t.deleteProductQuestion}</h3>

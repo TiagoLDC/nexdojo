@@ -613,8 +613,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({
 
       {/* Modal de Notificações Automáticas */}
       {isEditingNotifications && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[32px] p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800">
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[200] flex items-center justify-center p-4 sm:p-6">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[28px] md:rounded-[32px] p-5 md:p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-black text-slate-800 dark:text-white tracking-tight uppercase italic flex items-center gap-2">
                 <Bell className="text-amber-500" />
@@ -681,7 +681,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
       {/* Modal de Gestão de Planos da Academia */}
       {isManagingAcademyPlans && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[32px] p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto custom-scrollbar">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[28px] md:rounded-[32px] p-4 md:p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h2 className="text-xl font-black text-slate-800 dark:text-white tracking-tight uppercase italic flex items-center gap-2">
@@ -773,7 +773,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
       {/* Modal de Adição/Edição de Plano Específico */}
       {isAddingAcademyPlan && editingPlan && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[300] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[32px] p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[28px] md:rounded-[32px] p-5 md:p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800">
             <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase italic mb-6">
               {editingPlan.id ? 'Editar Plano' : 'Novo Plano'}
             </h3>
@@ -862,7 +862,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
       {/* Modal de Gestão de Usuários Adicionais */}
       {isManagingAdditionalUsers && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[32px] p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] flex flex-col">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[28px] md:rounded-[32px] p-4 md:p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between mb-8 shrink-0">
               <div>
                 <h2 className="text-xl font-black text-slate-800 dark:text-white tracking-tight uppercase italic flex items-center gap-2">
@@ -971,8 +971,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({
           Payload de save: handleSaveAcademyData() — manter em sincronia com esta lista.
       */}
       {isEditingAcademy && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[32px] p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto custom-scrollbar">
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[200] flex items-center justify-center p-4 sm:p-6">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[28px] md:rounded-[32px] p-4 md:p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-black text-slate-800 dark:text-white tracking-tight uppercase italic">Editar Academia</h2>
               <button onClick={() => setIsEditingAcademy(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
@@ -1109,8 +1109,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({
 
       {/* Modal de Edição de Perfil do Usuário */}
       {isEditingProfile && editProfile && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[32px] p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto custom-scrollbar">
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[200] flex items-center justify-center p-4 sm:p-6">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[28px] md:rounded-[32px] p-4 md:p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="bg-indigo-600 p-2 rounded-xl text-white"><UserIcon size={20} /></div>
@@ -1321,8 +1321,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({
 
       {/* Modal de Pagamentos */}
       {isEditingPayment && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[32px] p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800">
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[200] flex items-center justify-center p-4 sm:p-6">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[28px] md:rounded-[32px] p-5 md:p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-black text-slate-800 dark:text-white tracking-tight uppercase italic flex items-center gap-2">
                 <Wallet className="text-indigo-500" />
@@ -1473,7 +1473,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
       {/* Modal Planos */}
       {isEditingPlans && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[250] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-[40px] p-8 md:p-10 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[95vh] overflow-y-auto custom-scrollbar">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-[32px] md:rounded-[40px] p-4 md:p-10 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[95vh] overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight uppercase italic flex items-center gap-3">
@@ -1575,7 +1575,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
       {/* Modal Checkout Simulation */}
       {isCheckingOut && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[300] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[40px] p-10 animate-in zoom-in duration-300 shadow-2xl text-center border border-slate-100 dark:border-slate-800">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[32px] md:rounded-[40px] p-6 md:p-10 animate-in zoom-in duration-300 shadow-2xl text-center border border-slate-100 dark:border-slate-800">
             <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400 mx-auto mb-6">
               <CreditCard size={40} />
             </div>

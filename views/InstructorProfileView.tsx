@@ -284,7 +284,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
             <UserCheck size={16} /> DADOS PESSOAIS
           </h3>
 
-          <div className="flex flex-col md:flex-row gap-10 items-start">
+          <div className="flex flex-col md:flex-row gap-6 md:gap-10 items-start">
             {/* Foto */}
             <div className="flex flex-col items-center gap-4 shrink-0 mx-auto md:mx-0">
                <div className="w-40 h-40 rounded-[48px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 overflow-hidden relative group shadow-inner transition-colors">
@@ -474,7 +474,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
               <GraduationCap size={16} /> CARREIRA & GRADUAÇÃO
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
               <div className="space-y-6">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-3">Graus na Faixa Atual</label>

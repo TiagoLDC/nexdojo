@@ -43,7 +43,7 @@ const PrintHeader: React.FC<{ title: string; academy: Academy }> = ({ title, aca
     <div className="hidden print:block mb-8 border-b-2 border-slate-900 pb-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">{academy?.name || 'Academia'}</h1>
+          <h1 className="text-2xl md:text-3xl font-black uppercase italic tracking-tighter text-slate-900 dark:text-white">{academy?.name || 'Academia'}</h1>
           <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{academy?.address || ''}</p>
         </div>
         <div className="text-right">
@@ -376,7 +376,7 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =>
               </div>
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400">Análise de Dados</span>
             </div>
-            <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic leading-none">Percepções da Academia</h1>
+            <h1 className="text-2xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic leading-none">Percepções da Academia</h1>
             <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-2">Acompanhe o desempenho, crescimento e retenção dos seus atletas.</p>
           </div>
           <div className="flex flex-wrap gap-2 no-print items-center">
@@ -636,7 +636,7 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =>
         </div>
 
         {/* Growth Trends */}
-        <div className="bg-indigo-600 p-10 rounded-[48px] text-white flex flex-col justify-between shadow-2xl shadow-indigo-600/30 overflow-hidden relative group">
+        <div className="bg-indigo-600 p-6 md:p-10 rounded-[32px] md:rounded-[48px] text-white flex flex-col justify-between shadow-2xl shadow-indigo-600/30 overflow-hidden relative group">
           <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
             <TrendingUp size={160} />
           </div>
@@ -832,11 +832,11 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =>
         </div>
 
         {/* System Health */}
-        <div className="lg:col-span-2 bg-slate-950 p-10 rounded-[48px] text-white shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-10 opacity-5" >
+        <div className="lg:col-span-2 bg-slate-950 p-6 md:p-10 rounded-[32px] md:rounded-[48px] text-white shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-6 md:p-10 opacity-5" >
             <Activity size={200} />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 relative z-10">
             <div>
               <h4 className="text-2xl font-black mb-6 italic flex items-center gap-2">
                  <FileText className="text-indigo-500" />

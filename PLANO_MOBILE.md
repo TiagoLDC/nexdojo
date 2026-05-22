@@ -151,32 +151,58 @@ Status real por view:
 
 ---
 
-### Fase 3 — Modais e Formulários (3-4h)
+### Fase 3 — Modais e Formulários (3-4h) ✅ CONCLUÍDA
 
 **Objetivo:** aplicar padrões da Fase 0 nos modais principais.
 
-- [ ] `views/SettingsView.tsx` — múltiplos modais (linhas 616-683, 1476)
-- [ ] `views/StudentsView.tsx` — modal de edição (linha 515-1000)
-- [ ] `views/InstructorsView.tsx` — modal `max-w-4xl` (linha 514-515)
-- [ ] `views/InventoryView.tsx` — modal `max-w-2xl` (linha 527)
-- [ ] Trocar `grid grid-cols-2` por `grid grid-cols-1 sm:grid-cols-2` em formulários (vários arquivos)
+> **Descoberta:** nenhum `grid grid-cols-2` sem breakpoint encontrado nos 4 arquivos — formulários já estavam OK nesse aspecto. O problema real era padding `p-8`/`p-10` fixo em mobile.
 
-**Entregável:** commit + deploy QAS com modais ajustados.
+- [x] `views/StudentsView.tsx` — modal ficha (linha 1081): `p-6 md:p-8` → `p-4 md:p-8`
+- [x] `views/InstructorsView.tsx` — modal ficha (linha 515): `p-6 md:p-8` → `p-4 md:p-8`
+- [x] `views/InventoryView.tsx` — 3 modais:
+   - Compra (linha 401): `p-8` → `p-4 md:p-8`, raio + título reduzidos em mobile
+   - Edição produto (linha 527): `p-8 md:p-10` → `p-4 md:p-10`, raio + título reduzidos
+   - Exclusão (linha 680): `p-8` → `p-5 md:p-8`
+- [x] `views/SettingsView.tsx` — **10 modais ajustados**:
+   - Planos da Academia (684): `p-8` → `p-4 md:p-8`
+   - Usuários Adicionais (865): `p-8` → `p-4 md:p-8`
+   - Planos de Assinatura (1476): `p-8 md:p-10` → `p-4 md:p-10`
+   - 3 modais `max-w-sm p-8` (notificações, novo plano, pagamento): → `p-5 md:p-8`
+   - 2 modais `max-w-md p-8` (editar academia, perfil): → `p-4 md:p-8`
+   - Checkout (1578): `max-w-sm p-10` → `p-6 md:p-10`
+   - 4 overlays `p-6` → `p-4 sm:p-6` (mais respiro em telas pequenas)
+
+**Total: 16 modais corrigidos em 4 views.** Desktop preservado intacto via prefixos `md:`/`sm:`.
+
+**Entregável:** ✅ commit + deploy QAS pendente (aguardar solicitação).
 
 ---
 
-### Fase 4 — Polish (2h, ROI baixo mas notável)
+### Fase 4 — Polish (2h, ROI baixo mas notável) ✅ CONCLUÍDA
 
 **Objetivo:** ajustes finos via search & replace em todo o projeto.
 
-- [ ] `gap-10` / `gap-12` → `gap-4 md:gap-10` (em todas as views)
-- [ ] `p-10` / `p-12` → `p-4 md:p-10` (em todas as views)
-- [ ] `text-3xl` / `text-4xl` sem breakpoint → `text-xl md:text-3xl`
-- [ ] `views/StudentProfileView.tsx` linha 368 — `flex gap-10` → `gap-4 md:gap-10`
-- [ ] `views/InstructorProfileView.tsx` linha 287 — idem
-- [ ] `views/ReportsView.tsx` — verificar charts (Recharts) responsivos
+- [x] **Padding `p-10`/`p-12` sem breakpoint** — 7 ocorrências corrigidas:
+   - FinancesView:456 (`p-12` → `p-6 md:p-12`)
+   - DashboardView:1972 & 2099 (`p-10` → `p-5 md:p-10` + raio responsivo)
+   - SchedulesView:140 (`p-12` → `p-6 md:p-12`)
+   - ReportsView:639 (`p-10` → `p-6 md:p-10`)
+   - ReportsView:835 & 836 (`p-10` → `p-6 md:p-10`)
+- [x] **Gaps `gap-10`/`gap-12` sem breakpoint** — 5 ocorrências corrigidas:
+   - StudentProfileView:368 & 696 (flex/grid `gap-10` → `gap-6 md:gap-10`)
+   - InstructorProfileView:287 & 477 (idem)
+   - ReportsView:839 (`gap-12` → `gap-6 md:gap-12`)
+- [x] **Headings `text-3xl`/`text-4xl` sem breakpoint** — 8 h1 principais corrigidos:
+   - StudentsView:97 & 583 (`text-3xl` → `text-2xl md:text-3xl`)
+   - FinancesView:45, ReportsView:46, PaymentView:89, DashboardView:687 & 995 (idem)
+   - InventoryView:259 (`text-3xl`), 176 (`text-4xl` → `text-2xl md:text-4xl`)
+   - ReportsView:379, LoginView:625 (`text-4xl` → `text-2xl md:text-4xl`)
+- [x] **`text-3xl`/`text-4xl` em valores numéricos preservados** — preços, contadores, avatares, "OSS!" do kiosk continuam grandes intencionalmente (sinalização visual).
+- [x] **Charts Recharts** — usados em `ReportsView` em containers `<ResponsiveContainer>` (já responsivos por padrão).
 
-**Entregável:** commit + deploy QAS final.
+**Total: 20 ajustes em 8 views.** Desktop preservado intacto.
+
+**Entregável:** ✅ commit + deploy QAS pendente (aguardar solicitação).
 
 ---
 
