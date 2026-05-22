@@ -168,9 +168,9 @@ export interface AttendanceRecord {
   id: string;
   academyId: string;
   studentId: string;
-  classId: string;
-  date: string; 
-  durationMinutes: number;
+  classId?: string;
+  date: string;
+  durationMinutes?: number;
 }
 
 export interface ChatMessage {
