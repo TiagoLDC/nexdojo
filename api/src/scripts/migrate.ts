@@ -25,6 +25,7 @@ const DDL_STATEMENTS = [
   'DROP TABLE IF EXISTS instructors',
   'DROP TABLE IF EXISTS staff',
   'DROP TABLE IF EXISTS users',
+  'DROP TABLE IF EXISTS academy_plan_schedules',
   'DROP TABLE IF EXISTS academy_plans',
   'DROP TABLE IF EXISTS academies',
   'SET FOREIGN_KEY_CHECKS = 1',
@@ -54,7 +55,7 @@ const DDL_STATEMENTS = [
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`,
 
-  // Planos da academia
+  // Planos da academia (plano de aula: mensalidade, idade, tolerâncias de presença)
   `CREATE TABLE academy_plans (
     id VARCHAR(36) PRIMARY KEY,
     academy_id VARCHAR(36) NOT NULL,
@@ -64,7 +65,24 @@ const DDL_STATEMENTS = [
     price DECIMAL(10,2) NOT NULL,
     category VARCHAR(100),
     description TEXT,
+    min_age INT NULL,
+    max_age INT NULL,
+    instructor_id VARCHAR(36) NULL COMMENT 'FK lógica para instructors.id (sem constraint pois instructors é criada depois neste DDL)',
+    active TINYINT(1) DEFAULT 1,
+    tolerance_before_minutes INT DEFAULT 15,
+    tolerance_after_start_minutes INT DEFAULT 15,
     FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE
+  )`,
+
+  // Horários do plano de aula (1:N — vários horários por plano, vários por dia da semana)
+  `CREATE TABLE academy_plan_schedules (
+    id VARCHAR(36) PRIMARY KEY,
+    plan_id VARCHAR(36) NOT NULL,
+    day_of_week TINYINT NOT NULL COMMENT '0=Dom,1=Seg,...,6=Sab',
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    FOREIGN KEY (plan_id) REFERENCES academy_plans(id) ON DELETE CASCADE,
+    INDEX idx_plan_day (plan_id, day_of_week)
   )`,
 
   // Usuários do sistema
@@ -273,10 +291,16 @@ const DDL_STATEMENTS = [
     class_id VARCHAR(36),
     date DATE NOT NULL,
     duration_minutes INT,
+    check_in_time TIME NULL,
+    matched_plan_id VARCHAR(36) NULL COMMENT 'Plano que permitiu a presença (auditoria)',
+    matched_schedule_id VARCHAR(36) NULL COMMENT 'Horário do plano que bateu (auditoria)',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE,
     FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
-    FOREIGN KEY (class_id) REFERENCES class_sessions(id) ON DELETE SET NULL
+    FOREIGN KEY (class_id) REFERENCES class_sessions(id) ON DELETE SET NULL,
+    FOREIGN KEY (matched_plan_id) REFERENCES academy_plans(id) ON DELETE SET NULL,
+    FOREIGN KEY (matched_schedule_id) REFERENCES academy_plan_schedules(id) ON DELETE SET NULL,
+    INDEX idx_attendance_student_date (student_id, date)
   )`,
 
   // Transações financeiras

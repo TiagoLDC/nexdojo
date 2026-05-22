@@ -13,8 +13,9 @@ const StaffPage            = React.lazy(() => import('@/pages/StaffPage'));
 const UsersPage            = React.lazy(() => import('@/pages/UsersPage'));
 const AttendancePage       = React.lazy(() => import('@/pages/AttendancePage'));
 const FinancesPage         = React.lazy(() => import('@/pages/FinancesPage'));
-const TemplatesPage        = React.lazy(() => import('@/pages/TemplatesPage'));
-const SchedulesPage        = React.lazy(() => import('@/pages/SchedulesPage'));
+// DESATIVADO em #090 — Turmas substituídas por Planos de Aula
+// const TemplatesPage        = React.lazy(() => import('@/pages/TemplatesPage'));
+// const SchedulesPage        = React.lazy(() => import('@/pages/SchedulesPage'));
 const CalendarPage         = React.lazy(() => import('@/pages/CalendarPage'));
 const ChatPage             = React.lazy(() => import('@/pages/ChatPage'));
 const InventoryPage        = React.lazy(() => import('@/pages/InventoryPage'));
@@ -57,7 +58,8 @@ const App: React.FC = () => (
 
           {/* All authenticated roles */}
           <Route path="/" element={<DashboardPage />} />
-          <Route path="/schedules"  element={<SchedulesPage />} />
+          {/* DESATIVADO em #090 — Turmas substituídas por Planos de Aula */}
+          {/* <Route path="/schedules"  element={<SchedulesPage />} /> */}
           <Route path="/calendar"   element={<CalendarPage />} />
           <Route path="/chat"       element={<ChatPage />} />
           <Route path="/inventory"  element={<InventoryPage />} />
@@ -66,7 +68,8 @@ const App: React.FC = () => (
           {/* Admin + Instructor */}
           <Route element={<RoleGuard roles={['superuser', 'admin', 'instructor']} />}>
             <Route path="/attendance" element={<AttendancePage />} />
-            <Route path="/templates"  element={<TemplatesPage />} />
+            {/* DESATIVADO em #090 — Turmas substituídas por Planos de Aula */}
+            {/* <Route path="/templates"  element={<TemplatesPage />} /> */}
           </Route>
 
           {/* Admin + Instructor + Staff */}

@@ -180,9 +180,13 @@ export interface AttendanceRecord {
   id: string;
   academyId: string;
   studentId: string;
-  classId: string;
+  classId?: string;            // legado — opcional desde Fase 1
   date: string;
   durationMinutes: number;
+  // Auditoria do novo fluxo de presença (Fase 1)
+  checkInTime?: string;        // 'HH:MM:SS'
+  matchedPlanId?: string;
+  matchedScheduleId?: string;
 }
 
 // ── Chat ──────────────────────────────────────────────────────────────────
@@ -209,14 +213,30 @@ export interface CalendarEvent {
 
 // ── Academy & Plans ───────────────────────────────────────────────────────
 
+export interface PlanSchedule {
+  id?: string;
+  dayOfWeek: number;     // 0=Dom, 1=Seg, ..., 6=Sab
+  startTime: string;     // 'HH:MM' ou 'HH:MM:SS'
+  endTime: string;
+}
+
 export interface AcademyPlan {
   id: string;
+  academyId?: string;
   name: string;
   durationMonths: number;
   classesPerWeek: number;
   price: number;
   category: string;
   description?: string;
+  // Novos campos (Fase 1 — Reforma de Planos/Presença)
+  minAge?: number;
+  maxAge?: number;
+  instructorId?: string;
+  active?: boolean;
+  toleranceBeforeMinutes?: number;
+  toleranceAfterStartMinutes?: number;
+  schedules?: PlanSchedule[];
 }
 
 export interface Academy {

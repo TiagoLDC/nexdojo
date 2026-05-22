@@ -1,4 +1,7 @@
 
+// DESATIVADO em #090 — Turmas substituídas por Planos de Aula (PLANO_AULAS.md Fase 6).
+// Manter para eventual reativação futura. Não remover tabelas class_templates* do banco.
+
 import React, { useState, useEffect } from 'react';
 import { Academy, ClassTemplate, User } from '../types';
 import { templateService } from '@/features/schedules/services/templateService';

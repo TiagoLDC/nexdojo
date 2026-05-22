@@ -18,8 +18,9 @@ export const MANAGEMENT_NAV: NavItem[] = [
   { to: '/instructors', labelKey: 'instructors', icon: 'Award', roles: ['superuser', 'admin'] },
   { to: '/staff',  labelKey: 'staff',  icon: 'Briefcase', roles: ['superuser', 'admin'] },
   { to: '/users',  labelKey: 'users',  icon: 'KeyRound',  roles: ['superuser', 'admin'] },
-  { to: '/schedules', labelKey: 'schedules', icon: 'Clock', roles: ['superuser', 'admin', 'instructor', 'staff', 'student'] },
-  { to: '/templates', labelKey: 'templates', icon: 'CalendarDays', roles: ['superuser', 'admin', 'instructor'] },
+  // DESATIVADO em #090 — Turmas substituídas por Planos de Aula. Manter para eventual reativação.
+  // { to: '/schedules', labelKey: 'schedules', icon: 'Clock', roles: ['superuser', 'admin', 'instructor', 'staff', 'student'] },
+  // { to: '/templates', labelKey: 'templates', icon: 'CalendarDays', roles: ['superuser', 'admin', 'instructor'] },
   { to: '/calendar', labelKey: 'calendar', icon: 'Calendar', roles: ['superuser', 'admin', 'instructor', 'staff', 'student'] },
   { to: '/chat', labelKey: 'chat', icon: 'MessageSquare', roles: ['superuser', 'admin', 'instructor', 'staff', 'student'] },
   { to: '/inventory', labelKey: 'inventory', icon: 'Shirt', roles: ['superuser', 'admin', 'instructor', 'staff', 'student'] },

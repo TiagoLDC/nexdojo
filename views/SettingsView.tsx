@@ -2,13 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Academy, User, Student, Instructor, Staff, AcademyPlan, Language } from '../types';
-import { Settings, Bell, Shield, LogOut, ChevronRight, User as UserIcon, Palette, MapPin, Moon, Sun, X, CreditCard, Wallet, Loader2, Save, CheckCircle2, Crown, Zap, Star as StarIcon, Award, Trophy, Book, Users, Plus, Trash2, Globe, AlertTriangle, Smartphone, Check, Briefcase } from 'lucide-react';
+import { Settings, Bell, Shield, LogOut, ChevronRight, User as UserIcon, Palette, MapPin, Moon, Sun, X, CreditCard, Wallet, Loader2, Save, CheckCircle2, Crown, Zap, Star as StarIcon, Award, Trophy, Book, Users, Plus, Trash2, Globe, AlertTriangle, Smartphone, Check, Briefcase, Clock, ToggleLeft, ToggleRight } from 'lucide-react';
 import { fetchAddressByCep, maskCEP, maskPhone } from '../services/cep';
 import { PrivacyValue } from '../components/PrivacyValue';
 import { studentService } from '@/features/students/services/studentService';
 import { instructorService } from '@/features/instructors/services/instructorService';
 import { staffService } from '@/features/staff/services/staffService';
 import { academyService } from '@/features/settings/services/academyService';
+import { plansService } from '@/features/plans/services/plansService';
 import { useTranslation } from '../services/LanguageContext';
 
 /**
@@ -81,6 +82,12 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   const [editingPlan, setEditingPlan] = useState<Partial<AcademyPlan> | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState<string | null>(null);
   const [additionalUsers, setAdditionalUsers] = useState<{ instructors: Instructor[]; staff: Staff[] }>({ instructors: [], staff: [] });
+
+  // Planos de aula — gerenciados pelo novo endpoint /api/plans
+  const [localPlans, setLocalPlans] = useState<AcademyPlan[]>([]);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(false);
+  const [isSavingPlan, setIsSavingPlan] = useState(false);
+  const [availableInstructors, setAvailableInstructors] = useState<Instructor[]>([]);
   const [showPlanNotification, setShowPlanNotification] = useState(false);
   const [isSavingAcademy, setIsSavingAcademy] = useState(false);
   const [editAcademy, setEditAcademy] = React.useState<Academy>(academy);
@@ -89,6 +96,24 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   useEffect(() => {
     setEditAcademy(academy);
   }, [academy.id]);
+
+  // Carrega planos do novo endpoint e instrutores (para select no modal)
+  useEffect(() => {
+    if (user.role !== 'admin' && user.role !== 'superuser') return;
+    const load = async () => {
+      try {
+        const [plansRes, instrRes] = await Promise.all([
+          plansService.getAll(academy.id),
+          instructorService.getAll(academy.id, { limit: 1000 }),
+        ]);
+        setLocalPlans(plansRes.data);
+        setAvailableInstructors(instrRes.data);
+      } catch (err) {
+        console.error('Erro ao carregar planos:', err);
+      }
+    };
+    load();
+  }, [academy.id, user.role]);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -253,51 +278,36 @@ const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
-  const handleSaveAcademyPlans = async (updatedPlans: AcademyPlan[]) => {
+  const deletePlan = async (id: string) => {
     try {
-      const saved = await academyService.update(academy.id, { plans: updatedPlans });
-      onUpdateAcademy(saved);
-      setEditAcademy(saved);
+      await plansService.delete(id);
+      setLocalPlans(prev => prev.filter(p => p.id !== id));
+      showNotification('Plano removido.', 'delete' as any);
     } catch (e) {
       console.error(e);
-      showNotification('Erro ao salvar planos. Tente novamente.', 'error');
-      throw e;
-    }
-  };
-
-  const deletePlan = async (id: string) => {
-    const updated = (editAcademy.plans || []).filter(p => p.id !== id);
-    try {
-      await handleSaveAcademyPlans(updated);
-      showNotification('Plano removido.', 'delete' as any);
-    } catch {
-      // erro já notificado em handleSaveAcademyPlans
+      showNotification('Erro ao remover plano. Tente novamente.', 'error');
     }
   };
 
   const savePlan = async () => {
-    if (!editingPlan?.name) return;
-
-    const plans = editAcademy.plans || [];
-    let updated: AcademyPlan[];
-
-    if (editingPlan.id) {
-      updated = plans.map(p => p.id === editingPlan.id ? (editingPlan as AcademyPlan) : p);
-    } else {
-      const newPlanWithId: AcademyPlan = {
-        ...editingPlan as AcademyPlan,
-        id: Math.random().toString(36).substr(2, 9)
-      };
-      updated = [...plans, newPlanWithId];
-    }
-
+    if (!editingPlan?.name || !editingPlan?.price || !editingPlan?.durationMonths) return;
+    setIsSavingPlan(true);
     try {
-      await handleSaveAcademyPlans(updated);
+      if (editingPlan.id) {
+        const updated = await plansService.update(editingPlan.id, editingPlan);
+        setLocalPlans(prev => prev.map(p => p.id === updated.id ? updated : p));
+      } else {
+        const created = await plansService.create(academy.id, editingPlan);
+        setLocalPlans(prev => [...prev, created]);
+      }
       setIsAddingAcademyPlan(false);
       setEditingPlan(null);
       showNotification('Plano salvo com sucesso!');
-    } catch {
-      // erro já notificado em handleSaveAcademyPlans
+    } catch (e) {
+      console.error(e);
+      showNotification('Erro ao salvar plano. Tente novamente.', 'error');
+    } finally {
+      setIsSavingPlan(false);
     }
   };
 
@@ -564,11 +574,26 @@ const SettingsView: React.FC<SettingsViewProps> = ({
         <section className="space-y-4">
           <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-4">Recrutamento & Planos</h2>
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm divide-y divide-slate-50 dark:divide-slate-800 transition-colors">
-            <SettingItem 
-              icon={<Book className="text-orange-500" />} 
-              title="Planos de Aula" 
-              subtitle={`${(editAcademy.plans || []).length} planos configurados`} 
-              onClick={() => setIsManagingAcademyPlans(true)}
+            <SettingItem
+              icon={<Book className="text-orange-500" />}
+              title="Planos de Aula"
+              subtitle={`${localPlans.length} plano${localPlans.length !== 1 ? 's' : ''} configurado${localPlans.length !== 1 ? 's' : ''}`}
+              onClick={async () => {
+                setIsLoadingPlans(true);
+                try {
+                  const [plansRes, instrRes] = await Promise.all([
+                    plansService.getAll(academy.id),
+                    instructorService.getAll(academy.id, { limit: 1000 }),
+                  ]);
+                  setLocalPlans(plansRes.data);
+                  setAvailableInstructors(instrRes.data);
+                } catch (err) {
+                  console.error(err);
+                } finally {
+                  setIsLoadingPlans(false);
+                }
+                setIsManagingAcademyPlans(true);
+              }}
             />
           </div>
         </section>
@@ -678,153 +703,207 @@ const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       )}
 
-      {/* Modal de Gestão de Planos da Academia */}
+      {/* Modal de Gestão de Planos de Aula */}
       {isManagingAcademyPlans && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[28px] md:rounded-[32px] p-4 md:p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto custom-scrollbar">
-            <div className="flex items-center justify-between mb-8">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-[95vw] sm:max-w-2xl rounded-[28px] md:rounded-[32px] p-4 md:p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-xl font-black text-slate-800 dark:text-white tracking-tight uppercase italic flex items-center gap-2">
                   <Book className="text-orange-500" />
-                  Planos da Academia
+                  Planos de Aula
                 </h2>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Configure as opções de mensalidade para seus alunos</p>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Horários, mensalidade e regras de presença</p>
               </div>
-              <button onClick={() => setIsManagingAcademyPlans(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+              <button onClick={() => setIsManagingAcademyPlans(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2">
                 <X size={24} />
               </button>
             </div>
 
-            <div className="space-y-4">
-              <button 
-                onClick={() => {
-                  setEditingPlan({
-                    name: '',
-                    durationMonths: 1,
-                    classesPerWeek: 3,
-                    price: 0,
-                    category: 'Adultos'
-                  });
-                  setIsAddingAcademyPlan(true);
-                }}
-                className="w-full bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-black py-4 rounded-2xl border-2 border-dashed border-indigo-200 dark:border-indigo-800 flex items-center justify-center gap-2 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-all"
-              >
-                <Plus size={20} /> Adicionar Novo Plano
-              </button>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {(editAcademy.plans || []).map(plan => (
-                  <div key={plan.id} className="bg-slate-50 dark:bg-slate-800 p-5 rounded-3xl border border-slate-100 dark:border-slate-700 space-y-3 relative group">
-                    <div className="flex justify-between items-start">
-                      <span className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-tight italic">
-                        {plan.category}
-                      </span>
-                      <button 
-                        onClick={() => deletePlan(plan.id)}
-                        className="text-slate-300 hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                    <div>
-                      <h4 className="font-black text-slate-800 dark:text-white text-base leading-tight uppercase italic">{plan.name}</h4>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
-                        {plan.durationMonths} {plan.durationMonths === 1 ? 'Mês' : 'Meses'} • {plan.classesPerWeek}x p/ Semana
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between pt-2">
-                      <span className="text-xl font-black text-indigo-600 dark:text-indigo-400 italic">R$ {plan.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                      <button 
-                        onClick={() => {
-                          setEditingPlan(plan);
-                          setIsAddingAcademyPlan(true);
-                        }}
-                        className="bg-white dark:bg-slate-700 p-2 rounded-xl text-slate-400 hover:text-indigo-600 shadow-sm border border-slate-100 dark:border-slate-600"
-                      >
-                        <Save size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+            {isLoadingPlans ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="animate-spin text-indigo-500" size={32} />
               </div>
+            ) : (
+              <div className="space-y-4">
+                <button
+                  onClick={() => {
+                    setEditingPlan({
+                      name: '',
+                      durationMonths: 1,
+                      classesPerWeek: 3,
+                      price: 0,
+                      category: 'Adultos',
+                      active: true,
+                      toleranceBeforeMinutes: 15,
+                      toleranceAfterStartMinutes: 15,
+                      schedules: [],
+                    });
+                    setIsAddingAcademyPlan(true);
+                  }}
+                  className="w-full bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-black py-4 rounded-2xl border-2 border-dashed border-indigo-200 dark:border-indigo-800 flex items-center justify-center gap-2 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-all"
+                >
+                  <Plus size={20} /> Novo Plano de Aula
+                </button>
 
-              {(editAcademy.plans || []).length === 0 && !isAddingAcademyPlan && (
-                <div className="text-center py-10">
-                  <div className="bg-slate-50 dark:bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Book size={32} className="text-slate-300" />
-                  </div>
-                  <p className="text-sm font-bold text-slate-400 uppercase tracking-widest italic">Nenhum plano cadastrado</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {localPlans.map(plan => {
+                    const DAY_SHORT = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+                    const activeDays = [...new Set((plan.schedules || []).map(s => s.dayOfWeek))].sort();
+                    return (
+                      <div key={plan.id} className={`bg-slate-50 dark:bg-slate-800 p-4 rounded-3xl border space-y-3 relative ${plan.active === false ? 'border-slate-200 dark:border-slate-700 opacity-60' : 'border-slate-100 dark:border-slate-700'}`}>
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="flex flex-wrap gap-1.5 items-center">
+                            {plan.category && (
+                              <span className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-[9px] font-black px-2 py-0.5 rounded-lg uppercase tracking-tight italic">
+                                {plan.category}
+                              </span>
+                            )}
+                            {plan.active === false && (
+                              <span className="bg-slate-200 dark:bg-slate-700 text-slate-500 text-[9px] font-black px-2 py-0.5 rounded-lg uppercase">Inativo</span>
+                            )}
+                          </div>
+                          <button onClick={() => deletePlan(plan.id)} className="text-slate-300 hover:text-red-500 transition-colors shrink-0">
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+
+                        <div>
+                          <h4 className="font-black text-slate-800 dark:text-white text-sm leading-tight uppercase italic">{plan.name}</h4>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                            {plan.durationMonths} {plan.durationMonths === 1 ? 'Mês' : 'Meses'} • {plan.classesPerWeek}x/sem
+                            {plan.minAge || plan.maxAge ? ` • ${plan.minAge ?? 0}–${plan.maxAge ?? '∞'} anos` : ''}
+                          </p>
+                        </div>
+
+                        {activeDays.length > 0 && (
+                          <div className="flex gap-1 flex-wrap">
+                            {[0,1,2,3,4,5,6].map(d => (
+                              <span key={d} className={`w-6 h-6 rounded-full text-[9px] font-black flex items-center justify-center ${activeDays.includes(d) ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
+                                {DAY_SHORT[d]}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {(plan.schedules || []).length > 0 && (
+                          <div className="space-y-1">
+                            {plan.schedules!.map((s, i) => (
+                              <div key={i} className="flex items-center gap-1.5 text-[10px] text-slate-500 font-mono">
+                                <Clock size={10} className="text-indigo-400 shrink-0" />
+                                <span>{['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][s.dayOfWeek]} {s.startTime.slice(0,5)}–{s.endTime.slice(0,5)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-700">
+                          <span className="text-lg font-black text-indigo-600 dark:text-indigo-400 italic">
+                            R$ {plan.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                          <button
+                            onClick={() => { setEditingPlan({ ...plan }); setIsAddingAcademyPlan(true); }}
+                            className="bg-white dark:bg-slate-700 p-2 rounded-xl text-slate-400 hover:text-indigo-600 shadow-sm border border-slate-100 dark:border-slate-600 transition-colors"
+                          >
+                            <Save size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
-            </div>
 
-            <div className="mt-8">
-              <button 
+                {localPlans.length === 0 && (
+                  <div className="text-center py-10">
+                    <div className="bg-slate-50 dark:bg-slate-800 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Book size={32} className="text-slate-300" />
+                    </div>
+                    <p className="text-sm font-bold text-slate-400 uppercase tracking-widest italic">Nenhum plano cadastrado</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="mt-6">
+              <button
                 onClick={() => setIsManagingAcademyPlans(false)}
                 className="w-full bg-slate-900 dark:bg-slate-800 text-white font-black py-4 rounded-2xl active:scale-95 transition-all text-sm uppercase tracking-widest italic"
               >
-                Voltar
+                Fechar
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal de Adição/Edição de Plano Específico */}
+      {/* Modal de Adição/Edição de Plano de Aula */}
       {isAddingAcademyPlan && editingPlan && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[300] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[28px] md:rounded-[32px] p-5 md:p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800">
-            <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase italic mb-6">
-              {editingPlan.id ? 'Editar Plano' : 'Novo Plano'}
-            </h3>
-            
+          <div className="bg-white dark:bg-slate-900 w-full max-w-[95vw] sm:max-w-lg rounded-[28px] md:rounded-[32px] p-4 md:p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase italic">
+                {editingPlan.id ? 'Editar Plano' : 'Novo Plano de Aula'}
+              </h3>
+              <button onClick={() => { setIsAddingAcademyPlan(false); setEditingPlan(null); }} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
+                <X size={22} />
+              </button>
+            </div>
+
             <div className="space-y-4">
+              {/* Nome */}
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Nome do Plano</label>
-                <input 
-                  type="text" 
-                  value={editingPlan.name}
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Nome do Plano *</label>
+                <input
+                  type="text"
+                  value={editingPlan.name ?? ''}
                   onChange={(e) => setEditingPlan({ ...editingPlan, name: e.target.value })}
-                  placeholder="Ex: Semestral Master"
+                  placeholder="Ex: Infantil – 3x Semana"
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Mensalidade + Duração */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 font-mono">Duração (Meses)</label>
-                  <input 
-                    type="number" 
-                    value={editingPlan.durationMonths}
-                    onChange={(e) => setEditingPlan({ ...editingPlan, durationMonths: parseInt(e.target.value) || 1 })}
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Mensalidade (R$) *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editingPlan.price ?? ''}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, price: parseFloat(e.target.value) || 0 })}
                     className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
+                    placeholder="0,00"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Aulas p/ Semana</label>
-                  <input 
-                    type="number" 
-                    value={editingPlan.classesPerWeek}
-                    onChange={(e) => setEditingPlan({ ...editingPlan, classesPerWeek: parseInt(e.target.value) || 3 })}
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Duração (Meses) *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editingPlan.durationMonths ?? 1}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, durationMonths: parseInt(e.target.value) || 1 })}
                     className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Aulas/semana + Categoria */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Valor (R$)</label>
-                  <input 
-                    type="number" 
-                    value={editingPlan.price}
-                    onChange={(e) => setEditingPlan({ ...editingPlan, price: parseFloat(e.target.value) || 0 })}
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Aulas p/ Semana</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editingPlan.classesPerWeek ?? 3}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, classesPerWeek: parseInt(e.target.value) || 1 })}
                     className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
                   />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Categoria</label>
-                  <select 
-                    value={editingPlan.category}
+                  <select
+                    value={editingPlan.category ?? 'Adultos'}
                     onChange={(e) => setEditingPlan({ ...editingPlan, category: e.target.value })}
                     className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all appearance-none"
                   >
@@ -836,21 +915,177 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                   </select>
                 </div>
               </div>
+
+              {/* Idade mín/máx */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Idade Mínima (anos)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingPlan.minAge ?? ''}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, minAge: e.target.value ? parseInt(e.target.value) : undefined })}
+                    placeholder="Sem limite"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Idade Máxima (anos)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingPlan.maxAge ?? ''}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, maxAge: e.target.value ? parseInt(e.target.value) : undefined })}
+                    placeholder="Sem limite"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Instrutor responsável */}
+              {availableInstructors.length > 0 && (
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Instrutor Responsável (opcional)</label>
+                  <select
+                    value={editingPlan.instructorId ?? ''}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, instructorId: e.target.value || undefined })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all appearance-none"
+                  >
+                    <option value="">Nenhum</option>
+                    {availableInstructors.map(i => (
+                      <option key={i.id} value={i.id}>{i.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Tolerâncias */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Tolerância antes (min)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingPlan.toleranceBeforeMinutes ?? 15}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, toleranceBeforeMinutes: parseInt(e.target.value) ?? 15 })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
+                  />
+                  <p className="text-[9px] text-slate-400 mt-1 ml-1 italic">Min. antes do início para marcar presença</p>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Tolerância após início (min)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingPlan.toleranceAfterStartMinutes ?? 15}
+                    onChange={(e) => setEditingPlan({ ...editingPlan, toleranceAfterStartMinutes: parseInt(e.target.value) ?? 15 })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
+                  />
+                  <p className="text-[9px] text-slate-400 mt-1 ml-1 italic">Min. após início ainda aceitos como presença</p>
+                </div>
+              </div>
+
+              {/* Horários dinâmicos */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Horários de Aula</label>
+                  <button
+                    type="button"
+                    onClick={() => setEditingPlan({
+                      ...editingPlan,
+                      schedules: [...(editingPlan.schedules ?? []), { dayOfWeek: 1, startTime: '07:00', endTime: '08:00' }]
+                    })}
+                    className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase hover:underline"
+                  >
+                    <Plus size={14} /> Adicionar Horário
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {(editingPlan.schedules ?? []).map((sched, idx) => (
+                    <div key={idx} className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 rounded-2xl px-3 py-2">
+                      <select
+                        value={sched.dayOfWeek}
+                        onChange={(e) => {
+                          const s = [...(editingPlan.schedules ?? [])];
+                          s[idx] = { ...s[idx], dayOfWeek: parseInt(e.target.value) };
+                          setEditingPlan({ ...editingPlan, schedules: s });
+                        }}
+                        className="bg-transparent text-xs font-bold text-slate-700 dark:text-slate-300 outline-none appearance-none cursor-pointer flex-shrink-0 w-[64px]"
+                      >
+                        {['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map((d, i) => (
+                          <option key={i} value={i}>{d}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="time"
+                        value={sched.startTime.slice(0, 5)}
+                        onChange={(e) => {
+                          const s = [...(editingPlan.schedules ?? [])];
+                          s[idx] = { ...s[idx], startTime: e.target.value };
+                          setEditingPlan({ ...editingPlan, schedules: s });
+                        }}
+                        className="bg-transparent text-xs font-mono text-slate-700 dark:text-slate-300 outline-none w-[80px]"
+                      />
+                      <span className="text-slate-400 text-xs">–</span>
+                      <input
+                        type="time"
+                        value={sched.endTime.slice(0, 5)}
+                        onChange={(e) => {
+                          const s = [...(editingPlan.schedules ?? [])];
+                          s[idx] = { ...s[idx], endTime: e.target.value };
+                          setEditingPlan({ ...editingPlan, schedules: s });
+                        }}
+                        className="bg-transparent text-xs font-mono text-slate-700 dark:text-slate-300 outline-none w-[80px]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const s = (editingPlan.schedules ?? []).filter((_, i) => i !== idx);
+                          setEditingPlan({ ...editingPlan, schedules: s });
+                        }}
+                        className="ml-auto text-slate-300 hover:text-red-500 transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                  {(editingPlan.schedules ?? []).length === 0 && (
+                    <p className="text-[10px] text-slate-400 italic text-center py-2">Nenhum horário adicionado — alunos deste plano poderão marcar presença em qualquer horário.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Toggle ativo */}
+              <div className="flex items-center justify-between pt-2">
+                <div>
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Plano Ativo</p>
+                  <p className="text-[10px] text-slate-400">Planos inativos não aceitam novos registros de presença</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingPlan({ ...editingPlan, active: !editingPlan.active })}
+                  className="transition-colors"
+                >
+                  {editingPlan.active !== false
+                    ? <ToggleRight size={36} className="text-indigo-600" />
+                    : <ToggleLeft size={36} className="text-slate-400" />
+                  }
+                </button>
+              </div>
             </div>
 
-            <div className="flex flex-col gap-2 mt-8">
-              <button 
+            <div className="flex flex-col gap-2 mt-6">
+              <button
                 onClick={savePlan}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-600/20 transition-all active:scale-95 text-sm uppercase tracking-widest italic"
+                disabled={isSavingPlan || !editingPlan.name || !editingPlan.price || !editingPlan.durationMonths}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-600/20 transition-all active:scale-95 text-sm uppercase tracking-widest italic flex items-center justify-center gap-2"
               >
-                Salvar Plano
+                {isSavingPlan ? <><Loader2 size={16} className="animate-spin" /> Salvando...</> : 'Salvar Plano'}
               </button>
-              <button 
-                onClick={() => {
-                  setIsAddingAcademyPlan(false);
-                  setEditingPlan(null);
-                }}
-                className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-4 rounded-2xl active:scale-95 transition-all text-sm uppercase tracking-widest"
+              <button
+                onClick={() => { setIsAddingAcademyPlan(false); setEditingPlan(null); }}
+                disabled={isSavingPlan}
+                className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-4 rounded-2xl active:scale-95 transition-all text-sm uppercase tracking-widest disabled:opacity-50"
               >
                 Cancelar
               </button>
