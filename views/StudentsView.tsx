@@ -1695,6 +1695,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       <option value="Dropped">Desistente</option>
                     </select>
                   </div>
+                  {['admin', 'superuser'].includes(user.role) ? (
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Plano de Matrícula</label>
                     <select
@@ -1710,6 +1711,14 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       ))}
                     </select>
                   </div>
+                  ) : editingStudent.planId ? (
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Plano de Matrícula</label>
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 font-bold text-slate-500 dark:text-slate-400 text-sm">
+                      {(academy.plans || []).find(p => p.id === editingStudent.planId)?.name || 'Plano vinculado'}
+                    </div>
+                  </div>
+                  ) : null}
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Próximo Vencimento</label>
                     <input

@@ -180,7 +180,7 @@ Criar `src/features/plans/services/plansService.ts` espelhando padrão dos outro
 
 ---
 
-## Fase 3 — Frontend: nova UI de Planos
+## Fase 3 — Frontend: nova UI de Planos ✅ CONCLUÍDA (22/05/2026)
 
 ### 3.1 Decisão: substituir aba "Planos" dentro de `SettingsView.tsx`
 
@@ -220,7 +220,7 @@ Aplicar regra das 3 camadas (tipo + payload + form sincronizados). Aplicar recei
 
 ---
 
-## Fase 4 — Reforma do kiosk de presença
+## Fase 4 — Reforma do kiosk de presença ✅ CONCLUÍDA (22/05/2026)
 
 ### 4.1 Novo modelo
 
@@ -266,7 +266,48 @@ Em estágios pequenos:
 
 ---
 
-## Fase 5 — Testes & Verificação
+## Fase 5 — Frontend: refatorar AttendanceView.tsx ✅ CONCLUÍDA (22/05/2026)
+
+**O que foi feito:**
+- Removido todo o fluxo de `ClassSession`/`currentClass`/`checkedIds`/`templateService`
+- Nova tela: data de hoje em destaque, botão "Buscar aluno" → modal com pesquisa em tempo real
+- Lista de presentes do dia via `GET /api/attendance?dateFrom=hoje`; exibe `checkInTime` quando disponível
+- Erros da API (400) exibidos inline no modal e no modal de confirmação (ex: "Fora da janela de horário")
+- QR scanner e modo Kiosk mantidos integralmente; agora chamam `POST /api/attendance` diretamente
+- Histórico: modal com busca por nome + filtro por data via `GET /api/attendance` sem paginação limitada
+- `types.ts`: `AttendanceRecord.classId` e `durationMinutes` tornados opcionais (alinhamento com nova API)
+- `tsc --noEmit` limpo; tag de versão: `VERSÃO QAS 22/05/2026 17:20:00`
+
+---
+
+## Fase 6 — Esconder Turmas ✅ CONCLUÍDA (22/05/2026)
+
+**O que foi feito:**
+- `src/components/layout/navConfig.ts`: itens `/schedules` e `/templates` comentados com nota `// DESATIVADO em #090`
+- `src/App.tsx`: lazy imports e rotas de `SchedulesPage` e `TemplatesPage` comentados
+- `views/SchedulesView.tsx`: comentário de desativação no topo do arquivo
+- Tabelas `class_templates*` no banco preservadas; endpoints `/api/sessions` e `/api/templates` preservados
+
+---
+
+## Fase 7 — Permissões ✅ CONCLUÍDA (22/05/2026)
+
+**O que foi feito:**
+- **Backend** (`api/src/routes/students.ts`): `plan_id` já estava bloqueado para `instructor` (linha 269) e `student` (linha 273) no `PUT /:id` — já estava implementado desde antes desta reforma
+- **Frontend** (`views/StudentsView.tsx`): campo de seleção de `planId` agora só aparece para `admin`/`superuser`; instrutor vê apenas o nome do plano atual (somente leitura); aluno sem plano não vê o campo
+
+---
+
+## Fase 8 — Cleanup e documentação ✅ CONCLUÍDA (22/05/2026)
+
+**O que foi feito:**
+- `PLANO_AULAS.md` atualizado com todas as fases marcadas ✅
+- Tag de versão final: `VERSÃO QAS 22/05/2026 17:30:00`
+- Commit `#093` com todas as alterações das Fases 7 e 8
+
+---
+
+## Fase 9 — Testes & Verificação (pendente — QAS)
 
 > Sem abrir navegador (REGRAS seção 9). Backend smoke + frontend manual pelo usuário.
 
@@ -307,4 +348,4 @@ Em estágios pequenos:
 
 ---
 
-*Documento vivo — atualizar à medida que cada fase for concluída, marcando ✅ na seção respectiva.*
+*Reforma concluída em 22/05/2026. Todas as fases de código implementadas. Pendente: executar migrate.ts em QAS e validar fluxo completo manualmente.*
