@@ -20,6 +20,7 @@ interface TableProps<T> {
   emptyIcon?: React.ReactNode;
   onRowClick?: (row: T) => void;
   className?: string;
+  mobileCardRender?: (row: T, index: number) => React.ReactNode;
 }
 
 interface SortState {
@@ -36,6 +37,7 @@ export function Table<T extends Record<string, unknown>>({
   emptyIcon,
   onRowClick,
   className = '',
+  mobileCardRender,
 }: TableProps<T>) {
   const [sort, setSort] = useState<SortState | null>(null);
 
@@ -61,7 +63,39 @@ export function Table<T extends Record<string, unknown>>({
     : data;
 
   return (
-    <div className={`w-full overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 ${className}`}>
+    <>
+      {mobileCardRender && (
+        <div className={`sm:hidden space-y-3 ${className}`}>
+          {loading ? (
+            <div className="py-16 flex flex-col items-center gap-3 text-slate-400">
+              <Spinner size="lg" className="text-indigo-500" />
+              <span>Carregando…</span>
+            </div>
+          ) : sorted.length === 0 ? (
+            <div className="py-16 flex flex-col items-center gap-3 text-slate-400">
+              {emptyIcon && <span className="text-slate-300 dark:text-slate-600">{emptyIcon}</span>}
+              <span>{emptyMessage}</span>
+            </div>
+          ) : (
+            sorted.map((row, idx) => (
+              <div
+                key={keyExtractor(row)}
+                className={onRowClick ? 'cursor-pointer' : ''}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+              >
+                {mobileCardRender(row, idx)}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+      <div
+        className={[
+          'w-full overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700',
+          mobileCardRender ? 'hidden sm:block' : '',
+          className,
+        ].join(' ')}
+      >
       <table className="w-full text-sm text-left">
         <thead className="bg-slate-50 dark:bg-slate-800/60">
           <tr>
@@ -138,5 +172,6 @@ export function Table<T extends Record<string, unknown>>({
         </tbody>
       </table>
     </div>
+    </>
   );
 }

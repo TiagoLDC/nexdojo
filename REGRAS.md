@@ -226,7 +226,45 @@ GEMINI_API_KEY=<!-- PREENCHER -->
 
 ---
 
-## 10. Observações Adicionais
+## 10. Responsividade Mobile
+
+> **CRÍTICO:** O sistema é usado em mobile. Toda alteração de UI deve preservar o desktop **e** funcionar em telas pequenas (< 640px). **NUNCA alterar a visão de desktop** ao corrigir mobile — usar prefixos `sm:` / `md:` para isolar.
+
+### Estratégia de breakpoints (TailwindCSS v4)
+- Classes **base** (sem prefixo) → aplicam-se a TODAS as telas. Use para mobile.
+- `sm:` → ≥ 640px (tablet/desktop pequeno).
+- `md:` → ≥ 768px (desktop). É onde a sidebar aparece.
+- Para preservar desktop intacto: as classes desktop antigas devem ganhar prefixo `sm:` ou `md:`; o estado mobile vai na classe base.
+
+### Receitas obrigatórias
+
+| Categoria | ❌ Errado | ✅ Correto |
+|---|---|---|
+| Padding em cards/modais | `p-8`, `p-10`, `p-12` | `p-4 md:p-8` (ou `sm:p-8`) |
+| Gap em grids/flex | `gap-8`, `gap-10`, `gap-12` | `gap-4 md:gap-8` |
+| Heading principal | `text-3xl`, `text-4xl` | `text-xl sm:text-2xl md:text-3xl` |
+| Grid de formulário | `grid grid-cols-2` | `grid grid-cols-1 sm:grid-cols-2` |
+| Modal largura | `max-w-4xl` | `max-w-[95vw] sm:max-w-4xl` |
+| Tabela HTML | tabela única para todos | tabela `hidden md:block` + cards `md:hidden` |
+| Largura fixa em px | `w-[800px]`, `min-w-[600px]` | usar `w-full` ou container com `overflow-x-auto` |
+
+### Componentes base disponíveis (Fase 0 já aplicada)
+- **`src/components/ui/Modal.tsx`** — já tem padding responsivo (`p-4 sm:p-6`), `max-w-[95vw]` em mobile, footer empilha em mobile.
+- **`src/components/ui/Table.tsx`** — aceita prop `mobileCardRender={(row, idx) => <Card />}`; quando definida, em mobile (`< sm`) renderiza cards no lugar da tabela.
+
+### Antes de editar uma view, verificar
+1. Tabelas têm versão card mobile? (ou usam o `Table` com `mobileCardRender`?)
+2. Modais têm `max-w-[95vw] sm:max-w-*`?
+3. Gaps e paddings têm breakpoint?
+4. Headings têm `sm:`/`md:`?
+5. Kiosk/full-screen modes funcionam em viewport vertical?
+
+### Plano em execução
+Acompanhar em `PLANO_MOBILE.md` (raiz do projeto). Marcar checkboxes conforme concluído.
+
+---
+
+## 11. Observações Adicionais
 
 ```
 <!-- Espaço livre para anotações, gotchas, bugs conhecidos, etc. -->

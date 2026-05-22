@@ -950,14 +950,15 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
               setIsScannerOpen(false);
               setIsKioskMode(false);
             }}
-            className="absolute top-6 right-6 z-[110] bg-white/10 hover:bg-white/20 backdrop-blur-md text-white p-4 rounded-full border border-white/20 transition-all active:scale-90"
+            className="absolute top-3 right-3 md:top-6 md:right-6 z-[110] bg-white/10 hover:bg-white/20 backdrop-blur-md text-white p-2.5 md:p-4 rounded-full border border-white/20 transition-all active:scale-90"
           >
-            <X size={24} />
+            <X size={20} className="md:hidden" />
+            <X size={24} className="hidden md:block" />
           </button>
 
-          <div className="flex-[3] relative flex flex-col min-h-[50vh]">
-            <div className="absolute top-8 left-8 z-20 flex flex-col gap-4">
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 p-5 rounded-3xl text-white min-w-[240px]">
+          <div className="flex-none h-[55vh] md:flex-[3] md:h-auto relative flex flex-col">
+            <div className="absolute top-4 left-4 right-4 md:right-auto md:top-8 md:left-8 z-20 flex flex-col gap-3 md:gap-4">
+              <div className="bg-white/10 backdrop-blur-md border border-white/20 p-3 md:p-5 rounded-2xl md:rounded-3xl text-white md:min-w-[240px]">
                 {lastScannedStudent ? (
                   <div className="flex items-center gap-4 animate-in slide-in-from-left duration-300">
                     <div className="relative">
@@ -979,18 +980,19 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                   </div>
                 ) : (
                   <>
-                    <h2 className="text-xl md:text-2xl font-black italic flex items-center gap-3 tracking-tighter text-white">
-                      <Zap size={24} className="fill-white animate-pulse" />
+                    <h2 className="text-base md:text-2xl font-black italic flex items-center gap-2 md:gap-3 tracking-tighter text-white">
+                      <Zap size={18} className="md:hidden fill-white animate-pulse" />
+                      <Zap size={24} className="hidden md:block fill-white animate-pulse" />
                       {t.waitingScan}
                     </h2>
-                    <p className="text-white/60 text-xs md:text-sm font-medium mt-1">{t.bringQrCode}</p>
+                    <p className="text-white/60 text-[11px] md:text-sm font-medium mt-1">{t.bringQrCode}</p>
                   </>
                 )}
               </div>
-              <div className="flex items-center gap-3">
-                <div className="bg-indigo-600 p-4 rounded-3xl text-white shadow-xl shadow-indigo-600/20">
-                  <p className="text-white/40 text-[10px] font-black uppercase tracking-widest leading-none mb-1">{t.presentCount}</p>
-                  <p className="text-2xl md:text-3xl font-black leading-none">{checkedIds.size}</p>
+              <div className="flex items-center gap-3 self-start">
+                <div className="bg-indigo-600 px-3 py-2 md:p-4 rounded-2xl md:rounded-3xl text-white shadow-xl shadow-indigo-600/20 flex items-center gap-2 md:block">
+                  <p className="text-white/40 text-[9px] md:text-[10px] font-black uppercase tracking-widest leading-none md:mb-1">{t.presentCount}</p>
+                  <p className="text-lg md:text-3xl font-black leading-none">{checkedIds.size}</p>
                 </div>
               </div>
             </div>
@@ -1006,36 +1008,44 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
               </div>
 
               {lastScannedStudent && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-8 z-30 animate-in zoom-in fade-in duration-300 backdrop-blur-sm bg-black/40">
-                  <div className={`p-1 border-4 rounded-[60px] shadow-2xl w-full max-w-sm ${graduationMilestone ? 'border-amber-400' : 'border-indigo-600'}`}>
-                    <div className="bg-white dark:bg-slate-900 p-10 rounded-[54px] flex flex-col items-center text-center">
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-4 md:p-8 z-30 animate-in zoom-in fade-in duration-300 backdrop-blur-sm bg-black/40 overflow-y-auto">
+                  <div className={`p-1 border-2 md:border-4 rounded-[40px] md:rounded-[60px] shadow-2xl w-full max-w-xs md:max-w-sm ${graduationMilestone ? 'border-amber-400' : 'border-indigo-600'}`}>
+                    <div className="bg-white dark:bg-slate-900 p-4 md:p-10 rounded-[36px] md:rounded-[54px] flex flex-col items-center text-center">
                       {graduationMilestone ? (
-                        <div className="bg-amber-100 text-amber-600 p-8 rounded-full mb-6 animate-bounce border-4 border-amber-200"><Trophy size={100} /></div>
+                        <div className="bg-amber-100 text-amber-600 p-4 md:p-8 rounded-full mb-3 md:mb-6 animate-bounce border-4 border-amber-200">
+                          <Trophy size={48} className="md:hidden" />
+                          <Trophy size={100} className="hidden md:block" />
+                        </div>
                       ) : (
-                        <div className="bg-green-100 text-green-600 p-8 rounded-full mb-6"><CheckCircle size={100} /></div>
+                        <div className="bg-green-100 text-green-600 p-4 md:p-8 rounded-full mb-3 md:mb-6">
+                          <CheckCircle size={48} className="md:hidden" />
+                          <CheckCircle size={100} className="hidden md:block" />
+                        </div>
                       )}
-                      <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-xs mb-2">{t.welcomeCaps}</p>
-                      <div className="mb-6 relative">
+                      <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-[10px] md:text-xs mb-2">{t.welcomeCaps}</p>
+                      <div className="mb-3 md:mb-6 relative">
                         {lastScannedStudent.photo ? (
                           <div className="relative">
-                            <img src={lastScannedStudent.photo} className="w-48 h-48 md:w-56 md:h-56 rounded-[60px] border-8 border-slate-50 dark:border-slate-800 shadow-2xl object-cover animate-in zoom-in duration-500" />
-                            <div className="absolute -bottom-4 -right-4 bg-green-500 text-white p-4 rounded-full shadow-xl border-4 border-white dark:border-slate-900">
-                              <CheckCircle size={32} />
+                            <img src={lastScannedStudent.photo} className="w-24 h-24 md:w-56 md:h-56 rounded-[32px] md:rounded-[60px] border-4 md:border-8 border-slate-50 dark:border-slate-800 shadow-2xl object-cover animate-in zoom-in duration-500" />
+                            <div className="absolute -bottom-2 -right-2 md:-bottom-4 md:-right-4 bg-green-500 text-white p-2 md:p-4 rounded-full shadow-xl border-2 md:border-4 border-white dark:border-slate-900">
+                              <CheckCircle size={16} className="md:hidden" />
+                              <CheckCircle size={32} className="hidden md:block" />
                             </div>
                           </div>
                         ) : (
-                          <div className={`w-40 h-40 rounded-[50px] flex items-center justify-center shadow-2xl ${BELT_COLORS[lastScannedStudent.belt]}`}>
+                          <div className={`w-24 h-24 md:w-40 md:h-40 rounded-[32px] md:rounded-[50px] flex items-center justify-center shadow-2xl ${BELT_COLORS[lastScannedStudent.belt]}`}>
                             <div className="text-center">
-                              <UserIcon size={80} className="opacity-40 mx-auto" />
-                              <p className="text-[10px] font-black uppercase tracking-widest mt-2 opacity-40">Sem Foto</p>
+                              <UserIcon size={36} className="opacity-40 mx-auto md:hidden" />
+                              <UserIcon size={80} className="opacity-40 mx-auto hidden md:block" />
+                              <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest mt-1 md:mt-2 opacity-40">Sem Foto</p>
                             </div>
                           </div>
                         )}
                       </div>
-                      <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white leading-tight mb-2 tracking-tighter">{lastScannedStudent.name}</h2>
-                      <BeltBadge belt={lastScannedStudent.belt} stripes={lastScannedStudent.stripes} className="mb-4" />
-                      {graduationMilestone && <p className="text-amber-600 font-black text-xl mb-6 flex items-center gap-2"><Star size={24} fill="currentColor" /> {graduationMilestone}</p>}
-                      <p className="text-6xl font-black text-indigo-600 italic">OSS!</p>
+                      <h2 className="text-xl md:text-5xl font-black text-slate-900 dark:text-white leading-tight mb-2 tracking-tighter">{lastScannedStudent.name}</h2>
+                      <BeltBadge belt={lastScannedStudent.belt} stripes={lastScannedStudent.stripes} className="mb-2 md:mb-4" />
+                      {graduationMilestone && <p className="text-amber-600 font-black text-sm md:text-xl mb-3 md:mb-6 flex items-center gap-2"><Star size={18} fill="currentColor" /> {graduationMilestone}</p>}
+                      <p className="text-3xl md:text-6xl font-black text-indigo-600 italic">OSS!</p>
                     </div>
                   </div>
                 </div>
@@ -1043,7 +1053,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
             </div>
           </div>
 
-          <div className="flex-1 bg-slate-900 p-6 md:p-8 flex flex-col border-t md:border-t-0 md:border-l border-white/5 max-h-[50vh] md:max-h-full">
+          <div className="flex-1 min-h-0 bg-slate-900 p-4 md:p-8 flex flex-col border-t md:border-t-0 md:border-l border-white/5 md:max-h-full">
             <h3 className="text-white/40 font-black uppercase tracking-widest text-[10px] md:text-xs mb-4 md:mb-8 flex items-center gap-2">
               <Users size={16} /> {t.onMatNow}
             </h3>

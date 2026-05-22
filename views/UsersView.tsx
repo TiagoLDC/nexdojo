@@ -302,8 +302,101 @@ const UsersView: React.FC<{ academy: Academy; user: User }> = ({ user: currentUs
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="bg-transparent md:bg-white dark:md:bg-slate-900 md:rounded-3xl md:border md:border-slate-100 dark:md:border-slate-800 md:shadow-sm overflow-visible md:overflow-hidden">
+        {/* Mobile Card View */}
+        <div className="md:hidden space-y-3 pb-24">
+          {users.map(u => (
+            <div
+              key={u.id}
+              className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm p-4 relative"
+            >
+              <div className="flex items-start gap-3">
+                {u.photo ? (
+                  <img src={u.photo} className="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
+                ) : (
+                  <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 flex-shrink-0">
+                    <UserIcon size={20} />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="font-black text-slate-800 dark:text-white text-sm uppercase italic leading-tight truncate">
+                    {u.name}
+                    {isSelf(u) && (
+                      <span className="ml-2 text-[9px] bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300 px-1.5 py-0.5 rounded-full font-black uppercase">Você</span>
+                    )}
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-medium truncate">{u.email}</div>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter ${ROLE_COLORS[u.role] ?? ''}`}>
+                      {ROLE_LABELS[u.role] ?? u.role}
+                    </span>
+                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter ${STATUS_COLORS[u.status] ?? ''}`}>
+                      {STATUS_LABELS[u.status] ?? u.status}
+                    </span>
+                    {u.entity_type && (
+                      <span className="text-[9px] px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-black uppercase">
+                        {ENTITY_LABELS[u.entity_type]}
+                      </span>
+                    )}
+                  </div>
+                  {u.requires_password_change && (
+                    <span className="block mt-2 text-[9px] text-orange-500 font-bold uppercase">Troca de senha pendente</span>
+                  )}
+                  {!u.entity_type && (u.position || u.phone) && (
+                    <div className="mt-2 flex flex-col gap-0.5">
+                      {u.position && <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{u.position}</span>}
+                      {u.phone && <span className="text-[10px] text-slate-400 dark:text-slate-500">{u.phone}</span>}
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setOpenMenuId(openMenuId === u.id ? null : u.id)}
+                  className="text-slate-400 hover:text-indigo-600 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex-shrink-0"
+                >
+                  <MoreVertical size={18} />
+                </button>
+              </div>
+              {openMenuId === u.id && (
+                <div className="absolute right-3 top-14 z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl py-2 min-w-[180px] text-left">
+                  <button
+                    onClick={() => handleOpenEdit(u)}
+                    className="w-full px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
+                  >
+                    <UserIcon size={14} /> Editar dados
+                  </button>
+                  <button
+                    onClick={() => handleOpenReset(u)}
+                    className="w-full px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
+                  >
+                    <KeyRound size={14} /> Redefinir senha
+                  </button>
+                  {!isSelf(u) && u.role !== 'superuser' && (
+                    <>
+                      <div className="border-t border-slate-100 dark:border-slate-700 my-1" />
+                      <button
+                        onClick={() => handleToggleStatus(u)}
+                        className={`w-full px-4 py-2.5 text-xs font-bold flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 ${u.status === 'Active' ? 'text-red-500' : 'text-green-600'}`}
+                      >
+                        {u.status === 'Active'
+                          ? <><ShieldOff size={14} /> Bloquear acesso</>
+                          : <><ShieldCheck size={14} /> Ativar acesso</>
+                        }
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+          {users.length === 0 && (
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 px-6 py-12 text-center text-slate-400 text-sm italic">
+              Nenhum usuário encontrado.
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left min-w-[680px]">
             <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
               <tr>
