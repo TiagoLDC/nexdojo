@@ -51,51 +51,197 @@ router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunct
 });
 
 // POST /api/attendance
+// Fluxo novo (Fase 4): valida plano do aluno, horário, idade e idempotência antes de inserir.
+// Legado: se vier class_id no body (fluxo antigo de sessões), aceita sem validar horário.
 router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
   const errors = validate(req.body, {
     student_id: { required: true, type: 'string' },
-    date:       { required: true, type: 'date' },
   });
   if (errors.length) { res.status(400).json({ error: errors[0] }); return; }
 
-  const { student_id, class_id, date, duration_minutes } = req.body;
+  const { student_id, class_id } = req.body;
+
+  // Se vier class_id, é o fluxo legado de sessão — deixa passar sem validar plano/horário
+  const isLegacyFlow = !!class_id;
 
   try {
-    // Verifica se o aluno pertence à academia
+    // ── 1. Aluno existe e pertence à academia ────────────────────────────────
     const [studentRows] = await pool.execute<any[]>(
-      'SELECT id FROM students WHERE id = ? AND academy_id = ?',
+      `SELECT s.id, s.status, s.birth_date, s.plan_id, s.total_classes, s.total_hours
+       FROM students s
+       WHERE s.id = ? AND s.academy_id = ?`,
       [student_id, academyId]
     );
-    if (!studentRows[0]) { res.status(404).json({ error: 'Aluno não encontrado' }); return; }
+    const student = studentRows[0];
+    if (!student) { res.status(404).json({ error: 'Aluno não encontrado' }); return; }
 
-    const record = await withTransaction(async (conn) => {
-      const id = crypto.randomUUID();
+    // ── 2. Aluno ativo ───────────────────────────────────────────────────────
+    if (student.status !== 'Active') {
+      res.status(400).json({ error: 'Aluno inativo. Apenas alunos com status Ativo podem marcar presença.' });
+      return;
+    }
 
-      await conn.execute(
-        `INSERT INTO attendance_records (id, academy_id, student_id, class_id, date, duration_minutes)
-         VALUES (?,?,?,?,?,?)`,
-        [id, academyId, student_id, class_id ?? null, date, duration_minutes ?? null]
+    // Data/hora do servidor (MySQL) — evita divergência de fuso
+    const [[{ today, now_time }]] = await pool.execute<any[]>(
+      'SELECT CURDATE() AS today, CURTIME() AS now_time'
+    ) as any;
+
+    if (!isLegacyFlow) {
+      // ── 3. Aluno tem plano ───────────────────────────────────────────────
+      if (!student.plan_id) {
+        res.status(400).json({ error: 'Aluno sem plano de aula. Solicite ao administrador que selecione um plano.' });
+        return;
+      }
+
+      // ── 4. Plano existe e está ativo ─────────────────────────────────────
+      const [planRows] = await pool.execute<any[]>(
+        `SELECT p.id, p.active, p.min_age, p.max_age,
+                p.tolerance_before_minutes, p.tolerance_after_start_minutes
+         FROM academy_plans p
+         WHERE p.id = ? AND p.academy_id = ?`,
+        [student.plan_id, academyId]
+      );
+      const plan = planRows[0];
+      if (!plan) {
+        res.status(400).json({ error: 'Plano do aluno não encontrado.' });
+        return;
+      }
+      if (!plan.active) {
+        res.status(400).json({ error: 'O plano de aula do aluno está inativo.' });
+        return;
+      }
+
+      // ── 5. Verificação de idade ──────────────────────────────────────────
+      if (student.birth_date && (plan.min_age != null || plan.max_age != null)) {
+        const birth = new Date(student.birth_date);
+        const todayDate = new Date(today);
+        let age = todayDate.getFullYear() - birth.getFullYear();
+        const m = todayDate.getMonth() - birth.getMonth();
+        if (m < 0 || (m === 0 && todayDate.getDate() < birth.getDate())) age--;
+
+        if (plan.min_age != null && age < plan.min_age) {
+          res.status(400).json({ error: `Aluno com ${age} anos abaixo da idade mínima do plano (${plan.min_age} anos).` });
+          return;
+        }
+        if (plan.max_age != null && age > plan.max_age) {
+          res.status(400).json({ error: `Aluno com ${age} anos acima da idade máxima do plano (${plan.max_age} anos).` });
+          return;
+        }
+      }
+
+      // ── 6. Verificação de horário ────────────────────────────────────────
+      // Dia da semana da data atual (0=Dom..6=Sab) — MySQL DAYOFWEEK retorna 1=Dom..7=Sab
+      const [[{ dow }]] = await pool.execute<any[]>(
+        'SELECT DAYOFWEEK(CURDATE()) - 1 AS dow'
+      ) as any;
+
+      const [scheduleRows] = await pool.execute<any[]>(
+        `SELECT id, start_time, end_time
+         FROM academy_plan_schedules
+         WHERE plan_id = ? AND day_of_week = ?`,
+        [student.plan_id, dow]
       );
 
-      // Atualiza contadores do aluno atomicamente
-      const hoursToAdd = duration_minutes ? Math.round(Number(duration_minutes) / 60) : 0;
-      await conn.execute(
-        `UPDATE students
-         SET total_classes  = total_classes + 1,
-             total_hours    = total_hours + ?,
-             last_attendance = GREATEST(COALESCE(last_attendance, ?), ?)
-         WHERE id = ?`,
-        [hoursToAdd, date, date, student_id]
+      if (scheduleRows.length === 0) {
+        res.status(400).json({ error: 'Não há aula do seu plano hoje.' });
+        return;
+      }
+
+      // Converte 'HH:MM:SS' para minutos desde meia-noite
+      const toMinutes = (t: string) => {
+        const [h, m] = t.split(':').map(Number);
+        return h * 60 + m;
+      };
+      const nowMin = toMinutes(now_time);
+
+      const matchedSchedule = (scheduleRows as any[]).find(s => {
+        const startMin = toMinutes(s.start_time);
+        const windowStart = startMin - (plan.tolerance_before_minutes ?? 15);
+        const windowEnd   = startMin + (plan.tolerance_after_start_minutes ?? 15);
+        return nowMin >= windowStart && nowMin <= windowEnd;
+      });
+
+      if (!matchedSchedule) {
+        res.status(400).json({ error: 'Fora da janela de horário do seu plano. Verifique os horários e tente novamente.' });
+        return;
+      }
+
+      // ── 7. Idempotência: já marcou presença hoje? ────────────────────────
+      const [existingRows] = await pool.execute<any[]>(
+        'SELECT id FROM attendance_records WHERE student_id = ? AND academy_id = ? AND date = ? AND class_id IS NULL',
+        [student_id, academyId, today]
       );
+      if (existingRows.length > 0) {
+        res.status(400).json({ error: 'Presença já registrada hoje.' });
+        return;
+      }
 
-      const [rows] = await conn.execute<any[]>('SELECT * FROM attendance_records WHERE id = ?', [id]);
-      return rows[0];
-    });
+      // ── Inserção com auditoria de plano/horário ──────────────────────────
+      const durationMinutes = (() => {
+        const [sh, sm] = matchedSchedule.start_time.split(':').map(Number);
+        const [eh, em] = matchedSchedule.end_time.split(':').map(Number);
+        return (eh * 60 + em) - (sh * 60 + sm);
+      })();
 
-    res.status(201).json(record);
+      const record = await withTransaction(async (conn) => {
+        const id = crypto.randomUUID();
+        await conn.execute(
+          `INSERT INTO attendance_records
+             (id, academy_id, student_id, class_id, date, duration_minutes,
+              check_in_time, matched_plan_id, matched_schedule_id)
+           VALUES (?,?,?,NULL,?,?,?,?,?)`,
+          [id, academyId, student_id, today, durationMinutes,
+           now_time, student.plan_id, matchedSchedule.id]
+        );
+
+        const hoursToAdd = Math.round(durationMinutes / 60);
+        await conn.execute(
+          `UPDATE students
+           SET total_classes   = total_classes + 1,
+               total_hours     = total_hours + ?,
+               last_attendance = GREATEST(COALESCE(last_attendance, ?), ?)
+           WHERE id = ?`,
+          [hoursToAdd, today, today, student_id]
+        );
+
+        const [rows] = await conn.execute<any[]>('SELECT * FROM attendance_records WHERE id = ?', [id]);
+        return rows[0];
+      });
+
+      res.status(201).json(record);
+
+    } else {
+      // ── Fluxo legado: class_id presente, sem validação de plano/horário ──
+      const { date, duration_minutes } = req.body;
+      if (!date) { res.status(400).json({ error: 'date é obrigatório no fluxo legado' }); return; }
+
+      const record = await withTransaction(async (conn) => {
+        const id = crypto.randomUUID();
+        await conn.execute(
+          `INSERT INTO attendance_records (id, academy_id, student_id, class_id, date, duration_minutes)
+           VALUES (?,?,?,?,?,?)`,
+          [id, academyId, student_id, class_id, date, duration_minutes ?? null]
+        );
+
+        const hoursToAdd = duration_minutes ? Math.round(Number(duration_minutes) / 60) : 0;
+        await conn.execute(
+          `UPDATE students
+           SET total_classes   = total_classes + 1,
+               total_hours     = total_hours + ?,
+               last_attendance = GREATEST(COALESCE(last_attendance, ?), ?)
+           WHERE id = ?`,
+          [hoursToAdd, date, date, student_id]
+        );
+
+        const [rows] = await conn.execute<any[]>('SELECT * FROM attendance_records WHERE id = ?', [id]);
+        return rows[0];
+      });
+
+      res.status(201).json(record);
+    }
   } catch (err) {
     next(err);
   }
