@@ -331,25 +331,33 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
           [hash, existing[0].user_id]
         );
       } else {
-        // Usuário não existe: cria conta e vincula ao aluno
+        // Usuário não existe ainda vinculado: cria ou vincula pelo email
         const email = String(req.body.email || existing[0].email || '').toLowerCase().trim();
         if (email) {
           const [emailCheck] = await pool.execute<any[]>('SELECT id FROM users WHERE email = ?', [email]);
           if (emailCheck[0]) {
-            res.status(409).json({ error: 'E-mail já cadastrado em outro usuário' });
-            return;
+            // Já existe usuário com esse email: vincula e atualiza senha
+            await pool.execute(
+              'UPDATE users SET password_hash = ?, requires_password_change = 1 WHERE id = ?',
+              [hash, emailCheck[0].id]
+            );
+            await pool.execute(
+              'UPDATE students SET user_id = ? WHERE id = ?',
+              [emailCheck[0].id, req.params.id]
+            );
+          } else {
+            const userId = crypto.randomUUID();
+            const studentName = req.body.name || existing[0].name;
+            await pool.execute(
+              `INSERT INTO users (id, academy_id, role, name, email, password_hash, requires_password_change)
+               VALUES (?, ?, 'student', ?, ?, ?, 1)`,
+              [userId, academyId, studentName, email, hash]
+            );
+            await pool.execute(
+              'UPDATE students SET user_id = ? WHERE id = ?',
+              [userId, req.params.id]
+            );
           }
-          const userId = crypto.randomUUID();
-          const studentName = req.body.name || existing[0].name;
-          await pool.execute(
-            `INSERT INTO users (id, academy_id, role, name, email, password_hash, requires_password_change)
-             VALUES (?, ?, 'student', ?, ?, ?, 1)`,
-            [userId, academyId, studentName, email, hash]
-          );
-          await pool.execute(
-            'UPDATE students SET user_id = ? WHERE id = ?',
-            [userId, req.params.id]
-          );
         }
       }
     }
