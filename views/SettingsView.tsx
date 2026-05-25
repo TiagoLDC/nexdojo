@@ -735,6 +735,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                       price: 0,
                       category: 'Adultos',
                       active: true,
+                      freeSchedule: false,
+                      freeDays: false,
                       toleranceBeforeMinutes: 15,
                       toleranceAfterStartMinutes: 15,
                       schedules: [],
@@ -1055,8 +1057,60 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
               </div>
 
-              {/* Toggle ativo */}
+              {/* Toggle Horário Livre */}
               <div className="flex items-center justify-between pt-2">
+                <div>
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    Horário Livre
+                    <span
+                      title="Permite que os alunos registrem presença em qualquer horário, independentemente dos horários configurados no plano."
+                      className="cursor-help text-slate-400 hover:text-indigo-500 transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                    </span>
+                  </p>
+                  <p className="text-[10px] text-slate-400">Ignora a validação de horário ao registrar presença</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingPlan({ ...editingPlan, freeSchedule: !editingPlan.freeSchedule })}
+                  className="transition-colors"
+                >
+                  {editingPlan.freeSchedule
+                    ? <ToggleRight size={36} className="text-indigo-600" />
+                    : <ToggleLeft size={36} className="text-slate-400" />
+                  }
+                </button>
+              </div>
+
+              {/* Toggle Dias Livres */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    Dias Livres
+                    <span
+                      title="Permite que os alunos registrem presença mais vezes por semana do que o limite definido no plano."
+                      className="cursor-help text-slate-400 hover:text-indigo-500 transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                    </span>
+                  </p>
+                  <p className="text-[10px] text-slate-400">Ignora o limite de aulas por semana ao registrar presença</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingPlan({ ...editingPlan, freeDays: !editingPlan.freeDays })}
+                  className="transition-colors"
+                >
+                  {editingPlan.freeDays
+                    ? <ToggleRight size={36} className="text-indigo-600" />
+                    : <ToggleLeft size={36} className="text-slate-400" />
+                  }
+                </button>
+              </div>
+
+              {/* Toggle Plano Ativo */}
+              <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Plano Ativo</p>
                   <p className="text-[10px] text-slate-400">Planos inativos não aceitam novos registros de presença</p>

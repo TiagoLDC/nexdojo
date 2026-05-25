@@ -99,7 +99,8 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
       // ── 4. Plano existe e está ativo ─────────────────────────────────────
       const [planRows] = await pool.execute<any[]>(
         `SELECT p.id, p.active, p.min_age, p.max_age,
-                p.tolerance_before_minutes, p.tolerance_after_start_minutes
+                p.tolerance_before_minutes, p.tolerance_after_start_minutes,
+                p.free_schedule, p.free_days, p.classes_per_week
          FROM academy_plans p
          WHERE p.id = ? AND p.academy_id = ?`,
         [student.plan_id, academyId]
@@ -133,40 +134,53 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
       }
 
       // ── 6. Verificação de horário ────────────────────────────────────────
+      // Ignorada quando o plano tem "Horário Livre" (free_schedule = 1)
+      const freeSchedule = plan.free_schedule === 1 || plan.free_schedule === true;
+      const freeDays     = plan.free_days === 1 || plan.free_days === true;
+
       // Dia da semana da data atual (0=Dom..6=Sab) — MySQL DAYOFWEEK retorna 1=Dom..7=Sab
       const [[{ dow }]] = await pool.execute<any[]>(
         'SELECT DAYOFWEEK(CURDATE()) - 1 AS dow'
       ) as any;
-
-      const [scheduleRows] = await pool.execute<any[]>(
-        `SELECT id, start_time, end_time
-         FROM academy_plan_schedules
-         WHERE plan_id = ? AND day_of_week = ?`,
-        [student.plan_id, dow]
-      );
-
-      if (scheduleRows.length === 0) {
-        res.status(400).json({ error: 'Não há aula do seu plano hoje.' });
-        return;
-      }
 
       // Converte 'HH:MM:SS' para minutos desde meia-noite
       const toMinutes = (t: string) => {
         const [h, m] = t.split(':').map(Number);
         return h * 60 + m;
       };
-      const nowMin = toMinutes(now_time);
 
-      const matchedSchedule = (scheduleRows as any[]).find(s => {
-        const startMin = toMinutes(s.start_time);
-        const windowStart = startMin - (plan.tolerance_before_minutes ?? 15);
-        const windowEnd   = startMin + (plan.tolerance_after_start_minutes ?? 15);
-        return nowMin >= windowStart && nowMin <= windowEnd;
-      });
+      let matchedSchedule: any = null;
+      let durationMinutes = 60; // fallback quando não há horário fixo
 
-      if (!matchedSchedule) {
-        res.status(400).json({ error: 'Fora da janela de horário do seu plano. Verifique os horários e tente novamente.' });
-        return;
+      if (!freeSchedule) {
+        const [scheduleRows] = await pool.execute<any[]>(
+          `SELECT id, start_time, end_time
+           FROM academy_plan_schedules
+           WHERE plan_id = ? AND day_of_week = ?`,
+          [student.plan_id, dow]
+        );
+
+        if (scheduleRows.length === 0) {
+          res.status(400).json({ error: 'Não há aula do seu plano hoje.' });
+          return;
+        }
+
+        const nowMin = toMinutes(now_time);
+        matchedSchedule = (scheduleRows as any[]).find(s => {
+          const startMin = toMinutes(s.start_time);
+          const windowStart = startMin - (plan.tolerance_before_minutes ?? 15);
+          const windowEnd   = startMin + (plan.tolerance_after_start_minutes ?? 15);
+          return nowMin >= windowStart && nowMin <= windowEnd;
+        });
+
+        if (!matchedSchedule) {
+          res.status(400).json({ error: 'Fora da janela de horário do seu plano. Verifique os horários e tente novamente.' });
+          return;
+        }
+
+        const [sh, sm] = matchedSchedule.start_time.split(':').map(Number);
+        const [eh, em] = matchedSchedule.end_time.split(':').map(Number);
+        durationMinutes = (eh * 60 + em) - (sh * 60 + sm);
       }
 
       // ── 7. Idempotência: já marcou presença hoje? ────────────────────────
@@ -179,12 +193,29 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
         return;
       }
 
+      // ── 8. Verificação de frequência semanal ────────────────────────────
+      // Ignorada quando o plano tem "Dias Livres" (free_days = 1)
+      if (!freeDays && plan.classes_per_week) {
+        // Início da semana atual (segunda-feira, ISO)
+        const [[{ week_start }]] = await pool.execute<any[]>(
+          `SELECT DATE_SUB(CURDATE(), INTERVAL (DAYOFWEEK(CURDATE()) + 5) % 7 DAY) AS week_start`
+        ) as any;
+
+        const [weekRows] = await pool.execute<any[]>(
+          `SELECT COUNT(*) AS total FROM attendance_records
+           WHERE student_id = ? AND academy_id = ? AND date >= ? AND class_id IS NULL`,
+          [student_id, academyId, week_start]
+        );
+        const weekCount = (weekRows[0] as any).total;
+        if (weekCount >= plan.classes_per_week) {
+          res.status(400).json({
+            error: `Limite semanal atingido. Seu plano permite ${plan.classes_per_week} aula${plan.classes_per_week > 1 ? 's' : ''} por semana.`,
+          });
+          return;
+        }
+      }
+
       // ── Inserção com auditoria de plano/horário ──────────────────────────
-      const durationMinutes = (() => {
-        const [sh, sm] = matchedSchedule.start_time.split(':').map(Number);
-        const [eh, em] = matchedSchedule.end_time.split(':').map(Number);
-        return (eh * 60 + em) - (sh * 60 + sm);
-      })();
 
       const record = await withTransaction(async (conn) => {
         const id = crypto.randomUUID();
@@ -194,7 +225,7 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
               check_in_time, matched_plan_id, matched_schedule_id)
            VALUES (?,?,?,NULL,?,?,?,?,?)`,
           [id, academyId, student_id, today, durationMinutes,
-           now_time, student.plan_id, matchedSchedule.id]
+           now_time, student.plan_id, matchedSchedule?.id ?? null]
         );
 
         const hoursToAdd = Math.round(durationMinutes / 60);

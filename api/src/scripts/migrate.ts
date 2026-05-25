@@ -69,6 +69,8 @@ const DDL_STATEMENTS = [
     max_age INT NULL,
     instructor_id VARCHAR(36) NULL COMMENT 'FK lógica para instructors.id (sem constraint pois instructors é criada depois neste DDL)',
     active TINYINT(1) DEFAULT 1,
+    free_schedule TINYINT(1) DEFAULT 0 COMMENT 'Se 1, ignora validação de horário na presença',
+    free_days TINYINT(1) DEFAULT 0 COMMENT 'Se 1, ignora limite de aulas por semana na presença',
     tolerance_before_minutes INT DEFAULT 15,
     tolerance_after_start_minutes INT DEFAULT 15,
     FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE

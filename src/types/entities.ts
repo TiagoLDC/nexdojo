@@ -234,6 +234,8 @@ export interface AcademyPlan {
   maxAge?: number;
   instructorId?: string;
   active?: boolean;
+  freeSchedule?: boolean;
+  freeDays?: boolean;
   toleranceBeforeMinutes?: number;
   toleranceAfterStartMinutes?: number;
   schedules?: PlanSchedule[];
