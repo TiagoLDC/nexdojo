@@ -669,25 +669,6 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                     <AlertCircle size={20} className="text-red-400 shrink-0" />
                     <p className="text-sm font-bold text-red-300 leading-snug">{scanError}</p>
                   </div>
-                ) : lastScannedStudent ? (
-                  <div className="flex items-center gap-4 animate-in slide-in-from-left duration-300">
-                    <div className="relative">
-                      {lastScannedStudent.photo ? (
-                        <img src={lastScannedStudent.photo} className="w-12 h-12 rounded-2xl object-cover border-2 border-white/20 shadow-lg" />
-                      ) : (
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border-2 border-white/20 ${BELT_COLORS[lastScannedStudent.belt]}`}>
-                          <UserIcon size={20} className="opacity-40" />
-                        </div>
-                      )}
-                      <div className="absolute -bottom-1 -right-1 bg-green-500 text-white p-1 rounded-full border border-white/20">
-                        <CheckCircle size={10} />
-                      </div>
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-black italic text-green-400 leading-none tracking-tighter uppercase">Acesso Liberado</h2>
-                      <p className="text-white/60 text-xs font-medium mt-1 truncate max-w-[150px]">{lastScannedStudent.name}</p>
-                    </div>
-                  </div>
                 ) : (
                   <>
                     <h2 className="text-base md:text-2xl font-black italic flex items-center gap-2 md:gap-3 tracking-tighter text-white">
@@ -716,42 +697,40 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                 <div className="absolute bottom-0 right-0 w-10 h-10 border-b-4 border-r-4 border-indigo-500 -mb-1 -mr-1 rounded-br-[15px]" />
               </div>
 
+              {/* Last scan result — compact bar at bottom, never blocks camera */}
               {lastScannedStudent && !scanError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-4 md:p-8 z-30 animate-in zoom-in fade-in duration-300 backdrop-blur-sm bg-black/40 overflow-y-auto">
-                  <div className={`p-1 border-2 md:border-4 rounded-[40px] md:rounded-[60px] shadow-2xl w-full max-w-xs md:max-w-sm ${graduationMilestone ? 'border-amber-400' : 'border-indigo-600'}`}>
-                    <div className="bg-white dark:bg-slate-900 p-4 md:p-10 rounded-[36px] md:rounded-[54px] flex flex-col items-center text-center">
-                      {graduationMilestone ? (
-                        <div className="bg-amber-100 text-amber-600 p-4 md:p-8 rounded-full mb-3 md:mb-6 animate-bounce border-4 border-amber-200">
-                          <Trophy size={48} className="md:hidden" />
-                          <Trophy size={100} className="hidden md:block" />
-                        </div>
+                <div className={`absolute bottom-0 left-0 right-0 z-20 animate-in slide-in-from-bottom duration-300 ${graduationMilestone ? 'bg-amber-500/90' : 'bg-green-600/90'} backdrop-blur-sm px-4 py-3`}>
+                  <div className="flex items-center gap-3 max-w-sm mx-auto">
+                    <div className="relative shrink-0">
+                      {lastScannedStudent.photo ? (
+                        <img src={lastScannedStudent.photo} className="w-10 h-10 rounded-xl object-cover border-2 border-white/30" />
                       ) : (
-                        <div className="bg-green-100 text-green-600 p-4 md:p-8 rounded-full mb-3 md:mb-6">
-                          <CheckCircle size={48} className="md:hidden" />
-                          <CheckCircle size={100} className="hidden md:block" />
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center border-2 border-white/30 ${BELT_COLORS[lastScannedStudent.belt]}`}>
+                          <UserIcon size={18} className="opacity-60" />
                         </div>
                       )}
-                      <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-[10px] md:text-xs mb-2">BEM-VINDO</p>
-                      <div className="mb-3 md:mb-6 relative">
-                        {lastScannedStudent.photo ? (
-                          <div className="relative">
-                            <img src={lastScannedStudent.photo} className="w-24 h-24 md:w-56 md:h-56 rounded-[32px] md:rounded-[60px] border-4 md:border-8 border-slate-50 dark:border-slate-800 shadow-2xl object-cover animate-in zoom-in duration-500" />
-                            <div className="absolute -bottom-2 -right-2 md:-bottom-4 md:-right-4 bg-green-500 text-white p-2 md:p-4 rounded-full shadow-xl border-2 md:border-4 border-white dark:border-slate-900">
-                              <CheckCircle size={16} className="md:hidden" />
-                              <CheckCircle size={32} className="hidden md:block" />
-                            </div>
-                          </div>
-                        ) : (
-                          <div className={`w-24 h-24 md:w-40 md:h-40 rounded-[32px] md:rounded-[50px] flex items-center justify-center shadow-2xl ${BELT_COLORS[lastScannedStudent.belt]}`}>
-                            <UserIcon size={36} className="opacity-40 mx-auto md:hidden" />
-                            <UserIcon size={80} className="opacity-40 mx-auto hidden md:block" />
-                          </div>
+                      <div className="absolute -bottom-1 -right-1 bg-white text-green-600 rounded-full p-0.5">
+                        <CheckCircle size={10} />
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-black text-sm leading-tight truncate">{lastScannedStudent.name}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <BeltBadge belt={lastScannedStudent.belt} stripes={lastScannedStudent.stripes} />
+                        {graduationMilestone && (
+                          <span className="text-white/90 text-[10px] font-black flex items-center gap-1">
+                            <Star size={10} fill="currentColor" /> {graduationMilestone}
+                          </span>
                         )}
                       </div>
-                      <h2 className="text-xl md:text-5xl font-black text-slate-900 dark:text-white leading-tight mb-2 tracking-tighter">{lastScannedStudent.name}</h2>
-                      <BeltBadge belt={lastScannedStudent.belt} stripes={lastScannedStudent.stripes} className="mb-2 md:mb-4" />
-                      {graduationMilestone && <p className="text-amber-600 font-black text-sm md:text-xl mb-3 md:mb-6 flex items-center gap-2"><Star size={18} fill="currentColor" /> {graduationMilestone}</p>}
-                      <p className="text-3xl md:text-6xl font-black text-indigo-600 italic">OSS!</p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="text-white/70 text-[10px] font-black uppercase tracking-widest">{graduationMilestone ? 'Marco!' : 'OSS!'}</p>
+                      {graduationMilestone ? (
+                        <Trophy size={20} className="text-white mt-0.5 mx-auto" />
+                      ) : (
+                        <CheckCircle size={20} className="text-white mt-0.5 mx-auto" />
+                      )}
                     </div>
                   </div>
                 </div>
