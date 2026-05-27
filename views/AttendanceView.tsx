@@ -146,8 +146,9 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [students, search]);
 
-  const doCheckIn = async (student: Student, overrideAge = false): Promise<'ok' | 'error' | 'age_warning'> => {
-    if (isProcessing) return 'error';
+  // Retorna 'ok' | 'age_warning' | <mensagem de erro>
+  const doCheckIn = async (student: Student, overrideAge = false): Promise<'ok' | 'age_warning' | string> => {
+    if (isProcessing) return 'Aguarde, processando...';
     setIsProcessing(true);
     setCheckInError(null);
     try {
@@ -164,9 +165,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
         setAgeWarningMsg(err.response.data.error);
         return 'age_warning';
       }
-      const msg = err?.response?.data?.error || 'Erro ao registrar presença.';
-      setCheckInError(msg);
-      return 'error';
+      return err?.response?.data?.error || 'Erro ao registrar presença.';
     } finally {
       setIsProcessing(false);
     }
@@ -184,6 +183,8 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
     } else if (result === 'age_warning') {
       setAgeWarningStudent(confirmingStudent);
       setAgeWarningContext('search');
+    } else {
+      setCheckInError(result as string);
     }
   };
 
@@ -213,23 +214,35 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
           return [student, ...prev.slice(0, 10)];
         });
         if (navigator.vibrate) milestone ? navigator.vibrate([100, 50, 200, 50, 300]) : navigator.vibrate(50);
+        lastScannedIdRef.current = null; // allow new scans immediately after success
         scanTimeoutRef.current = setTimeout(() => {
           setLastScannedStudent(null);
-          lastScannedIdRef.current = null;
           setGraduationMilestone(null);
           scanTimeoutRef.current = null;
         }, milestone ? 5000 : 2500);
       }
+    } else {
+      if (context === 'search') {
+        setCheckInError(result as string);
+      } else {
+        setScanError(result as string);
+        scanTimeoutRef.current = setTimeout(() => {
+          lastScannedIdRef.current = null;
+          setScanError(null);
+          scanTimeoutRef.current = null;
+        }, 4000);
+      }
     }
-    // Em qualquer caso, libera o scanner para nova leitura
-    if (context === 'scanner') lastScannedIdRef.current = null;
   };
 
   const handleAgeWarningCancel = () => {
     const context = ageWarningContext;
     setAgeWarningStudent(null);
     setAgeWarningMsg('');
-    if (context === 'scanner') lastScannedIdRef.current = null;
+    if (context === 'scanner') {
+      lastScannedIdRef.current = null;
+      scanTimeoutRef.current = null;
+    }
   };
 
   const handleRemoveAttendance = async () => {
@@ -302,7 +315,8 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
             }
 
             lastScannedIdRef.current = student.id;
-            if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
+            if (scanTimeoutRef.current && scanTimeoutRef.current !== -1) clearTimeout(scanTimeoutRef.current);
+            scanTimeoutRef.current = -1 as any; // sentinel: blocks re-scan during API call
 
             const result = await doCheckIn(student);
             if (result === 'ok') {
@@ -325,13 +339,13 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                 }
               }, milestone ? 5000 : 2500);
             } else if (result === 'age_warning') {
-              // Abre diálogo de confirmação — lastScannedIdRef será limpo pelo handler
+              // sentinel mantido até o handler liberar
               if (isMounted) {
                 setAgeWarningStudent(student);
                 setAgeWarningContext('scanner');
               }
             } else {
-              // show error briefly then allow rescan
+              if (isMounted) setScanError(result as string);
               scanTimeoutRef.current = setTimeout(() => {
                 if (isMounted) {
                   lastScannedIdRef.current = null;
