@@ -21,6 +21,7 @@ import {
   ChevronLeft,
   AlertCircle,
   RefreshCw,
+  Trash2,
 } from 'lucide-react';
 import { BeltBadge } from '../components/BeltBadge';
 import { BELT_COLORS } from '../constants';
@@ -80,6 +81,15 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
   const [recentScans, setRecentScans] = useState<Student[]>([]);
   const [scanError, setScanError] = useState<string | null>(null);
 
+  // Age warning dialog
+  const [ageWarningStudent, setAgeWarningStudent] = useState<Student | null>(null);
+  const [ageWarningMsg, setAgeWarningMsg] = useState<string>('');
+  const [ageWarningContext, setAgeWarningContext] = useState<'search' | 'scanner'>('search');
+
+  // Remove attendance confirmation
+  const [removingAttendanceId, setRemovingAttendanceId] = useState<string | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
+
   // History
   const [showFullHistory, setShowFullHistory] = useState(false);
   const [historyRecords, setHistoryRecords] = useState<AttendanceRecordWithName[]>([]);
@@ -136,23 +146,27 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [students, search]);
 
-  const doCheckIn = async (student: Student): Promise<boolean> => {
-    if (isProcessing) return false;
+  const doCheckIn = async (student: Student, overrideAge = false): Promise<'ok' | 'error' | 'age_warning'> => {
+    if (isProcessing) return 'error';
     setIsProcessing(true);
     setCheckInError(null);
     try {
       const record = await attendanceService.createRecord(academy.id, {
         studentId: student.id,
         date: todayStr,
+        overrideAge,
       });
       setTodayAttendances(prev => [...prev, record as AttendanceRecordWithName]);
-      // optimistically update student totalClasses for milestone calc
       setStudents(prev => prev.map(s => s.id === student.id ? { ...s, totalClasses: s.totalClasses + 1 } : s));
-      return true;
+      return 'ok';
     } catch (err: any) {
+      if (err?.response?.status === 422 && err?.response?.data?.type === 'AGE_WARNING') {
+        setAgeWarningMsg(err.response.data.error);
+        return 'age_warning';
+      }
       const msg = err?.response?.data?.error || 'Erro ao registrar presença.';
       setCheckInError(msg);
-      return false;
+      return 'error';
     } finally {
       setIsProcessing(false);
     }
@@ -160,13 +174,81 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
 
   const handleConfirmStudent = async () => {
     if (!confirmingStudent) return;
-    const ok = await doCheckIn(confirmingStudent);
-    if (ok) {
+    const result = await doCheckIn(confirmingStudent);
+    if (result === 'ok') {
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
       setConfirmingStudent(null);
       setIsSearchOpen(false);
       setSearch('');
+    } else if (result === 'age_warning') {
+      setAgeWarningStudent(confirmingStudent);
+      setAgeWarningContext('search');
+    }
+  };
+
+  const handleAgeWarningConfirm = async () => {
+    if (!ageWarningStudent) return;
+    const student = ageWarningStudent;
+    const context = ageWarningContext;
+    setAgeWarningStudent(null);
+    setAgeWarningMsg('');
+
+    const result = await doCheckIn(student, true);
+    if (result === 'ok') {
+      if (context === 'search') {
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
+        setConfirmingStudent(null);
+        setIsSearchOpen(false);
+        setSearch('');
+      } else {
+        const milestone = getGraduationMilestone(student, t);
+        setLastScannedStudent(student);
+        setGraduationMilestone(milestone);
+        setScanError(null);
+        setRecentScans(prev => {
+          const already = prev.some(s => s.id === student.id);
+          if (already) return prev;
+          return [student, ...prev.slice(0, 10)];
+        });
+        if (navigator.vibrate) milestone ? navigator.vibrate([100, 50, 200, 50, 300]) : navigator.vibrate(50);
+        scanTimeoutRef.current = setTimeout(() => {
+          setLastScannedStudent(null);
+          lastScannedIdRef.current = null;
+          setGraduationMilestone(null);
+          scanTimeoutRef.current = null;
+        }, milestone ? 5000 : 2500);
+      }
+    }
+    // Em qualquer caso, libera o scanner para nova leitura
+    if (context === 'scanner') lastScannedIdRef.current = null;
+  };
+
+  const handleAgeWarningCancel = () => {
+    const context = ageWarningContext;
+    setAgeWarningStudent(null);
+    setAgeWarningMsg('');
+    if (context === 'scanner') lastScannedIdRef.current = null;
+  };
+
+  const handleRemoveAttendance = async () => {
+    if (!removingAttendanceId) return;
+    setIsRemoving(true);
+    try {
+      const record = todayAttendances.find(a => a.id === removingAttendanceId);
+      await attendanceService.deleteRecord(removingAttendanceId);
+      setTodayAttendances(prev => prev.filter(a => a.id !== removingAttendanceId));
+      if (record) {
+        setStudents(prev => prev.map(s =>
+          s.id === record.studentId ? { ...s, totalClasses: Math.max(0, s.totalClasses - 1) } : s
+        ));
+      }
+    } catch (err: any) {
+      setCheckInError(err?.response?.data?.error || 'Erro ao remover presença.');
+    } finally {
+      setIsRemoving(false);
+      setRemovingAttendanceId(null);
     }
   };
 
@@ -222,8 +304,8 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
             lastScannedIdRef.current = student.id;
             if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
 
-            const ok = await doCheckIn(student);
-            if (ok) {
+            const result = await doCheckIn(student);
+            if (result === 'ok') {
               const milestone = getGraduationMilestone(student, t);
               setLastScannedStudent(student);
               setGraduationMilestone(milestone);
@@ -242,6 +324,12 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                   scanTimeoutRef.current = null;
                 }
               }, milestone ? 5000 : 2500);
+            } else if (result === 'age_warning') {
+              // Abre diálogo de confirmação — lastScannedIdRef será limpo pelo handler
+              if (isMounted) {
+                setAgeWarningStudent(student);
+                setAgeWarningContext('scanner');
+              }
             } else {
               // show error briefly then allow rescan
               scanTimeoutRef.current = setTimeout(() => {
@@ -381,6 +469,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                 ? String((record as any).checkInTime).substring(0, 5)
                 : null;
 
+              const hasAgeWarning = !!(record as any).ageWarning;
               return (
                 <div key={record.id} className="bg-white dark:bg-slate-900 flex items-center justify-between p-4 rounded-[24px] border border-slate-100 dark:border-slate-800">
                   <div className="flex items-center gap-3">
@@ -397,13 +486,29 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                       </div>
                     </div>
                     <div>
-                      <p className="font-bold text-sm text-slate-800 dark:text-white leading-tight">{name}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-bold text-sm text-slate-800 dark:text-white leading-tight">{name}</p>
+                        {hasAgeWarning && (
+                          <span title="Divergência de idade com o plano — presença confirmada manualmente" className="flex items-center">
+                            <AlertCircle size={13} className="text-amber-500" />
+                          </span>
+                        )}
+                      </div>
                       {student && <BeltBadge belt={student.belt} stripes={student.stripes} />}
                     </div>
                   </div>
-                  {checkInTime && (
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{checkInTime}</span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {checkInTime && (
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{checkInTime}</span>
+                    )}
+                    <button
+                      onClick={() => setRemovingAttendanceId(record.id)}
+                      className="p-1.5 text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20"
+                      title="Remover presença"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -640,6 +745,70 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                   );
                 });
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Age warning dialog ─────────────────────────────────────────────── */}
+      {ageWarningStudent && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[300] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl text-center">
+            <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-[24px] flex items-center justify-center mx-auto mb-5">
+              <AlertCircle size={32} className="text-amber-500" />
+            </div>
+            <h2 className="text-xl font-black text-slate-800 dark:text-white mb-1 tracking-tight">Divergência de Idade</h2>
+            <p className="text-base font-bold text-indigo-600 dark:text-indigo-400 mb-3">{ageWarningStudent.name}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 leading-snug">{ageWarningMsg}</p>
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-8">Deseja registrar a presença mesmo assim?</p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handleAgeWarningConfirm}
+                disabled={isProcessing}
+                className="w-full bg-amber-500 hover:bg-amber-600 disabled:bg-slate-400 text-white font-black py-5 rounded-3xl shadow-xl shadow-amber-500/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                {isProcessing ? <Loader2 size={20} className="animate-spin" /> : <CheckCircle size={20} />}
+                {isProcessing ? 'Aguarde...' : 'Sim, registrar mesmo assim'}
+              </button>
+              <button
+                onClick={handleAgeWarningCancel}
+                disabled={isProcessing}
+                className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold py-5 rounded-3xl transition-all active:scale-95"
+              >
+                Não
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Remove attendance confirm dialog ───────────────────────────────── */}
+      {removingAttendanceId && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[300] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl text-center">
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-[24px] flex items-center justify-center mx-auto mb-5">
+              <Trash2 size={28} className="text-red-500" />
+            </div>
+            <h2 className="text-xl font-black text-slate-800 dark:text-white mb-2 tracking-tight">Remover Presença?</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 leading-snug">
+              Esta ação irá remover o registro de presença e descontar 1 aula do total do aluno.
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handleRemoveAttendance}
+                disabled={isRemoving}
+                className="w-full bg-red-600 hover:bg-red-700 disabled:bg-slate-400 text-white font-black py-5 rounded-3xl shadow-xl shadow-red-600/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                {isRemoving ? <Loader2 size={20} className="animate-spin" /> : <Trash2 size={20} />}
+                {isRemoving ? 'Removendo...' : 'Sim, remover'}
+              </button>
+              <button
+                onClick={() => setRemovingAttendanceId(null)}
+                disabled={isRemoving}
+                className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold py-5 rounded-3xl transition-all active:scale-95"
+              >
+                Cancelar
+              </button>
             </div>
           </div>
         </div>

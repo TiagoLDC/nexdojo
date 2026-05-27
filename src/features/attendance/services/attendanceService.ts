@@ -28,6 +28,9 @@ export const attendanceService = {
       })
       .then((r) => r.data),
 
-  createRecord: (academyId: string, data: { studentId: string; classId?: string; date: string; durationMinutes?: number }) =>
+  createRecord: (academyId: string, data: { studentId: string; classId?: string; date: string; durationMinutes?: number; overrideAge?: boolean }) =>
     api.post<AttendanceRecord>('/attendance', { ...data, academyId }).then((r) => r.data),
+
+  deleteRecord: (id: string) =>
+    api.delete<{ message: string }>(`/attendance/${id}`).then((r) => r.data),
 };

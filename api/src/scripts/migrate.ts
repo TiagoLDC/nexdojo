@@ -71,6 +71,7 @@ const DDL_STATEMENTS = [
     active TINYINT(1) DEFAULT 1,
     free_schedule TINYINT(1) DEFAULT 0 COMMENT 'Se 1, ignora validação de horário na presença',
     free_days TINYINT(1) DEFAULT 0 COMMENT 'Se 1, ignora limite de aulas por semana na presença',
+    free_age TINYINT(1) DEFAULT 0 COMMENT 'Se 1, ignora validação de idade na presença',
     tolerance_before_minutes INT DEFAULT 15,
     tolerance_after_start_minutes INT DEFAULT 15,
     FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE
@@ -296,6 +297,7 @@ const DDL_STATEMENTS = [
     check_in_time TIME NULL,
     matched_plan_id VARCHAR(36) NULL COMMENT 'Plano que permitiu a presença (auditoria)',
     matched_schedule_id VARCHAR(36) NULL COMMENT 'Horário do plano que bateu (auditoria)',
+    age_warning TINYINT(1) DEFAULT 0 COMMENT 'Presença com divergência de idade confirmada manualmente',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE,
     FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,

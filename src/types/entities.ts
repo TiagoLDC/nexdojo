@@ -187,6 +187,7 @@ export interface AttendanceRecord {
   checkInTime?: string;        // 'HH:MM:SS'
   matchedPlanId?: string;
   matchedScheduleId?: string;
+  ageWarning?: boolean;
 }
 
 // ── Chat ──────────────────────────────────────────────────────────────────
@@ -236,6 +237,7 @@ export interface AcademyPlan {
   active?: boolean;
   freeSchedule?: boolean;
   freeDays?: boolean;
+  freeAge?: boolean;
   toleranceBeforeMinutes?: number;
   toleranceAfterStartMinutes?: number;
   schedules?: PlanSchedule[];

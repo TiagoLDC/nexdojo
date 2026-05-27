@@ -737,6 +737,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                       active: true,
                       freeSchedule: false,
                       freeDays: false,
+                      freeAge: false,
                       toleranceBeforeMinutes: 15,
                       toleranceAfterStartMinutes: 15,
                       schedules: [],
@@ -1103,6 +1104,32 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                   className="transition-colors"
                 >
                   {editingPlan.freeDays
+                    ? <ToggleRight size={36} className="text-indigo-600" />
+                    : <ToggleLeft size={36} className="text-slate-400" />
+                  }
+                </button>
+              </div>
+
+              {/* Toggle Idade Livre */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    Idade Livre
+                    <span
+                      title="Permite que alunos de qualquer idade registrem presença neste plano, ignorando as faixas de idade mínima e máxima configuradas."
+                      className="cursor-help text-slate-400 hover:text-indigo-500 transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                    </span>
+                  </p>
+                  <p className="text-[10px] text-slate-400">Ignora a validação de idade mínima/máxima ao registrar presença</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingPlan({ ...editingPlan, freeAge: !editingPlan.freeAge })}
+                  className="transition-colors"
+                >
+                  {editingPlan.freeAge
                     ? <ToggleRight size={36} className="text-indigo-600" />
                     : <ToggleLeft size={36} className="text-slate-400" />
                   }

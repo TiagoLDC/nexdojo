@@ -100,7 +100,7 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
       const [planRows] = await pool.execute<any[]>(
         `SELECT p.id, p.active, p.min_age, p.max_age,
                 p.tolerance_before_minutes, p.tolerance_after_start_minutes,
-                p.free_schedule, p.free_days, p.classes_per_week
+                p.free_schedule, p.free_days, p.free_age, p.classes_per_week
          FROM academy_plans p
          WHERE p.id = ? AND p.academy_id = ?`,
         [student.plan_id, academyId]
@@ -116,20 +116,30 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
       }
 
       // ── 5. Verificação de idade ──────────────────────────────────────────
-      if (student.birth_date && (plan.min_age != null || plan.max_age != null)) {
+      // free_age = 1 → ignora completamente; caso contrário avisa (422) e permite override
+      const freeAge      = plan.free_age === 1 || plan.free_age === true;
+      const overrideAge  = req.body.override_age === true || req.body.override_age === 1;
+      let hasAgeWarning  = false;
+
+      if (!freeAge && student.birth_date && (plan.min_age != null || plan.max_age != null)) {
         const birth = new Date(student.birth_date);
         const todayDate = new Date(today);
         let age = todayDate.getFullYear() - birth.getFullYear();
         const m = todayDate.getMonth() - birth.getMonth();
         if (m < 0 || (m === 0 && todayDate.getDate() < birth.getDate())) age--;
 
-        if (plan.min_age != null && age < plan.min_age) {
-          res.status(400).json({ error: `Aluno com ${age} anos abaixo da idade mínima do plano (${plan.min_age} anos).` });
-          return;
-        }
-        if (plan.max_age != null && age > plan.max_age) {
-          res.status(400).json({ error: `Aluno com ${age} anos acima da idade máxima do plano (${plan.max_age} anos).` });
-          return;
+        const isBelowMin = plan.min_age != null && age < plan.min_age;
+        const isAboveMax = plan.max_age != null && age > plan.max_age;
+
+        if (isBelowMin || isAboveMax) {
+          if (!overrideAge) {
+            const warnMsg = isBelowMin
+              ? `Aluno com ${age} anos está abaixo da idade mínima do plano (${plan.min_age} anos).`
+              : `Aluno com ${age} anos está acima da idade máxima do plano (${plan.max_age} anos).`;
+            res.status(422).json({ error: warnMsg, type: 'AGE_WARNING' });
+            return;
+          }
+          hasAgeWarning = true;
         }
       }
 
@@ -222,10 +232,10 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
         await conn.execute(
           `INSERT INTO attendance_records
              (id, academy_id, student_id, class_id, date, duration_minutes,
-              check_in_time, matched_plan_id, matched_schedule_id)
-           VALUES (?,?,?,NULL,?,?,?,?,?)`,
+              check_in_time, matched_plan_id, matched_schedule_id, age_warning)
+           VALUES (?,?,?,NULL,?,?,?,?,?,?)`,
           [id, academyId, student_id, today, durationMinutes,
-           now_time, student.plan_id, matchedSchedule?.id ?? null]
+           now_time, student.plan_id, matchedSchedule?.id ?? null, hasAgeWarning ? 1 : 0]
         );
 
         const hoursToAdd = Math.round(durationMinutes / 60);
@@ -273,6 +283,38 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
 
       res.status(201).json(record);
     }
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/attendance/:id — remove presença e reverte contadores do aluno
+router.delete('/:id', requireAuth, requireRole('admin', 'superuser', 'instructor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const academyId = getAcademyId(req, res);
+  if (!academyId) return;
+
+  try {
+    const [rows] = await pool.execute<any[]>(
+      'SELECT id, student_id, duration_minutes FROM attendance_records WHERE id = ? AND academy_id = ?',
+      [req.params.id, academyId]
+    );
+    if (!rows[0]) { res.status(404).json({ error: 'Presença não encontrada' }); return; }
+
+    const record = rows[0];
+    const hoursToRemove = Math.round((record.duration_minutes || 0) / 60);
+
+    await withTransaction(async (conn) => {
+      await conn.execute(
+        `UPDATE students
+         SET total_classes = GREATEST(0, total_classes - 1),
+             total_hours   = GREATEST(0, total_hours - ?)
+         WHERE id = ?`,
+        [hoursToRemove, record.student_id]
+      );
+      await conn.execute('DELETE FROM attendance_records WHERE id = ?', [req.params.id]);
+    });
+
+    res.json({ message: 'Presença removida com sucesso' });
   } catch (err) {
     next(err);
   }

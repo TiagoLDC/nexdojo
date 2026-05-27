@@ -26,6 +26,7 @@ function mapPlan(p: any, hidePrice: boolean) {
     active: p.active === 1 || p.active === true,
     freeSchedule: p.free_schedule === 1 || p.free_schedule === true,
     freeDays: p.free_days === 1 || p.free_days === true,
+    freeAge: p.free_age === 1 || p.free_age === true,
     toleranceBeforeMinutes: p.tolerance_before_minutes,
     toleranceAfterStartMinutes: p.tolerance_after_start_minutes,
     schedules: p.schedules ?? [],
@@ -122,7 +123,7 @@ router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Req
 
   const {
     name, duration_months, classes_per_week, price, category, description,
-    min_age, max_age, instructor_id, active, free_schedule, free_days,
+    min_age, max_age, instructor_id, active, free_schedule, free_days, free_age,
     tolerance_before_minutes, tolerance_after_start_minutes,
   } = req.body;
 
@@ -132,9 +133,9 @@ router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Req
       await conn.execute(
         `INSERT INTO academy_plans
            (id, academy_id, name, duration_months, classes_per_week, price, category, description,
-            min_age, max_age, instructor_id, active, free_schedule, free_days,
+            min_age, max_age, instructor_id, active, free_schedule, free_days, free_age,
             tolerance_before_minutes, tolerance_after_start_minutes)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [
           id, academyId, name, duration_months, classes_per_week ?? null, price,
           category ?? null, description ?? null,
@@ -142,6 +143,7 @@ router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Req
           active === undefined ? 1 : (active ? 1 : 0),
           free_schedule ? 1 : 0,
           free_days ? 1 : 0,
+          free_age ? 1 : 0,
           tolerance_before_minutes ?? 15, tolerance_after_start_minutes ?? 15,
         ]
       );
@@ -209,6 +211,9 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
       }
       if (req.body.free_days !== undefined) {
         await conn.execute('UPDATE academy_plans SET free_days = ? WHERE id = ?', [req.body.free_days ? 1 : 0, req.params.id]);
+      }
+      if (req.body.free_age !== undefined) {
+        await conn.execute('UPDATE academy_plans SET free_age = ? WHERE id = ?', [req.body.free_age ? 1 : 0, req.params.id]);
       }
 
       if (Array.isArray(req.body.schedules)) {
