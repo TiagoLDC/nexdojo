@@ -29,6 +29,7 @@ app.use('/api', router);
 app.use(errorHandler);
 
 // Aplica colunas novas sem derrubar o banco existente (idempotente — ignora ER_DUP_FIELDNAME)
+// Usa pool.query (não execute) porque ALTER TABLE é DDL e MySQL rejeita DDL via prepared statements
 async function applySchemaPatches() {
   const patches = [
     `ALTER TABLE academy_plans ADD COLUMN free_age TINYINT(1) DEFAULT 0 COMMENT 'Se 1, ignora validação de idade na presença'`,
@@ -36,7 +37,7 @@ async function applySchemaPatches() {
   ];
   for (const sql of patches) {
     try {
-      await pool.execute(sql);
+      await pool.query(sql);
     } catch (err: any) {
       if (err.code !== 'ER_DUP_FIELDNAME') throw err;
     }
