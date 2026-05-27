@@ -84,10 +84,20 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
       return;
     }
 
-    // Data/hora do servidor (MySQL) — evita divergência de fuso
-    const [[{ today, now_time }]] = await pool.execute<any[]>(
-      'SELECT CURDATE() AS today, CURTIME() AS now_time'
-    ) as any;
+    // Data/hora no fuso de Brasília — independente do timezone do servidor MySQL
+    const _brParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false,
+    }).formatToParts(new Date());
+    const _get = (t: string) => parseInt(_brParts.find(p => p.type === t)!.value);
+    const today      = `${_get('year')}-${String(_get('month')).padStart(2,'0')}-${String(_get('day')).padStart(2,'0')}`;
+    const _h         = _get('hour') % 24;
+    const nowTimeStr = `${String(_h).padStart(2,'0')}:${String(_get('minute')).padStart(2,'0')}:${String(_get('second')).padStart(2,'0')}`;
+    const nowMin     = _h * 60 + _get('minute');
+    // day_of_week no DB: 0=Dom,1=Seg,...,6=Sab (igual a getUTCDay sobre noon UTC da data brasileira)
+    const dow        = new Date(`${today}T12:00:00Z`).getUTCDay();
 
     if (!isLegacyFlow) {
       // ── 3. Aluno tem plano ───────────────────────────────────────────────
@@ -148,11 +158,6 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
       const freeSchedule = plan.free_schedule === 1 || plan.free_schedule === true;
       const freeDays     = plan.free_days === 1 || plan.free_days === true;
 
-      // Dia da semana da data atual (0=Dom..6=Sab) — MySQL DAYOFWEEK retorna 1=Dom..7=Sab
-      const [[{ dow }]] = await pool.execute<any[]>(
-        'SELECT DAYOFWEEK(CURDATE()) - 1 AS dow'
-      ) as any;
-
       // Converte 'HH:MM:SS' para minutos desde meia-noite
       const toMinutes = (t: string) => {
         const [h, m] = t.split(':').map(Number);
@@ -175,7 +180,6 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
           return;
         }
 
-        const nowMin = toMinutes(now_time);
         matchedSchedule = (scheduleRows as any[]).find(s => {
           const startMin = toMinutes(s.start_time);
           const windowStart = startMin - (plan.tolerance_before_minutes ?? 15);
@@ -184,7 +188,13 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
         });
 
         if (!matchedSchedule) {
-          res.status(400).json({ error: 'Fora da janela de horário do seu plano. Verifique os horários e tente novamente.' });
+          const windows = (scheduleRows as any[]).map(s => {
+            const start = toMinutes(s.start_time);
+            const ws = start - (plan.tolerance_before_minutes ?? 15);
+            const we = start + (plan.tolerance_after_start_minutes ?? 15);
+            return `${String(Math.floor(ws/60)).padStart(2,'0')}:${String(ws%60).padStart(2,'0')}–${String(Math.floor(we/60)).padStart(2,'0')}:${String(we%60).padStart(2,'0')}`;
+          }).join(', ');
+          res.status(400).json({ error: `Fora da janela de horário. Hora atual: ${nowTimeStr.substring(0,5)}. Janela${scheduleRows.length > 1 ? 's' : ''}: ${windows}.` });
           return;
         }
 
@@ -206,10 +216,11 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
       // ── 8. Verificação de frequência semanal ────────────────────────────
       // Ignorada quando o plano tem "Dias Livres" (free_days = 1)
       if (!freeDays && plan.classes_per_week) {
-        // Início da semana atual (segunda-feira, ISO)
-        const [[{ week_start }]] = await pool.execute<any[]>(
-          `SELECT DATE_SUB(CURDATE(), INTERVAL (DAYOFWEEK(CURDATE()) + 5) % 7 DAY) AS week_start`
-        ) as any;
+        // Início da semana atual (segunda-feira, ISO) — calculado a partir da data brasileira
+        const [ty, tm, td] = today.split('-').map(Number);
+        const daysBack = (dow + 6) % 7; // 0=Seg → 0, 1=Ter → 1, …, 6=Dom → 6
+        const weekStartDate = new Date(Date.UTC(ty, tm - 1, td - daysBack, 12, 0, 0));
+        const week_start = `${weekStartDate.getUTCFullYear()}-${String(weekStartDate.getUTCMonth()+1).padStart(2,'0')}-${String(weekStartDate.getUTCDate()).padStart(2,'0')}`;
 
         const [weekRows] = await pool.execute<any[]>(
           `SELECT COUNT(*) AS total FROM attendance_records
@@ -235,7 +246,7 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
               check_in_time, matched_plan_id, matched_schedule_id, age_warning)
            VALUES (?,?,?,NULL,?,?,?,?,?,?)`,
           [id, academyId, student_id, today, durationMinutes,
-           now_time, student.plan_id, matchedSchedule?.id ?? null, hasAgeWarning ? 1 : 0]
+           nowTimeStr, student.plan_id, matchedSchedule?.id ?? null, hasAgeWarning ? 1 : 0]
         );
 
         const hoursToAdd = Math.round(durationMinutes / 60);

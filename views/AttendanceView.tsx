@@ -100,6 +100,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
   const html5QrCodeRef = useRef<any>(null);
   const scanTimeoutRef = useRef<any>(null);
   const lastScannedIdRef = useRef<string | null>(null);
+  const isProcessingRef = useRef(false);
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -148,7 +149,8 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
 
   // Retorna 'ok' | 'age_warning' | <mensagem de erro>
   const doCheckIn = async (student: Student, overrideAge = false): Promise<'ok' | 'age_warning' | string> => {
-    if (isProcessing) return 'Aguarde, processando...';
+    if (isProcessingRef.current) return 'Aguarde, processando...';
+    isProcessingRef.current = true;
     setIsProcessing(true);
     setCheckInError(null);
     try {
@@ -167,6 +169,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
       }
       return err?.response?.data?.error || 'Erro ao registrar presença.';
     } finally {
+      isProcessingRef.current = false;
       setIsProcessing(false);
     }
   };
@@ -352,7 +355,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                   setScanError(null);
                   scanTimeoutRef.current = null;
                 }
-              }, 4000);
+              }, 10000);
             }
           };
 
