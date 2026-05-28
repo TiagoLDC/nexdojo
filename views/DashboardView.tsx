@@ -673,7 +673,19 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       status: 'Active',
       birthDate: '2000-01-01'
     };
-    
+
+    const paymentPlan = academy?.plans?.find((p: any) => p.id === profile.planId);
+    const paymentAlertData = (() => {
+      if (!profile.nextPaymentDate) return null;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const paymentDate = new Date(profile.nextPaymentDate + 'T12:00:00');
+      paymentDate.setHours(0, 0, 0, 0);
+      const diffDays = Math.round((paymentDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays > 7) return null;
+      return { diffDays, price: paymentPlan?.price as number | undefined, planName: paymentPlan?.name as string | undefined };
+    })();
+
     return (
       <>
       <motion.div
@@ -777,6 +789,49 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                 </div>
               );
             })}
+          </motion.div>
+        )}
+
+        {/* ALERTA DE VENCIMENTO DE MENSALIDADE */}
+        {paymentAlertData && (
+          <motion.div variants={itemVariants} className="px-2">
+            <div
+              className={`bg-gradient-to-r ${
+                paymentAlertData.diffDays < 0
+                  ? 'from-red-600 to-red-700'
+                  : 'from-amber-500 to-amber-600'
+              } p-6 rounded-[32px] text-white shadow-xl flex items-center justify-between relative overflow-hidden`}
+            >
+              <div className="flex items-center gap-5 relative z-10">
+                <div className={`bg-white/20 p-4 rounded-2xl ${paymentAlertData.diffDays < 0 ? 'animate-pulse' : ''}`}>
+                  {paymentAlertData.diffDays < 0 ? <AlertTriangle size={32} /> : <CreditCard size={32} />}
+                </div>
+                <div>
+                  <h3 className="font-black text-xl uppercase tracking-tight leading-none">
+                    {paymentAlertData.diffDays < 0
+                      ? `Mensalidade Vencida há ${Math.abs(paymentAlertData.diffDays)} dia${Math.abs(paymentAlertData.diffDays) !== 1 ? 's' : ''}!`
+                      : paymentAlertData.diffDays === 0
+                      ? 'Sua Mensalidade Vence Hoje!'
+                      : `Mensalidade Vence em ${paymentAlertData.diffDays} Dia${paymentAlertData.diffDays !== 1 ? 's' : ''}`}
+                  </h3>
+                  <p className={`${paymentAlertData.diffDays < 0 ? 'text-red-100' : 'text-amber-50'} font-medium opacity-90 mt-1 text-sm`}>
+                    {paymentAlertData.price != null
+                      ? `Valor: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(paymentAlertData.price)}${paymentAlertData.planName ? ` — ${paymentAlertData.planName}` : ''}`
+                      : paymentAlertData.diffDays < 0
+                      ? 'Entre em contato com a academia para regularizar.'
+                      : 'Entre em contato com a academia para mais informações.'}
+                  </p>
+                </div>
+              </div>
+              <div className="hidden md:block relative z-10 shrink-0 ml-4">
+                {paymentAlertData.diffDays < 0 ? <AlertTriangle size={48} className="opacity-20" /> : <CreditCard size={48} className="opacity-20" />}
+              </div>
+              {paymentAlertData.diffDays < 0 && (
+                <div className="absolute -right-8 -bottom-8 opacity-10 pointer-events-none">
+                  <AlertTriangle size={160} />
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
 
