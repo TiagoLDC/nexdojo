@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { User, Academy, Student, Instructor, Staff, Belt } from '../types';
+import { User, Academy, Student, Instructor, Staff, Belt, AcademyPlan } from '../types';
 import { useTranslation } from '../services/LanguageContext';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
 import { authService } from '@/features/auth/services/authService';
@@ -117,6 +117,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [_isFromSharedLink, setIsFromSharedLink] = useState(false);
   const [linkedAcademy, setLinkedAcademy] = useState<Academy | null>(null);
+  const [academyPlans, setAcademyPlans] = useState<AcademyPlan[]>([]);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
 
@@ -164,6 +165,10 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         setStudentData(prev => ({ ...prev, academyId: found.id }));
         setInstructorData(prev => ({ ...prev, academyId: found.id }));
         setStaffData(prev => ({ ...prev, academyId: found.id }));
+
+        api.get<{ data: AcademyPlan[] }>(`/plans/public?academyId=${found.id}`)
+          .then(pr => setAcademyPlans(pr.data.data ?? []))
+          .catch(() => setAcademyPlans([]));
       })
       .catch(() => {
         // alias não encontrado — sem branding
@@ -188,7 +193,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     joinDate: new Date().toISOString(), totalClasses: 0, totalHours: 0,
     absentCount: 0, gender: 'Masculino', weight: '', height: '',
     bloodType: '', emergencyContact: '', emergencyPhone: '', lastGraduationDate: '',
-    cep: '', address: '', addressNumber: ''
+    cep: '', address: '', addressNumber: '', planId: undefined
   });
   const [instructorData, setInstructorData] = useState<Partial<Instructor>>({
     name: '', belt: Belt.BLACK, stripes: 0, birthDate: '', status: 'Pending',
@@ -346,6 +351,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         guardianCpf: studentData.guardianCpf,
         medicalNotes: studentData.medicalNotes,
         photo: studentData.photo,
+        planId: studentData.planId || undefined,
       });
       showNotification("Matrícula realizada com sucesso! Aguarde aprovação. OSS!");
       setView('login');
@@ -1015,6 +1021,55 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                 <SectionHeader icon={<Heart size={16} />} title="Saúde e Observações" />
                 <textarea value={studentData.medicalNotes || ''} onChange={e => setStudentData({...studentData, medicalNotes: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 outline-none text-sm min-h-[120px] text-slate-700 dark:text-white" placeholder="Possui alguma lesão ou condição especial?" />
               </div>
+
+              {academyPlans.length > 0 && (
+                <div className="space-y-6">
+                  <SectionHeader icon={<Award size={16} />} title="Plano de Aula" />
+                  <p className="text-xs text-slate-500 dark:text-slate-400 -mt-2">Selecione o plano de aula que melhor se encaixa na sua rotina. (Opcional — o instrutor pode alterar depois.)</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {academyPlans.map(plan => {
+                      const selected = studentData.planId === plan.id;
+                      return (
+                        <button
+                          key={plan.id}
+                          type="button"
+                          onClick={() => setStudentData({ ...studentData, planId: selected ? undefined : plan.id })}
+                          className={`text-left p-5 rounded-3xl border-2 transition-all ${
+                            selected
+                              ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30 shadow-lg shadow-indigo-500/10'
+                              : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 hover:border-indigo-300 dark:hover:border-indigo-700'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <span className={`text-sm font-black uppercase tracking-tight ${selected ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-700 dark:text-white'}`}>{plan.name}</span>
+                            {selected && <CheckCircle2 size={18} className="text-indigo-600 shrink-0 mt-0.5" />}
+                          </div>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {plan.price != null && (
+                              <span className="text-[10px] font-black bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full">
+                                R$ {Number(plan.price).toFixed(2).replace('.', ',')}
+                              </span>
+                            )}
+                            {plan.durationMonths && (
+                              <span className="text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full">
+                                {plan.durationMonths} {plan.durationMonths === 1 ? 'mês' : 'meses'}
+                              </span>
+                            )}
+                            {plan.classesPerWeek && (
+                              <span className="text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full">
+                                {plan.classesPerWeek}x/semana
+                              </span>
+                            )}
+                          </div>
+                          {plan.description && (
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 leading-relaxed">{plan.description}</p>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 space-y-4">
                 <div className="flex items-start gap-3">

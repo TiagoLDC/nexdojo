@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Student, Academy, Belt, StudentDocument } from '../types';
+import { User, Student, Academy, Belt, StudentDocument, AcademyPlan } from '../types';
 import { studentService } from '@/features/students/services/studentService';
+import { plansService } from '@/features/plans/services/plansService';
 import {
   User as UserIcon,
   MapPin,
@@ -60,6 +61,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState<AcademyPlan | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -79,6 +81,13 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
         if (fullStudent) {
           setProfile(fullStudent);
           setEditData(JSON.parse(JSON.stringify(fullStudent)));
+          if (fullStudent.planId) {
+            plansService.getById(fullStudent.planId)
+              .then(plan => setCurrentPlan(plan))
+              .catch(() => setCurrentPlan(null));
+          } else {
+            setCurrentPlan(null);
+          }
         } else {
           setProfile(null);
           setEditData(null);
@@ -771,7 +780,47 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
             </div>
           </section>
 
-          {/* Seção 6: Observações Médicas & Status */}
+          {/* Seção 6: Plano de Aula */}
+          <section className="space-y-6 pt-12 border-t border-slate-100 dark:border-slate-800">
+            <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2 mb-8">
+              <Award size={16} /> PLANO DE AULA
+            </h3>
+            {currentPlan ? (
+              <div className="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-800/50 rounded-3xl p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex-1 space-y-2">
+                  <p className="text-sm font-black uppercase tracking-tight text-indigo-700 dark:text-indigo-300">{currentPlan.name}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {currentPlan.price != null && (
+                      <span className="text-[10px] font-black bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full">
+                        R$ {Number(currentPlan.price).toFixed(2).replace('.', ',')}
+                      </span>
+                    )}
+                    {currentPlan.durationMonths && (
+                      <span className="text-[10px] font-bold bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full border border-slate-100 dark:border-slate-700">
+                        {currentPlan.durationMonths} {currentPlan.durationMonths === 1 ? 'mês' : 'meses'}
+                      </span>
+                    )}
+                    {currentPlan.classesPerWeek && (
+                      <span className="text-[10px] font-bold bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full border border-slate-100 dark:border-slate-700">
+                        {currentPlan.classesPerWeek}x/semana
+                      </span>
+                    )}
+                  </div>
+                  {currentPlan.description && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{currentPlan.description}</p>
+                  )}
+                </div>
+                <div className="text-[9px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900/40 px-3 py-1.5 rounded-full shrink-0">Plano Ativo</div>
+              </div>
+            ) : (
+              <div className="bg-slate-50 dark:bg-slate-800/30 border border-dashed border-slate-200 dark:border-slate-700 rounded-3xl p-6 flex items-center gap-4 text-slate-400">
+                <AlertCircle size={20} className="shrink-0 opacity-40" />
+                <p className="text-xs font-bold uppercase tracking-widest opacity-60">Nenhum plano de aula vinculado. Solicite à administração da academia.</p>
+              </div>
+            )}
+          </section>
+
+          {/* Seção 7: Observações Médicas & Status */}
           <section className="space-y-8 pt-12 border-t border-slate-100 dark:border-slate-800">
             <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2 mb-8">
               <Heart size={16} /> OBSERVAÇÕES MÉDICAS

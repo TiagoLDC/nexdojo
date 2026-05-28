@@ -51,6 +51,23 @@ async function attachSchedules(plans: any[]): Promise<void> {
   }
 }
 
+// GET /api/plans/public?academyId=... — público (sem auth): lista planos ativos para cadastro de aluno
+router.get('/public', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { academyId } = req.query;
+  if (!academyId) { res.status(400).json({ error: 'academyId obrigatório' }); return; }
+
+  try {
+    const [plans] = await pool.execute<any[]>(
+      'SELECT * FROM academy_plans WHERE academy_id = ? AND active = 1 ORDER BY price ASC',
+      [String(academyId)]
+    );
+    await attachSchedules(plans as any[]);
+    res.json({ data: (plans as any[]).map(p => mapPlan(p, false)), total: (plans as any[]).length });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/plans — lista planos da academia (com schedules). Mascara price para instrutor.
 router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
