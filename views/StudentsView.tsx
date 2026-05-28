@@ -4,6 +4,7 @@ import { Student, Belt, StudentDocument, ClassTemplate, Academy, User } from '..
 import { studentService } from '@/features/students/services/studentService';
 import { usersService } from '@/features/users/services/usersService';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
+import { advancePaymentDate } from '@/utils/paymentUtils';
 import { calculateAge, isReadyForGraduation, getNextRank } from '../services/graduation';
 import { useTranslation } from '../services/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -49,7 +50,9 @@ import {
   Clipboard,
   LockKeyhole,
   ShieldOff,
-  ShieldCheck as ShieldCheckIcon
+  ShieldCheck as ShieldCheckIcon,
+  CreditCard,
+  CheckCircle2
 } from 'lucide-react';
 import { BeltBadge } from '../components/BeltBadge';
 import { BELT_COLORS } from '../constants';
@@ -142,6 +145,25 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
   const [newStudentPassword, setNewStudentPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [accountActionLoading, setAccountActionLoading] = useState<string | null>(null);
+  const [isMarkingPayment, setIsMarkingPayment] = useState(false);
+
+  const markPaymentAsPaid = async () => {
+    if (!editingStudent?.id || !editingStudent.nextPaymentDate) return;
+    setIsMarkingPayment(true);
+    try {
+      const nextDate = advancePaymentDate(editingStudent.nextPaymentDate);
+      const updated = await studentService.update(editingStudent.id, { nextPaymentDate: nextDate } as any);
+      setStudents(prev => prev.map(s => s.id === updated.id ? updated : s));
+      setEditingStudent(prev => prev ? { ...prev, nextPaymentDate: nextDate } : prev);
+      showNotification(
+        `Mensalidade registrada. Próx. vencimento: ${new Date(nextDate + 'T12:00:00').toLocaleDateString('pt-BR')}`
+      );
+    } catch {
+      showNotification('Erro ao registrar pagamento.', 'error');
+    } finally {
+      setIsMarkingPayment(false);
+    }
+  };
 
   useEffect(() => {
     if (editingStudent?.birthDate) {
@@ -1721,12 +1743,34 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   ) : null}
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Próximo Vencimento</label>
-                    <input
-                      type="date"
-                      value={(editingStudent.nextPaymentDate || '').split('T')[0]}
-                      onChange={(e) => setEditingStudent({...editingStudent, nextPaymentDate: e.target.value})}
-                      className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700 dark:text-slate-200"
-                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="date"
+                        value={(editingStudent.nextPaymentDate || '').split('T')[0]}
+                        onChange={(e) => setEditingStudent({...editingStudent, nextPaymentDate: e.target.value})}
+                        className="flex-1 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700 dark:text-slate-200"
+                      />
+                      {!isNewStudent && editingStudent.nextPaymentDate && (
+                        <button
+                          type="button"
+                          disabled={isMarkingPayment}
+                          onClick={markPaymentAsPaid}
+                          title="Marcar mensalidade deste mês como paga e avançar vencimento"
+                          className="shrink-0 flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 px-3 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-60 border border-emerald-200 dark:border-emerald-900/30 cursor-pointer whitespace-nowrap"
+                        >
+                          {isMarkingPayment
+                            ? <Loader2 size={14} className="animate-spin" />
+                            : <CheckCircle2 size={14} />}
+                          <span className="hidden sm:inline">Pago</span>
+                        </button>
+                      )}
+                    </div>
+                    {!isNewStudent && editingStudent.nextPaymentDate && (
+                      <p className="text-[9px] text-slate-400 mt-1 ml-1 font-medium italic flex items-center gap-1">
+                        <CreditCard size={9} />
+                        Clique em "Pago" para registrar pagamento e avançar o vencimento.
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Limite de Faltas Personalizado</label>
