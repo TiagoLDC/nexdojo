@@ -346,10 +346,23 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
 
   const markPaymentAsPaid = async (student: Student) => {
     if (!student.nextPaymentDate) return;
+    const oldDueDate = student.nextPaymentDate;
+    const plan = academy?.plans?.find((p: any) => p.id === student.planId);
     setMarkingPaymentId(student.id);
     try {
-      const nextDate = advancePaymentDate(student.nextPaymentDate);
+      const nextDate = advancePaymentDate(oldDueDate);
       const updated = await studentService.update(student.id, { nextPaymentDate: nextDate } as any);
+      await financeService.create(academy!.id, {
+        description: plan?.name ?? 'Mensalidade',
+        amount: plan?.price ?? 0,
+        type: 'income',
+        category: 'Mensalidade',
+        date: new Date().toISOString().split('T')[0],
+        paymentMethod: 'Admin',
+        status: 'paid',
+        studentId: student.id,
+        dueDate: oldDueDate,
+      });
       setStudents(prev => prev.map(s => s.id === updated.id ? updated : s));
       showNotification(
         `Mensalidade de ${student.name} registrada. Próx. vencimento: ${new Date(nextDate + 'T12:00:00').toLocaleDateString('pt-BR')}`

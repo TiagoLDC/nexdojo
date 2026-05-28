@@ -197,6 +197,7 @@ export interface CreateTransactionDTO {
   paymentMethod: string;
   status: TransactionStatus;
   studentId?: string;
+  dueDate?: string;
 }
 
 export type UpdateTransactionDTO = Partial<CreateTransactionDTO>;

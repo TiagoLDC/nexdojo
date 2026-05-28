@@ -12,7 +12,8 @@ const InstructorsPage      = React.lazy(() => import('@/pages/InstructorsPage'))
 const StaffPage            = React.lazy(() => import('@/pages/StaffPage'));
 const UsersPage            = React.lazy(() => import('@/pages/UsersPage'));
 const AttendancePage       = React.lazy(() => import('@/pages/AttendancePage'));
-const FinancesPage         = React.lazy(() => import('@/pages/FinancesPage'));
+// DESATIVADO — controle financeiro simplificado (pagamento do aluno via /pay)
+// const FinancesPage         = React.lazy(() => import('@/pages/FinancesPage'));
 // DESATIVADO em #090 — Turmas substituídas por Planos de Aula
 // const TemplatesPage        = React.lazy(() => import('@/pages/TemplatesPage'));
 // const SchedulesPage        = React.lazy(() => import('@/pages/SchedulesPage'));
@@ -79,7 +80,7 @@ const App: React.FC = () => (
 
           {/* Admin only */}
           <Route element={<RoleGuard roles={['superuser', 'admin']} />}>
-            <Route path="/finances"    element={<FinancesPage />} />
+            {/* <Route path="/finances"    element={<FinancesPage />} /> */}
             <Route path="/instructors" element={<InstructorsPage />} />
             <Route path="/staff"       element={<StaffPage />} />
             <Route path="/users"       element={<UsersPage />} />

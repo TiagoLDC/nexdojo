@@ -9,9 +9,11 @@ import {
   Copy,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Clock,
   DollarSign,
-  TrendingUp
+  TrendingUp,
+  Calendar
 } from 'lucide-react';
 
 const PaymentView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
@@ -28,7 +30,7 @@ const PaymentView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
 
         if (profile) {
           setStudent(profile);
-          return financeService.getAll(academy.id).then((finRes) => {
+          return financeService.getAll(academy.id, { limit: 1000 } as any).then((finRes) => {
             const allFinances = Array.isArray(finRes.data) ? finRes.data : [];
             const studentFinances = allFinances.filter(f => f.studentId === profile.id);
             setTransactions(studentFinances);
@@ -54,6 +56,25 @@ const PaymentView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
       .filter(t => t.type === 'income')
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions]);
+
+  // Status da mensalidade baseado em nextPaymentDate
+  const paymentStatus = useMemo(() => {
+    if (!student?.nextPaymentDate) return { state: 'unknown' as const, diffDays: 0 };
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const paymentDate = new Date(student.nextPaymentDate + 'T12:00:00');
+    paymentDate.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((paymentDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0)  return { state: 'overdue'  as const, diffDays };
+    if (diffDays === 0) return { state: 'dueToday' as const, diffDays };
+    if (diffDays <= 7)  return { state: 'upcoming' as const, diffDays };
+    return { state: 'ok' as const, diffDays };
+  }, [student?.nextPaymentDate]);
+
+  const planInfo = useMemo(() => {
+    if (!student?.planId || !academy.plans) return null;
+    return (academy.plans as any[]).find(p => p.id === student.planId) ?? null;
+  }, [student?.planId, academy.plans]);
 
   if (isLoading) {
     return (
@@ -82,6 +103,23 @@ const PaymentView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
       </div>
     );
   }
+
+  // Config visual do status
+  const statusConfig = {
+    ok:      { icon: <CheckCircle2 size={24} />, bg: 'bg-green-100 text-green-600',  label: 'EM DIA',        color: 'text-green-600' },
+    upcoming:{ icon: <Clock size={24} />,        bg: 'bg-amber-100 text-amber-600',  label: 'A VENCER',      color: 'text-amber-600' },
+    dueToday:{ icon: <Clock size={24} />,        bg: 'bg-amber-100 text-amber-600',  label: 'VENCE HOJE',    color: 'text-amber-600' },
+    overdue: { icon: <AlertTriangle size={24} />,bg: 'bg-red-100 text-red-600',      label: 'VENCIDA',       color: 'text-red-600'   },
+    unknown: { icon: <CheckCircle2 size={24} />, bg: 'bg-green-100 text-green-600',  label: student.status === 'Active' ? 'EM DIA' : 'PENDENTE', color: student.status === 'Active' ? 'text-green-600' : 'text-red-600' },
+  }[paymentStatus.state];
+
+  const statusSubtitle = {
+    ok:       `Vence em ${paymentStatus.diffDays} dia${paymentStatus.diffDays !== 1 ? 's' : ''} — ${new Date(student.nextPaymentDate! + 'T12:00:00').toLocaleDateString('pt-BR')}`,
+    upcoming: `Vence em ${paymentStatus.diffDays} dia${paymentStatus.diffDays !== 1 ? 's' : ''} — ${new Date(student.nextPaymentDate! + 'T12:00:00').toLocaleDateString('pt-BR')}`,
+    dueToday: `Vence hoje — ${new Date(student.nextPaymentDate! + 'T12:00:00').toLocaleDateString('pt-BR')}`,
+    overdue:  `Vencida há ${Math.abs(paymentStatus.diffDays)} dia${Math.abs(paymentStatus.diffDays) !== 1 ? 's' : ''} — ${new Date(student.nextPaymentDate! + 'T12:00:00').toLocaleDateString('pt-BR')}`,
+    unknown:  studentPayments[0] ? new Date(studentPayments[0].date).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) : 'N/A',
+  }[paymentStatus.state];
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-32 animate-in fade-in duration-700 px-2">
@@ -147,35 +185,59 @@ const PaymentView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
           )}
         </div>
 
-        {/* Informações Bancárias e Status */}
+        {/* Informações e Status */}
         <div className="space-y-6">
+          {/* STATUS DA MENSALIDADE */}
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm">
             <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 uppercase italic flex items-center gap-2">
               <DollarSign size={20} className="text-indigo-600" />
               Status da Mensalidade
             </h3>
 
-            <div className="flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-4">
-                <div className={`p-3 rounded-2xl ${student.status === 'Active' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                  {student.status === 'Active' ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
+            <div className={`p-6 rounded-3xl border ${
+              paymentStatus.state === 'overdue'  ? 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/20' :
+              paymentStatus.state === 'dueToday' || paymentStatus.state === 'upcoming' ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/20' :
+              'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800'
+            }`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className={`p-3 rounded-2xl ${statusConfig.bg}`}>
+                    {statusConfig.icon}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Situação Atual</p>
+                    <p className={`text-xl font-black uppercase italic ${statusConfig.color}`}>
+                      {statusConfig.label}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Situação Atual</p>
-                  <p className={`text-xl font-black uppercase italic ${student.status === 'Active' ? 'text-green-600' : 'text-red-600'}`}>
-                    {student.status === 'Active' ? 'EM DIA' : 'PENDENTE'}
+                <div className="text-right">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
+                    {paymentStatus.state === 'unknown' ? 'Última Ref.' : 'Vencimento'}
+                  </p>
+                  <p className={`text-xs font-bold ${paymentStatus.state === 'overdue' ? 'text-red-600' : paymentStatus.state === 'dueToday' || paymentStatus.state === 'upcoming' ? 'text-amber-600' : 'text-slate-700 dark:text-slate-200'}`}>
+                    {statusSubtitle}
                   </p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Última Ref.</p>
-                <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                  {studentPayments[0] ? new Date(studentPayments[0].date).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }) : 'N/A'}
-                </p>
-              </div>
+
+              {/* Plano + Valor */}
+              {planInfo && (
+                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CreditCard size={14} className="text-slate-400" />
+                    <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{planInfo.name}</span>
+                  </div>
+                  <span className="text-sm font-black text-indigo-600">
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(planInfo.price)}
+                    <span className="text-[9px] text-slate-400 font-bold">/mês</span>
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
+          {/* DADOS BANCÁRIOS */}
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm">
             <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 uppercase italic flex items-center gap-2">
               <CreditCard size={20} className="text-indigo-600" />
@@ -208,7 +270,7 @@ const PaymentView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
         </div>
       </div>
 
-      {/* Histórico de Pagamentos */}
+      {/* HISTÓRICO DE PAGAMENTOS */}
       <section className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden transition-all">
         <header className="px-8 py-6 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
           <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase italic tracking-tight flex items-center gap-2">
@@ -222,31 +284,69 @@ const PaymentView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
 
         <div className="overflow-x-auto">
           {studentPayments.length > 0 ? (
-            <table className="w-full text-left">
-              <thead className="bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-50 dark:border-slate-800">
-                <tr>
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Data do Pagamento</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Referência</th>
-                  <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Valor</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                {studentPayments.map(p => (
-                  <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                    <td className="px-8 py-5 text-sm font-bold text-slate-500 whitespace-nowrap">
-                      {new Date(p.date).toLocaleDateString('pt-BR')}
-                    </td>
-                    <td className="px-8 py-5">
-                      <p className="font-bold text-slate-800 dark:text-white text-sm leading-tight uppercase italic">{p.description}</p>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-1">{p.paymentMethod}</p>
-                    </td>
-                    <td className="px-8 py-5 text-right font-black text-sm text-green-600 whitespace-nowrap">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.amount)}
-                    </td>
+            <>
+              {/* Desktop table */}
+              <table className="w-full text-left hidden sm:table">
+                <thead className="bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-50 dark:border-slate-800">
+                  <tr>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Plano de Aula</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Valor</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Vencimento</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Registro</th>
                   </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+                  {studentPayments.map(p => (
+                    <tr key={p.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                      <td className="px-6 py-4">
+                        <p className="font-bold text-slate-800 dark:text-white text-sm leading-tight uppercase italic">{p.description}</p>
+                        {p.category && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-0.5">{p.category}</p>}
+                      </td>
+                      <td className="px-6 py-4 text-right font-black text-sm text-green-600 whitespace-nowrap">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.amount)}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-bold text-slate-500 whitespace-nowrap">
+                        {p.dueDate
+                          ? new Date(p.dueDate + 'T12:00:00').toLocaleDateString('pt-BR')
+                          : <span className="text-slate-300 italic text-[11px]">—</span>}
+                      </td>
+                      <td className="px-6 py-4 text-sm font-bold text-slate-500 whitespace-nowrap">
+                        {new Date(p.date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Mobile cards */}
+              <div className="sm:hidden divide-y divide-slate-50 dark:divide-slate-800">
+                {studentPayments.map(p => (
+                  <div key={p.id} className="px-6 py-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-bold text-slate-800 dark:text-white text-sm uppercase italic">{p.description}</p>
+                        {p.category && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter mt-0.5">{p.category}</p>}
+                      </div>
+                      <span className="font-black text-sm text-green-600 shrink-0 ml-3">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.amount)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      {p.dueDate && (
+                        <span className="flex items-center gap-1">
+                          <Calendar size={10} />
+                          Venc. {new Date(p.dueDate + 'T12:00:00').toLocaleDateString('pt-BR')}
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Clock size={10} />
+                        Reg. {new Date(p.date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                      </span>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </>
           ) : (
             <div className="py-20 text-center text-slate-400 space-y-4">
               <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center mx-auto">

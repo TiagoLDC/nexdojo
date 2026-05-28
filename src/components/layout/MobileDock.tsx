@@ -49,11 +49,13 @@ export const MobileDock: React.FC = () => {
           </>
         ) : (
           <>
-            {user.role === 'superuser' || user.role === 'admin' ? (
+            {/* DESATIVADO — controle financeiro simplificado (pagamento via /pay) */}
+            {/* {user.role === 'superuser' || user.role === 'admin' ? (
               <DockLink to="/finances" icon={<DollarSign size={22} />} label="Finanças" />
             ) : (
               <DockLink to="/calendar" icon={<Calendar size={22} />} label="Agenda" />
-            )}
+            )} */}
+            <DockLink to="/calendar" icon={<Calendar size={22} />} label="Agenda" />
             <Link
               to="/attendance"
               className="relative -top-6 w-16 h-16 bg-indigo-600 text-white rounded-[24px] flex items-center justify-center shadow-xl shadow-indigo-600/40 shrink-0"

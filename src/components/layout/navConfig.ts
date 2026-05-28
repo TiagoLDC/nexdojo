@@ -10,7 +10,8 @@ export interface NavItem {
 export const MAIN_NAV: NavItem[] = [
   { to: '/', labelKey: 'dashboard', icon: 'Home', roles: ['superuser', 'admin', 'instructor', 'staff', 'student'] },
   { to: '/attendance', labelKey: 'attendance', icon: 'CheckCircle2', roles: ['superuser', 'admin', 'instructor'] },
-  { to: '/finances', labelKey: 'finances', icon: 'DollarSign', roles: ['superuser', 'admin'] },
+  // DESATIVADO — controle financeiro simplificado (pagamento via /pay)
+  // { to: '/finances', labelKey: 'finances', icon: 'DollarSign', roles: ['superuser', 'admin'] },
 ];
 
 export const MANAGEMENT_NAV: NavItem[] = [

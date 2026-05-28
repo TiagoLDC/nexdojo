@@ -34,6 +34,7 @@ async function applySchemaPatches() {
   const patches = [
     `ALTER TABLE academy_plans ADD COLUMN free_age TINYINT(1) DEFAULT 0 COMMENT 'Se 1, ignora validação de idade na presença'`,
     `ALTER TABLE attendance_records ADD COLUMN age_warning TINYINT(1) DEFAULT 0 COMMENT 'Presença com divergência de idade confirmada manualmente'`,
+    `ALTER TABLE finance_transactions ADD COLUMN due_date DATE NULL COMMENT 'Data de vencimento da mensalidade registrada'`,
   ];
   for (const sql of patches) {
     try {

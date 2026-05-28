@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Student, Belt, StudentDocument, ClassTemplate, Academy, User } from '../types';
 import { studentService } from '@/features/students/services/studentService';
+import { financeService } from '@/features/finances/services/financeService';
 import { usersService } from '@/features/users/services/usersService';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
 import { advancePaymentDate } from '@/utils/paymentUtils';
@@ -149,10 +150,23 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
   const markPaymentAsPaid = async () => {
     if (!editingStudent?.id || !editingStudent.nextPaymentDate) return;
+    const oldDueDate = editingStudent.nextPaymentDate;
+    const plan = (academy.plans || []).find(p => p.id === editingStudent.planId);
     setIsMarkingPayment(true);
     try {
-      const nextDate = advancePaymentDate(editingStudent.nextPaymentDate);
+      const nextDate = advancePaymentDate(oldDueDate);
       const updated = await studentService.update(editingStudent.id, { nextPaymentDate: nextDate } as any);
+      await financeService.create(academy.id, {
+        description: plan?.name ?? 'Mensalidade',
+        amount: plan?.price ?? 0,
+        type: 'income',
+        category: 'Mensalidade',
+        date: new Date().toISOString().split('T')[0],
+        paymentMethod: 'Admin',
+        status: 'paid',
+        studentId: editingStudent.id,
+        dueDate: oldDueDate,
+      });
       setStudents(prev => prev.map(s => s.id === updated.id ? updated : s));
       setEditingStudent(prev => prev ? { ...prev, nextPaymentDate: nextDate } : prev);
       showNotification(

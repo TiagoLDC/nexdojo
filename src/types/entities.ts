@@ -309,6 +309,7 @@ export interface FinanceTransaction {
   paymentMethod: string;
   status: TransactionStatus;
   studentId?: string;
+  dueDate?: string;
 }
 
 // ── Recycle Bin ───────────────────────────────────────────────────────────

@@ -155,9 +155,11 @@ sys.exit(exit_code)
 ```
 
 **Como executar pelo agente:**
-1. Criar o script acima como `deploy_run.py` na raiz do projeto
-2. Executar via PowerShell: `cd D:\DEV_WEB\nexdojo; python deploy_run.py` (timeout 360000ms)
-3. Remover o arquivo após o deploy: `Remove-Item deploy_run.py`
+1. Criar o script acima como `deploy_run.py` na raiz do projeto usando a ferramenta Write
+2. Executar via **ferramenta PowerShell**: `cd D:\DEV_WEB\nexdojo; py deploy_run.py` (timeout 360000ms)
+   - Usar `py` (Windows Python Launcher) — `python` e `python3` não funcionam nesta máquina
+3. Remover o arquivo após o deploy via **ferramenta PowerShell**: `Remove-Item D:\DEV_WEB\nexdojo\deploy_run.py -Force`
+   - Usar caminho absoluto e `-Force` — NUNCA usar a ferramenta Bash para este passo (Remove-Item é PowerShell, não bash)
 
 **Decisões técnicas já resolvidas (não alterar sem necessidade):**
 - `docker compose down` antes do `up` é obrigatório — evita conflito de porta e rede

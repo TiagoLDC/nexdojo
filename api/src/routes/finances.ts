@@ -59,16 +59,16 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'staff'), async 
   });
   if (errors.length) { res.status(400).json({ error: errors[0] }); return; }
 
-  const { description, amount, type, category, date, payment_method, status = 'paid', student_id } = req.body;
+  const { description, amount, type, category, date, payment_method, status = 'paid', student_id, due_date } = req.body;
   const id = crypto.randomUUID();
 
   try {
     await pool.execute(
       `INSERT INTO finance_transactions
-         (id, academy_id, description, amount, type, category, date, payment_method, status, student_id)
-       VALUES (?,?,?,?,?,?,?,?,?,?)`,
+         (id, academy_id, description, amount, type, category, date, payment_method, status, student_id, due_date)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
       [id, academyId, description, amount, type, category ?? null,
-       date, payment_method ?? null, status, student_id ?? null]
+       date, payment_method ?? null, status, student_id ?? null, due_date ?? null]
     );
 
     const [rows] = await pool.execute<any[]>('SELECT * FROM finance_transactions WHERE id = ?', [id]);
@@ -93,7 +93,7 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser', 'staff'), asyn
   });
   if (errors.length) { res.status(400).json({ error: errors[0] }); return; }
 
-  const ALLOWED = ['description', 'amount', 'type', 'category', 'date', 'payment_method', 'status', 'student_id'];
+  const ALLOWED = ['description', 'amount', 'type', 'category', 'date', 'payment_method', 'status', 'student_id', 'due_date'];
   const fields = Object.keys(req.body).filter(k => ALLOWED.includes(k));
   if (!fields.length) { res.status(400).json({ error: 'Nenhum campo válido para atualizar' }); return; }
 
