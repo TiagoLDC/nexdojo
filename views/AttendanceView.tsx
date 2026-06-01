@@ -97,12 +97,17 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
   const [historySearch, setHistorySearch] = useState('');
   const [historyDateFilter, setHistoryDateFilter] = useState('');
 
+  // Retroactive date
+  const [selectedDate, setSelectedDate] = useState('');
+
   const html5QrCodeRef = useRef<any>(null);
   const scanTimeoutRef = useRef<any>(null);
   const lastScannedIdRef = useRef<string | null>(null);
   const isProcessingRef = useRef(false);
 
   const todayStr = new Date().toISOString().split('T')[0];
+  const activeDate = selectedDate || todayStr;
+  const isRetroactive = activeDate !== todayStr;
 
   const loadData = async () => {
     if (!academy) return;
@@ -110,7 +115,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
     try {
       const [studentsRes, attendancesRes] = await Promise.all([
         studentService.getAll(academy.id, { limit: 1000 }),
-        attendanceService.getRecords(academy.id, { dateFrom: todayStr, dateTo: todayStr, limit: 1000 } as any),
+        attendanceService.getRecords(academy.id, { dateFrom: activeDate, dateTo: activeDate, limit: 1000 } as any),
       ]);
       setStudents((studentsRes.data || []).filter((s: Student) => s.status === 'Active'));
       setTodayAttendances(attendancesRes.data || []);
@@ -123,7 +128,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
 
   useEffect(() => {
     loadData();
-  }, [academy]);
+  }, [academy, activeDate]);
 
   const loadHistory = async () => {
     if (!academy) return;
@@ -156,7 +161,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
     try {
       const record = await attendanceService.createRecord(academy.id, {
         studentId: student.id,
-        date: todayStr,
+        date: activeDate,
         overrideAge,
       });
       setTodayAttendances(prev => [...prev, record as AttendanceRecordWithName]);
@@ -379,7 +384,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
     };
   }, [isScannerOpen, isKioskMode, students]);
 
-  const todayLabel = new Date(todayStr + 'T12:00:00').toLocaleDateString(
+  const activeDateLabel = new Date(activeDate + 'T12:00:00').toLocaleDateString(
     language === 'pt' ? 'pt-BR' : language === 'es' ? 'es-ES' : 'en-US',
     { weekday: 'long', day: 'numeric', month: 'long' }
   );
@@ -395,8 +400,8 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
               Chamada
             </h1>
             <div className="flex items-center gap-2 mt-1">
-              <Calendar size={14} className="text-indigo-500" />
-              <p className="text-xs font-bold text-slate-400 capitalize">{todayLabel}</p>
+              <Calendar size={14} className={isRetroactive ? 'text-amber-500' : 'text-indigo-500'} />
+              <p className={`text-xs font-bold capitalize ${isRetroactive ? 'text-amber-500' : 'text-slate-400'}`}>{activeDateLabel}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -423,7 +428,48 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
             </button>
           </div>
         </div>
+
+        {/* Retroactive date picker */}
+        <div className="flex items-center gap-3 mt-1">
+          <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+            <Calendar size={12} />
+            Data retroativa
+          </label>
+          <input
+            type="date"
+            max={todayStr}
+            value={selectedDate}
+            onChange={e => setSelectedDate(e.target.value)}
+            className={`flex-1 rounded-xl px-3 py-2 text-xs font-bold outline-none border transition-all ${
+              isRetroactive
+                ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 focus:ring-2 focus:ring-amber-400'
+                : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-indigo-500'
+            }`}
+          />
+          {selectedDate && (
+            <button
+              onClick={() => setSelectedDate('')}
+              title="Voltar para hoje"
+              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all active:scale-95 shrink-0"
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
       </header>
+
+      {/* Retroactive warning banner */}
+      {isRetroactive && (
+        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 px-5 py-4 rounded-[24px] flex items-start gap-3 animate-in slide-in-from-top duration-300">
+          <AlertCircle size={18} className="shrink-0 mt-0.5 text-amber-500" />
+          <div>
+            <p className="font-black text-sm uppercase tracking-wide">Modo Retroativo Ativo</p>
+            <p className="text-xs font-medium mt-0.5 leading-snug">
+              As presenças registradas agora serão lançadas para <strong>{activeDateLabel}</strong>, não para hoje.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Success toast */}
       {showSuccess && (
@@ -454,7 +500,9 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
       <section>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest">Presentes hoje</h2>
+            <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest">
+              {isRetroactive ? `Presentes em ${new Date(activeDate + 'T12:00:00').toLocaleDateString(language === 'pt' ? 'pt-BR' : language === 'es' ? 'es-ES' : 'en-US', { day: '2-digit', month: '2-digit' })}` : 'Presentes hoje'}
+            </h2>
             <span className="bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 text-[10px] font-black px-2 py-0.5 rounded-full">
               {todayAttendances.length}
             </span>
@@ -645,6 +693,12 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
             <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-1 tracking-tight">Confirmar Presença?</h2>
             <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400 mb-2">{confirmingStudent.name}</p>
             <BeltBadge belt={confirmingStudent.belt} stripes={confirmingStudent.stripes} />
+            {isRetroactive && (
+              <div className="mt-4 flex items-center justify-center gap-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300 px-4 py-2.5 rounded-2xl">
+                <AlertCircle size={14} className="shrink-0 text-amber-500" />
+                <p className="text-xs font-black">Retroativo: {activeDateLabel}</p>
+              </div>
+            )}
 
             {checkInError && (
               <div className="flex items-start gap-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 p-3 rounded-2xl mt-4 text-left">

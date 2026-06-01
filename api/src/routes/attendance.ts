@@ -96,8 +96,14 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
     const _h         = _get('hour') % 24;
     const nowTimeStr = `${String(_h).padStart(2,'0')}:${String(_get('minute')).padStart(2,'0')}:${String(_get('second')).padStart(2,'0')}`;
     const nowMin     = _h * 60 + _get('minute');
+
+    // Data efetiva: usa req.body.date se fornecida e não for futura (chamada retroativa)
+    const bodyDate      = req.body.date && /^\d{4}-\d{2}-\d{2}$/.test(req.body.date) ? req.body.date : null;
+    const activeDate    = (bodyDate && bodyDate <= today) ? bodyDate : today;
+    const isRetroactive = activeDate !== today;
+
     // day_of_week no DB: 0=Dom,1=Seg,...,6=Sab (igual a getUTCDay sobre noon UTC da data brasileira)
-    const dow        = new Date(`${today}T12:00:00Z`).getUTCDay();
+    const dow        = new Date(`${activeDate}T12:00:00Z`).getUTCDay();
 
     if (!isLegacyFlow) {
       // ── 3. Aluno tem plano ───────────────────────────────────────────────
@@ -154,7 +160,7 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
       }
 
       // ── 6. Verificação de horário ────────────────────────────────────────
-      // Ignorada quando o plano tem "Horário Livre" (free_schedule = 1)
+      // Ignorada quando: plano tem "Horário Livre" (free_schedule=1) OU chamada retroativa
       const freeSchedule = plan.free_schedule === 1 || plan.free_schedule === true;
       const freeDays     = plan.free_days === 1 || plan.free_days === true;
 
@@ -167,7 +173,7 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
       let matchedSchedule: any = null;
       let durationMinutes = 60; // fallback quando não há horário fixo
 
-      if (!freeSchedule) {
+      if (!freeSchedule && !isRetroactive) {
         const [scheduleRows] = await pool.execute<any[]>(
           `SELECT id, start_time, end_time
            FROM academy_plan_schedules
@@ -201,21 +207,36 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
         const [sh, sm] = matchedSchedule.start_time.split(':').map(Number);
         const [eh, em] = matchedSchedule.end_time.split(':').map(Number);
         durationMinutes = (eh * 60 + em) - (sh * 60 + sm);
+      } else if (!freeSchedule && isRetroactive) {
+        // Retroativo: tenta pegar duração do horário do dia sem validar janela de tempo
+        const [scheduleRows] = await pool.execute<any[]>(
+          `SELECT id, start_time, end_time
+           FROM academy_plan_schedules
+           WHERE plan_id = ? AND day_of_week = ?`,
+          [student.plan_id, dow]
+        );
+        if (scheduleRows.length > 0) {
+          const s = scheduleRows[0] as any;
+          const [sh, sm] = s.start_time.split(':').map(Number);
+          const [eh, em] = s.end_time.split(':').map(Number);
+          durationMinutes = (eh * 60 + em) - (sh * 60 + sm);
+          matchedSchedule = s;
+        }
       }
 
-      // ── 7. Idempotência: já marcou presença hoje? ────────────────────────
+      // ── 7. Idempotência: já marcou presença nesta data? ──────────────────
       const [existingRows] = await pool.execute<any[]>(
         'SELECT id FROM attendance_records WHERE student_id = ? AND academy_id = ? AND date = ? AND class_id IS NULL',
-        [student_id, academyId, today]
+        [student_id, academyId, activeDate]
       );
       if (existingRows.length > 0) {
-        res.status(400).json({ error: 'Presença já registrada hoje.' });
+        res.status(400).json({ error: isRetroactive ? 'Presença já registrada nesta data.' : 'Presença já registrada hoje.' });
         return;
       }
 
       // ── 8. Verificação de frequência semanal ────────────────────────────
-      // Ignorada quando o plano tem "Dias Livres" (free_days = 1)
-      if (!freeDays && plan.classes_per_week) {
+      // Ignorada quando: plano tem "Dias Livres" (free_days=1) OU chamada retroativa
+      if (!freeDays && !isRetroactive && plan.classes_per_week) {
         // Início da semana atual (segunda-feira, ISO) — calculado a partir da data brasileira
         const [ty, tm, td] = today.split('-').map(Number);
         const daysBack = (dow + 6) % 7; // 0=Seg → 0, 1=Ter → 1, …, 6=Dom → 6
@@ -245,8 +266,8 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
              (id, academy_id, student_id, class_id, date, duration_minutes,
               check_in_time, matched_plan_id, matched_schedule_id, age_warning)
            VALUES (?,?,?,NULL,?,?,?,?,?,?)`,
-          [id, academyId, student_id, today, durationMinutes,
-           nowTimeStr, student.plan_id, matchedSchedule?.id ?? null, hasAgeWarning ? 1 : 0]
+          [id, academyId, student_id, activeDate, durationMinutes,
+           isRetroactive ? null : nowTimeStr, student.plan_id, matchedSchedule?.id ?? null, hasAgeWarning ? 1 : 0]
         );
 
         const hoursToAdd = Math.round(durationMinutes / 60);
@@ -256,7 +277,7 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
                total_hours     = total_hours + ?,
                last_attendance = GREATEST(COALESCE(last_attendance, ?), ?)
            WHERE id = ?`,
-          [hoursToAdd, today, today, student_id]
+          [hoursToAdd, activeDate, activeDate, student_id]
         );
 
         const [rows] = await conn.execute<any[]>('SELECT * FROM attendance_records WHERE id = ?', [id]);
