@@ -1986,7 +1986,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         const { readyForBelt, readyForStripe } = isReadyForGraduation(s, academy.graduationRules);
                         return readyForBelt || readyForStripe;
                       })
-                      .sort((a, b) => b.totalClasses - a.totalClasses)
+                      .sort((a, b) => (b.classesSinceGraduation ?? 0) - (a.classesSinceGraduation ?? 0))
                       .map(student => {
                         const { nextBelt, nextStripes } = getNextRank(student.belt, student.stripes);
 
@@ -2032,8 +2032,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                               </div>
                               <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
                                 <div className="shrink-0">
-                                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Treinos Atuais</p>
-                                  <p className="text-sm font-black text-white">{student.totalClasses} aulas</p>
+                                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Treinos nesta faixa</p>
+                                  <p className="text-sm font-black text-white">{student.classesSinceGraduation ?? 0} aulas</p>
                                 </div>
                                 <button
                                   onClick={() => handlePromoteStudent(student, nextBelt, nextStripes)}

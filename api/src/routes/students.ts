@@ -288,7 +288,7 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
 
       // Registra no histórico de graduações se admin alterou faixa ou grau
       if (isAdmin) {
-        const beltChanged   = req.body.belt    !== undefined && req.body.belt    !== existing[0].belt;
+        const beltChanged    = req.body.belt    !== undefined && req.body.belt    !== existing[0].belt;
         const stripesChanged = req.body.stripes !== undefined && Number(req.body.stripes) !== Number(existing[0].stripes);
         if (beltChanged || stripesChanged) {
           const gradDate = req.body.last_graduation_date
@@ -306,6 +306,11 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
               req.user!.userId,
               'Atualização manual',
             ]
+          );
+          // Zera o contador de aulas do ciclo atual para o novo grau/faixa
+          await pool.execute(
+            `UPDATE students SET classes_since_graduation = 0, hours_since_graduation = 0 WHERE id = ?`,
+            [req.params.id]
           );
         }
       }
