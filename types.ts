@@ -26,6 +26,19 @@ export interface StudentDocument {
   uploadedAt: string;
 }
 
+export interface GraduationGroupRules {
+  beltThreshold?: number;
+  stripeThreshold: number;
+}
+
+export interface GraduationRules {
+  mode: 'classes' | 'hours' | 'months';
+  kids?: GraduationGroupRules;
+  white?: GraduationGroupRules;
+  intermediate?: GraduationGroupRules;
+  black?: Pick<GraduationGroupRules, 'stripeThreshold'>;
+}
+
 export interface GraduationHistoryItem {
   id: string;
   previousBelt: Belt;
@@ -253,6 +266,7 @@ export interface Academy {
   planStatus?: 'Active' | 'Expired' | 'Trial' | 'Suspended' | 'Canceled';
   planExpirationDate?: string;
   paymentWarningDays?: number;
+  graduationRules?: GraduationRules;
   plans?: AcademyPlan[];
 }
 

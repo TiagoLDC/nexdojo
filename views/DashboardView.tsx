@@ -487,16 +487,17 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   };
 
   const graduationAlerts = useMemo(() => {
+    const rules = academy?.graduationRules ?? undefined;
     return students.filter(s => {
-      const { readyForBelt, readyForStripe } = isReadyForGraduation(s);
+      const { readyForBelt, readyForStripe } = isReadyForGraduation(s, rules);
       return readyForBelt || readyForStripe;
     }).map(s => {
-      const { readyForBelt } = isReadyForGraduation(s);
+      const { readyForBelt } = isReadyForGraduation(s, rules);
       let type: 'STRIPE' | 'BELT' = readyForBelt ? 'BELT' : 'STRIPE';
       let message = readyForBelt ? 'Elegível para Próxima Faixa' : 'Elegível para Próximo Grau';
       return { ...s, alertType: type, alertMessage: message };
     }).sort((a, b) => a.name.localeCompare(b.name));
-  }, [students]);
+  }, [students, academy]);
 
   const birthdaysToday = useMemo(() => {
     const today = new Date();

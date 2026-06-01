@@ -228,6 +228,7 @@ export interface UpdateAcademyDTO {
   bankAgency?: string;
   bankAccount?: string;
   paymentWarningDays?: number;
+  graduationRules?: import('./entities').GraduationRules | null;
   plans?: AcademyPlan[];
 }
 

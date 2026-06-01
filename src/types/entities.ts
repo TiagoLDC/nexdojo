@@ -23,6 +23,21 @@ export interface ClassSchedule {
   endTime: string;
 }
 
+// ── Graduation Rules ─────────────────────────────────────────────────────
+
+export interface GraduationGroupRules {
+  beltThreshold?: number;
+  stripeThreshold: number;
+}
+
+export interface GraduationRules {
+  mode: 'classes' | 'hours' | 'months';
+  kids?: GraduationGroupRules;
+  white?: GraduationGroupRules;
+  intermediate?: GraduationGroupRules;
+  black?: Pick<GraduationGroupRules, 'stripeThreshold'>;
+}
+
 // ── Documents & Graduation ────────────────────────────────────────────────
 
 export interface StudentDocument {
@@ -264,6 +279,7 @@ export interface Academy {
   planStatus?: PlanStatus;
   planExpirationDate?: string;
   paymentWarningDays?: number;
+  graduationRules?: GraduationRules;
   plans?: AcademyPlan[];
 }
 

@@ -1,5 +1,5 @@
 import { Belt } from '@/types';
-import type { Student } from '@/types';
+import type { Student, GraduationRules } from '@/types';
 import { BELT_ORDER } from './constants';
 
 export const calculateAge = (birthDate: string): number => {
@@ -15,47 +15,70 @@ export const calculateAge = (birthDate: string): number => {
 export const isKidsBelt = (belt: Belt): boolean =>
   [Belt.WHITE, Belt.GREY, Belt.YELLOW, Belt.ORANGE, Belt.GREEN].includes(belt);
 
+const monthsSince = (dateStr?: string): number => {
+  if (!dateStr) return 0;
+  const past = new Date(dateStr);
+  const now = new Date();
+  return (now.getFullYear() - past.getFullYear()) * 12 + (now.getMonth() - past.getMonth());
+};
+
+const getMetric = (student: Student, mode: GraduationRules['mode']): number => {
+  if (mode === 'hours') return student.totalHours ?? 0;
+  if (mode === 'months') return monthsSince(student.lastGraduationDate);
+  return student.totalClasses;
+};
+
 export const isReadyForGraduation = (
   student: Student,
+  rules?: GraduationRules,
 ): { readyForBelt: boolean; readyForStripe: boolean } => {
   const age = calculateAge(student.birthDate);
+  const mode = rules?.mode ?? 'classes';
+  const metric = getMetric(student, mode);
 
   if (age < 16 && isKidsBelt(student.belt)) {
+    const beltT  = rules?.kids?.beltThreshold  ?? 100;
+    const stripeT = rules?.kids?.stripeThreshold ?? 25;
     return {
-      readyForBelt: student.totalClasses >= 100,
+      readyForBelt: metric >= beltT,
       readyForStripe:
-        student.totalClasses >= 25 &&
-        Math.floor(student.totalClasses / 25) > student.stripes &&
+        metric >= stripeT &&
+        Math.floor(metric / stripeT) > student.stripes &&
         student.stripes < 4,
     };
   }
 
   if (student.belt === Belt.WHITE) {
+    const beltT  = rules?.white?.beltThreshold  ?? 80;
+    const stripeT = rules?.white?.stripeThreshold ?? 20;
     return {
-      readyForBelt: student.totalClasses >= 80,
+      readyForBelt: metric >= beltT,
       readyForStripe:
-        student.totalClasses >= 20 &&
-        Math.floor(student.totalClasses / 20) > student.stripes &&
+        metric >= stripeT &&
+        Math.floor(metric / stripeT) > student.stripes &&
         student.stripes < 4,
     };
   }
 
   if ([Belt.BLUE, Belt.PURPLE, Belt.BROWN].includes(student.belt)) {
+    const beltT  = rules?.intermediate?.beltThreshold  ?? 160;
+    const stripeT = rules?.intermediate?.stripeThreshold ?? 40;
     return {
-      readyForBelt: student.totalClasses >= 160,
+      readyForBelt: metric >= beltT,
       readyForStripe:
-        student.totalClasses >= 40 &&
-        Math.floor(student.totalClasses / 40) > student.stripes &&
+        metric >= stripeT &&
+        Math.floor(metric / stripeT) > student.stripes &&
         student.stripes < 4,
     };
   }
 
   if (student.belt === Belt.BLACK) {
+    const stripeT = rules?.black?.stripeThreshold ?? 300;
     return {
       readyForBelt: false,
       readyForStripe:
-        student.totalClasses >= 300 &&
-        Math.floor(student.totalClasses / 300) > student.stripes &&
+        metric >= stripeT &&
+        Math.floor(metric / stripeT) > student.stripes &&
         student.stripes < 6,
     };
   }
@@ -80,4 +103,33 @@ export const getNextRank = (
   }
 
   return { nextBelt: currentBelt, nextStripes: maxStripes };
+};
+
+export const getGraduationThreshold = (
+  student: Student,
+  rules?: GraduationRules,
+  type: 'belt' | 'stripe' = 'belt',
+): number => {
+  const age = calculateAge(student.birthDate);
+  const isKids = age < 16 && isKidsBelt(student.belt);
+
+  if (isKids) {
+    return type === 'belt'
+      ? (rules?.kids?.beltThreshold ?? 100)
+      : (rules?.kids?.stripeThreshold ?? 25);
+  }
+  if (student.belt === Belt.WHITE) {
+    return type === 'belt'
+      ? (rules?.white?.beltThreshold ?? 80)
+      : (rules?.white?.stripeThreshold ?? 20);
+  }
+  if ([Belt.BLUE, Belt.PURPLE, Belt.BROWN].includes(student.belt)) {
+    return type === 'belt'
+      ? (rules?.intermediate?.beltThreshold ?? 160)
+      : (rules?.intermediate?.stripeThreshold ?? 40);
+  }
+  if (student.belt === Belt.BLACK) {
+    return rules?.black?.stripeThreshold ?? 300;
+  }
+  return 0;
 };

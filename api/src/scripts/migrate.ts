@@ -52,6 +52,7 @@ const DDL_STATEMENTS = [
     plan_status ENUM('Active','Expired','Trial','Suspended','Canceled') DEFAULT 'Trial',
     plan_expiration_date DATE,
     payment_warning_days INT DEFAULT 5,
+    graduation_rules JSON DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`,
 

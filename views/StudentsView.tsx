@@ -591,7 +591,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
     let matchesReadiness = true;
     if (readinessFilter !== 'All') {
-      const { readyForBelt, readyForStripe } = isReadyForGraduation(s);
+      const { readyForBelt, readyForStripe } = isReadyForGraduation(s, academy.graduationRules);
       if (readinessFilter === 'Stripe') matchesReadiness = readyForStripe;
       if (readinessFilter === 'Belt') matchesReadiness = readyForBelt;
       if (readinessFilter === 'Any') matchesReadiness = readyForStripe || readyForBelt;
@@ -620,6 +620,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t.manageAccess}</p>
         </div>
         <div className="grid grid-cols-3 md:flex gap-2">
+          {(['admin', 'superuser'] as const).includes(user.role as any) && (
           <button
             onClick={() => setIsGraduationCenterOpen(true)}
             className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-4 py-3.5 rounded-2xl font-black flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 text-xs uppercase tracking-widest border border-indigo-100 dark:border-indigo-800"
@@ -627,6 +628,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
             <Trophy size={18} />
             {t.graduationJourney.split(' ')[0]}
           </button>
+          )}
           <button
             onClick={exportStudentsToCSV}
             className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 px-4 py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 text-xs uppercase tracking-widest"
@@ -746,7 +748,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
           ) : filtered.length > 0 ? (
             filtered.map(student => {
               const contactPhone = student.phone || student.guardianPhone;
-              const { readyForBelt, readyForStripe } = isReadyForGraduation(student);
+              const { readyForBelt, readyForStripe } = isReadyForGraduation(student, academy.graduationRules);
               const effectiveLimit = getEffectiveAbsenceLimit(student);
 
               return (
@@ -931,7 +933,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                           <div className="flex items-center gap-2">
                             <div className="font-bold text-slate-800 dark:text-slate-100">{student.name}</div>
                             {(() => {
-                              const { readyForBelt, readyForStripe } = isReadyForGraduation(student);
+                              const { readyForBelt, readyForStripe } = isReadyForGraduation(student, academy.graduationRules);
                               const effectiveLimit = getEffectiveAbsenceLimit(student);
                               const isAbsentee = student.absentCount >= effectiveLimit;
 
@@ -1639,8 +1641,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                               : "bg-slate-100 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700/50 text-slate-400 cursor-not-allowed"
                           }`}
                         />
-                        {(() => {
-                           const { readyForBelt, readyForStripe } = isReadyForGraduation(editingStudent);
+                        {(['admin', 'superuser'] as const).includes(user.role as any) && (() => {
+                           const { readyForBelt, readyForStripe } = isReadyForGraduation(editingStudent, academy.graduationRules);
                            if (readyForBelt || readyForStripe) {
                              const { nextBelt, nextStripes } = getNextRank(editingStudent.belt, editingStudent.stripes);
                              return (
@@ -1900,13 +1902,13 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   <div className="bg-white/5 border border-white/10 rounded-[32px] p-6 text-center">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Prontos p/ Grau</p>
                     <p className="text-3xl font-black text-amber-500 leading-none">
-                      {students.filter(s => isReadyForGraduation(s).readyForStripe).length}
+                      {students.filter(s => isReadyForGraduation(s, academy.graduationRules).readyForStripe).length}
                     </p>
                   </div>
                   <div className="bg-white/5 border border-white/10 rounded-[32px] p-6 text-center">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Prontos p/ Faixa</p>
                     <p className="text-3xl font-black text-indigo-500 leading-none">
-                      {students.filter(s => isReadyForGraduation(s).readyForBelt).length}
+                      {students.filter(s => isReadyForGraduation(s, academy.graduationRules).readyForBelt).length}
                     </p>
                   </div>
                   <div className="bg-white/5 border border-white/10 rounded-[32px] p-6 text-center">
@@ -1942,7 +1944,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       <button
                         onClick={() => {
                           const ready = students.filter(s => {
-                            const { readyForBelt, readyForStripe } = isReadyForGraduation(s);
+                            const { readyForBelt, readyForStripe } = isReadyForGraduation(s, academy.graduationRules);
                             return readyForBelt || readyForStripe;
                           });
                           const names = ready.map(s => s.name).join('\n');
@@ -1955,7 +1957,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       </button>
                       <button
                         onClick={() => {
-                          const ready = students.filter(s => isReadyForGraduation(s).readyForBelt);
+                          const ready = students.filter(s => isReadyForGraduation(s, academy.graduationRules).readyForBelt);
                           const names = ready.map(s => s.name).join('\n');
                           navigator.clipboard.writeText(names);
                           showNotification(`${ready.length} nomes de Faixa copiados!`);
@@ -1966,7 +1968,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       </button>
                       <button
                         onClick={() => {
-                          const ready = students.filter(s => isReadyForGraduation(s).readyForStripe);
+                          const ready = students.filter(s => isReadyForGraduation(s, academy.graduationRules).readyForStripe);
                           const names = ready.map(s => s.name).join('\n');
                           navigator.clipboard.writeText(names);
                           showNotification(`${ready.length} nomes de Graus copiados!`);
@@ -1981,7 +1983,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {students
                       .filter(s => {
-                        const { readyForBelt, readyForStripe } = isReadyForGraduation(s);
+                        const { readyForBelt, readyForStripe } = isReadyForGraduation(s, academy.graduationRules);
                         return readyForBelt || readyForStripe;
                       })
                       .sort((a, b) => b.totalClasses - a.totalClasses)
@@ -2047,7 +2049,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       })}
 
                     {students.filter(s => {
-                      const { readyForBelt, readyForStripe } = isReadyForGraduation(s);
+                      const { readyForBelt, readyForStripe } = isReadyForGraduation(s, academy.graduationRules);
                       return readyForBelt || readyForStripe;
                     }).length === 0 && (
                       <div className="col-span-full py-20 text-center text-slate-500">

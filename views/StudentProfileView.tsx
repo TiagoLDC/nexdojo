@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User, Student, Academy, Belt, StudentDocument, AcademyPlan } from '../types';
 import { studentService } from '@/features/students/services/studentService';
 import { plansService } from '@/features/plans/services/plansService';
+import { getGraduationThreshold } from '../services/graduation';
 import {
   User as UserIcon,
   MapPin,
@@ -28,7 +29,8 @@ import {
   Minus,
   Printer,
   Share2,
-  TrendingUp
+  TrendingUp,
+  ChevronRight
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
@@ -357,10 +359,22 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
             <div className="bg-indigo-600 p-8 rounded-[40px] text-white shadow-xl shadow-indigo-600/20 relative overflow-hidden group">
               <div className="relative z-10">
                 <h4 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 mb-2">Próxima Graduação</h4>
-                <p className="text-3xl font-black italic tracking-tighter">
-                  {Math.max(0, (profile.belt === Belt.WHITE ? 80 : 160) - profile.totalClasses)} <span className="text-sm">Aulas</span>
-                </p>
-                <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest mt-1">Estimativa para o próximo passo</p>
+                {(() => {
+                  const rules = academy.graduationRules;
+                  const mode = rules?.mode ?? 'classes';
+                  const threshold = getGraduationThreshold(profile, rules, 'belt');
+                  const current = mode === 'hours' ? (profile.totalHours ?? 0) : mode === 'months' ? 0 : profile.totalClasses;
+                  const unit = mode === 'hours' ? 'Horas' : mode === 'months' ? 'Meses' : 'Treinos';
+                  const remaining = Math.max(0, threshold - current);
+                  return (
+                    <>
+                      <p className="text-3xl font-black italic tracking-tighter">
+                        {remaining} <span className="text-sm">{unit}</span>
+                      </p>
+                      <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest mt-1">Estimativa para o próximo passo</p>
+                    </>
+                  );
+                })()}
               </div>
               <TrendingUp size={100} className="absolute -bottom-6 -right-6 text-white/10 group-hover:scale-110 transition-transform duration-700" />
             </div>
@@ -820,7 +834,42 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
             )}
           </section>
 
-          {/* Seção 7: Observações Médicas & Status */}
+          {/* Seção 7: Histórico de Graduações */}
+          <section className="space-y-6 pt-12 border-t border-slate-100 dark:border-slate-800">
+            <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2 mb-8">
+              <GraduationCap size={16} /> HISTÓRICO DE GRADUAÇÕES
+            </h3>
+            {(profile.graduationHistory && profile.graduationHistory.length > 0) ? (
+              <div className="space-y-3">
+                {[...(profile.graduationHistory)].reverse().map((item, idx) => (
+                  <div key={item.id ?? idx} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl px-4 py-3 border border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase text-white shrink-0 ${BELT_COLORS[item.previousBelt]?.split(' ')[0] ?? 'bg-slate-400'}`}>
+                        {item.previousBelt} {item.previousStripes > 0 ? `${item.previousStripes}°` : ''}
+                      </span>
+                      <ChevronRight size={14} className="text-slate-400 shrink-0" />
+                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase text-white shrink-0 ${BELT_COLORS[item.newBelt]?.split(' ')[0] ?? 'bg-slate-400'}`}>
+                        {item.newBelt} {item.newStripes > 0 ? `${item.newStripes}°` : ''}
+                      </span>
+                      {item.notes && (
+                        <span className="text-[10px] text-slate-400 italic truncate ml-1">{item.notes}</span>
+                      )}
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-400 shrink-0 ml-auto">
+                      {item.date ? new Date(item.date).toLocaleDateString('pt-BR') : '—'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-slate-50 dark:bg-slate-800/30 border border-dashed border-slate-200 dark:border-slate-700 rounded-3xl p-6 flex items-center gap-4 text-slate-400">
+                <GraduationCap size={20} className="shrink-0 opacity-40" />
+                <p className="text-xs font-bold uppercase tracking-widest opacity-60">Nenhuma graduação registrada ainda.</p>
+              </div>
+            )}
+          </section>
+
+          {/* Seção 8: Observações Médicas & Status */}
           <section className="space-y-8 pt-12 border-t border-slate-100 dark:border-slate-800">
             <h3 className="text-xs font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2 mb-8">
               <Heart size={16} /> OBSERVAÇÕES MÉDICAS

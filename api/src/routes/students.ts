@@ -250,7 +250,7 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
 
   try {
     const [existing] = await pool.execute<any[]>(
-      'SELECT id, user_id, name, email FROM students WHERE id = ? AND academy_id = ?',
+      'SELECT id, user_id, name, email, belt, stripes FROM students WHERE id = ? AND academy_id = ?',
       [req.params.id, academyId]
     );
     if (!existing[0]) { res.status(404).json({ error: 'Aluno não encontrado' }); return; }
@@ -285,6 +285,30 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
         `UPDATE students SET ${set} WHERE id = ? AND academy_id = ?`,
         [...values, req.params.id, academyId]
       );
+
+      // Registra no histórico de graduações se admin alterou faixa ou grau
+      if (isAdmin) {
+        const beltChanged   = req.body.belt    !== undefined && req.body.belt    !== existing[0].belt;
+        const stripesChanged = req.body.stripes !== undefined && Number(req.body.stripes) !== Number(existing[0].stripes);
+        if (beltChanged || stripesChanged) {
+          const gradDate = req.body.last_graduation_date
+            ?? new Date().toISOString().split('T')[0];
+          await pool.execute(
+            `INSERT INTO graduation_history (id, student_id, previous_belt, new_belt, previous_stripes, new_stripes, date, instructor_id, notes)
+             VALUES (?,?,?,?,?,?,?,?,?)`,
+            [
+              crypto.randomUUID(), req.params.id,
+              existing[0].belt,
+              req.body.belt    ?? existing[0].belt,
+              existing[0].stripes,
+              req.body.stripes ?? existing[0].stripes,
+              gradDate,
+              req.user!.userId,
+              'Atualização manual',
+            ]
+          );
+        }
+      }
 
       // Ao ativar aluno, ativa também o usuário vinculado
       if (req.body.status === 'Active') {
@@ -424,7 +448,7 @@ router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), async (req
 });
 
 // POST /api/students/:id/graduate
-router.post('/:id/graduate', requireAuth, requireRole('admin', 'superuser', 'instructor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.post('/:id/graduate', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 

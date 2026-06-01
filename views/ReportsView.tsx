@@ -94,7 +94,7 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =>
     
     // Graduation Stats
     const readyStudents = students.filter(s => {
-      const { readyForBelt, readyForStripe } = isReadyForGraduation(s);
+      const { readyForBelt, readyForStripe } = isReadyForGraduation(s, academy.graduationRules);
       return readyForBelt || readyForStripe;
     }).length;
 
@@ -149,7 +149,7 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =>
     return students
       .filter(s => s.status === 'Active')
       .map(s => {
-        const { readyForBelt, readyForStripe } = isReadyForGraduation(s);
+        const { readyForBelt, readyForStripe } = isReadyForGraduation(s, academy.graduationRules);
         return { 
           ...s, 
           readyForBelt, 
@@ -163,8 +163,8 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =>
 
   // Graduation Data
   const graduationStats = useMemo(() => {
-    const readyForBelt = students.filter(s => isReadyForGraduation(s).readyForBelt).length;
-    const readyForStripe = students.filter(s => isReadyForGraduation(s).readyForStripe).length;
+    const readyForBelt = students.filter(s => isReadyForGraduation(s, academy.graduationRules).readyForBelt).length;
+    const readyForStripe = students.filter(s => isReadyForGraduation(s, academy.graduationRules).readyForStripe).length;
     
     return [
       { name: 'Pronto p/ Faixa', value: readyForBelt, color: '#4f46e5' },

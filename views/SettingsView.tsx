@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Academy, User, Student, Instructor, Staff, AcademyPlan, Language } from '../types';
+import { Academy, User, Student, Instructor, Staff, AcademyPlan, Language, GraduationRules } from '../types';
 import { Settings, Bell, Shield, LogOut, ChevronRight, User as UserIcon, Palette, MapPin, Moon, Sun, X, CreditCard, Wallet, Loader2, Save, CheckCircle2, Crown, Zap, Star as StarIcon, Award, Trophy, Book, Users, Plus, Trash2, Globe, AlertTriangle, Smartphone, Check, Briefcase, Clock, ToggleLeft, ToggleRight } from 'lucide-react';
 import { fetchAddressByCep, maskCEP, maskPhone } from '../services/cep';
 import { PrivacyValue } from '../components/PrivacyValue';
@@ -73,6 +73,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   const { t, showNotification } = useTranslation();
   const [isEditingAcademy, setIsEditingAcademy] = React.useState(false);
   const [isEditingNotifications, setIsEditingNotifications] = React.useState(false);
+  const [isEditingGraduation, setIsEditingGraduation] = React.useState(false);
   const [isEditingPayment, setIsEditingPayment] = React.useState(false);
   const [isEditingProfile, setIsEditingProfile] = React.useState(false);
   const [isEditingPlans, setIsEditingPlans] = useState(false);
@@ -91,6 +92,18 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   const [showPlanNotification, setShowPlanNotification] = useState(false);
   const [isSavingAcademy, setIsSavingAcademy] = useState(false);
   const [editAcademy, setEditAcademy] = React.useState<Academy>(academy);
+
+  const defaultGraduationRules = (): GraduationRules => ({
+    mode: 'classes',
+    kids:         { beltThreshold: 100, stripeThreshold: 25 },
+    white:        { beltThreshold: 80,  stripeThreshold: 20 },
+    intermediate: { beltThreshold: 160, stripeThreshold: 40 },
+    black:        { stripeThreshold: 300 },
+  });
+
+  const [editGraduationRules, setEditGraduationRules] = useState<GraduationRules>(
+    academy.graduationRules ?? defaultGraduationRules()
+  );
   const logoInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -225,6 +238,21 @@ const SettingsView: React.FC<SettingsViewProps> = ({
     } catch (e) {
       console.error(e);
       showNotification("Erro ao salvar notificações. Tente novamente.", 'error');
+    } finally {
+      setIsSavingAcademy(false);
+    }
+  };
+
+  const handleSaveGraduation = async () => {
+    setIsSavingAcademy(true);
+    try {
+      const saved = await academyService.update(academy.id, { graduationRules: editGraduationRules });
+      onUpdateAcademy({ ...academy, ...saved });
+      setIsEditingGraduation(false);
+      showNotification('Critérios de graduação salvos!');
+    } catch (e) {
+      console.error(e);
+      showNotification('Erro ao salvar critérios. Tente novamente.', 'error');
     } finally {
       setIsSavingAcademy(false);
     }
@@ -693,6 +721,118 @@ const SettingsView: React.FC<SettingsViewProps> = ({
               </button>
               <button
                 onClick={() => setIsEditingNotifications(false)}
+                disabled={isSavingAcademy}
+                className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-4 rounded-2xl active:scale-95 transition-all text-sm disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Critérios de Graduação */}
+      {isEditingGraduation && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[200] flex items-center justify-center p-4 sm:p-6">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-[95vw] sm:max-w-lg rounded-[28px] md:rounded-[32px] p-5 md:p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-black text-slate-800 dark:text-white tracking-tight uppercase italic flex items-center gap-2">
+                <Trophy size={20} className="text-indigo-500" /> Critérios de Graduação
+              </h2>
+              <button onClick={() => setIsEditingGraduation(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <X size={18} className="text-slate-500" />
+              </button>
+            </div>
+
+            {/* Modo */}
+            <div className="mb-6">
+              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Métrica de Avaliação</label>
+              <div className="grid grid-cols-3 gap-2">
+                {(['classes', 'hours', 'months'] as const).map(m => (
+                  <button
+                    key={m}
+                    onClick={() => setEditGraduationRules(r => ({ ...r, mode: m }))}
+                    className={`py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${
+                      editGraduationRules.mode === m
+                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-600/20'
+                        : 'border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:border-indigo-300'
+                    }`}
+                  >
+                    {m === 'classes' ? 'Treinos' : m === 'hours' ? 'Horas' : 'Meses'}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[9px] text-slate-400 mt-2 ml-1 italic">
+                {editGraduationRules.mode === 'classes' && 'Critério baseado no número de presenças registradas.'}
+                {editGraduationRules.mode === 'hours'   && 'Critério baseado no total de horas treinadas (calculado automaticamente via duração das aulas).'}
+                {editGraduationRules.mode === 'months'  && 'Critério baseado nos meses desde a última graduação.'}
+              </p>
+            </div>
+
+            {/* Tabela de thresholds */}
+            {(() => {
+              const unit = editGraduationRules.mode === 'classes' ? 'Treinos' : editGraduationRules.mode === 'hours' ? 'Horas' : 'Meses';
+              const groups: Array<{
+                key: 'kids' | 'white' | 'intermediate' | 'black';
+                label: string;
+                hasBelt: boolean;
+                defaults: { belt: number; stripe: number };
+              }> = [
+                { key: 'kids',         label: 'Infantil (< 16 anos)',          hasBelt: true,  defaults: { belt: 100, stripe: 25 } },
+                { key: 'white',        label: 'Branca (adulto)',                hasBelt: true,  defaults: { belt: 80,  stripe: 20 } },
+                { key: 'intermediate', label: 'Intermediárias (Azul/Roxa/Marrom)', hasBelt: true, defaults: { belt: 160, stripe: 40 } },
+                { key: 'black',        label: 'Faixa Preta',                   hasBelt: false, defaults: { belt: 0,   stripe: 300 } },
+              ];
+              return (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-2 mb-1">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Grupo</span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Grau ({unit})</span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Faixa ({unit})</span>
+                  </div>
+                  {groups.map(g => (
+                    <div key={g.key} className="grid grid-cols-3 gap-2 items-center">
+                      <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">{g.label}</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={(editGraduationRules[g.key] as any)?.stripeThreshold ?? g.defaults.stripe}
+                        onChange={e => setEditGraduationRules(r => ({
+                          ...r,
+                          [g.key]: { ...(r[g.key] as any), stripeThreshold: parseInt(e.target.value) || 1 },
+                        }))}
+                        className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
+                      />
+                      {g.hasBelt ? (
+                        <input
+                          type="number"
+                          min="1"
+                          value={(editGraduationRules[g.key] as any)?.beltThreshold ?? g.defaults.belt}
+                          onChange={e => setEditGraduationRules(r => ({
+                            ...r,
+                            [g.key]: { ...(r[g.key] as any), beltThreshold: parseInt(e.target.value) || 1 },
+                          }))}
+                          className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
+                        />
+                      ) : (
+                        <div className="bg-slate-50 dark:bg-slate-800 rounded-xl px-3 py-2.5 text-center text-[10px] text-slate-400 italic">—</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            <div className="flex flex-col gap-2 mt-8">
+              <button
+                onClick={handleSaveGraduation}
+                disabled={isSavingAcademy}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-600/20 active:scale-95 transition-all text-sm uppercase tracking-widest"
+              >
+                {isSavingAcademy ? 'Salvando...' : 'Salvar Critérios'}
+              </button>
+              <button
+                onClick={() => setIsEditingGraduation(false)}
                 disabled={isSavingAcademy}
                 className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-4 rounded-2xl active:scale-95 transition-all text-sm disabled:opacity-50"
               >
@@ -1741,18 +1881,34 @@ const SettingsView: React.FC<SettingsViewProps> = ({
         <section className="space-y-4">
           <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-4">Preferências do Sistema</h2>
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm divide-y divide-slate-50 dark:divide-slate-800 transition-colors">
-            <SettingItem 
-              icon={<Bell className="text-amber-500" />} 
-              title="Notificações Automáticas" 
-              subtitle={user.role === 'admin' 
+            <SettingItem
+              icon={<Bell className="text-amber-500" />}
+              title="Notificações Automáticas"
+              subtitle={user.role === 'admin'
                 ? `${academy.absenceLimit || 3} Faltas / Aviso de Mensalidade: ${academy.paymentWarningDays || 5} Dias`
                 : `${academy.absenceLimit || 3} Faltas`
-              } 
+              }
               onClick={() => {
                 setEditAcademy(academy);
                 setIsEditingNotifications(true);
               }}
             />
+            {['admin', 'superuser'].includes(user.role) && (
+              <SettingItem
+                icon={<Trophy className="text-indigo-500" />}
+                title="Critérios de Graduação"
+                subtitle={(() => {
+                  const r = academy.graduationRules;
+                  if (!r) return 'Padrão do sistema (treinos)';
+                  const modeLabel = r.mode === 'hours' ? 'horas' : r.mode === 'months' ? 'meses' : 'treinos';
+                  return `Por ${modeLabel} · Branca: ${r.white?.beltThreshold ?? 80} · Intermediária: ${r.intermediate?.beltThreshold ?? 160}`;
+                })()}
+                onClick={() => {
+                  setEditGraduationRules(academy.graduationRules ?? defaultGraduationRules());
+                  setIsEditingGraduation(true);
+                }}
+              />
+            )}
           </div>
         </section>
       )}
