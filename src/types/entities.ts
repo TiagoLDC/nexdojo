@@ -96,6 +96,8 @@ export interface Student {
   documents?: StudentDocument[];
   totalClasses: number;
   totalHours: number;
+  classesSinceGraduation: number;
+  hoursSinceGraduation: number;
   lastAttendance?: string;
   absentCount: number;
   status: StudentStatus;

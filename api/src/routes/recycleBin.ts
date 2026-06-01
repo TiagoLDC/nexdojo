@@ -68,9 +68,10 @@ router.post('/:id/restore', requireAuth, requireRole('admin', 'superuser'), asyn
           cpf, rg, weight, height, blood_type, emergency_contact, emergency_phone,
           cep, address, address_number, guardian_name, guardian_phone, guardian_email,
           guardian_cpf, guardian_rg, guardian_relation, guardian_profession,
-          medical_notes, total_classes, total_hours, last_attendance, absent_count,
+          medical_notes, total_classes, total_hours, classes_since_graduation, hours_since_graduation,
+          last_attendance, absent_count,
           status, join_date, last_graduation_date, plan_id, next_payment_date, absence_limit
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [
           student.id, student.academy_id, student.user_id ?? null, student.name, student.email ?? null,
           student.phone ?? null, student.belt ?? 'Branca', student.stripes ?? 0,
@@ -82,6 +83,7 @@ router.post('/:id/restore', requireAuth, requireRole('admin', 'superuser'), asyn
           student.guardian_cpf ?? null, student.guardian_rg ?? null, student.guardian_relation ?? null,
           student.guardian_profession ?? null, student.medical_notes ?? null,
           student.total_classes ?? 0, student.total_hours ?? 0,
+          student.classes_since_graduation ?? 0, student.hours_since_graduation ?? 0,
           student.last_attendance ?? null, student.absent_count ?? 0,
           student.status ?? 'Active', student.join_date ?? null, student.last_graduation_date ?? null,
           student.plan_id ?? null, student.next_payment_date ?? null, student.absence_limit ?? null,

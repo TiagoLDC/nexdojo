@@ -138,6 +138,8 @@ const DDL_STATEMENTS = [
     medical_notes TEXT,
     total_classes INT DEFAULT 0,
     total_hours INT DEFAULT 0,
+    classes_since_graduation INT DEFAULT 0,
+    hours_since_graduation INT DEFAULT 0,
     last_attendance DATE,
     absent_count INT DEFAULT 0,
     status ENUM('Active','Inactive','Dropped','Pending') DEFAULT 'Active',

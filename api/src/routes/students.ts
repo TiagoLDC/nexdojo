@@ -481,7 +481,10 @@ router.post('/:id/graduate', requireAuth, requireRole('admin', 'superuser'), asy
     );
 
     await pool.execute(
-      'UPDATE students SET belt = ?, stripes = ?, last_graduation_date = ? WHERE id = ?',
+      `UPDATE students
+       SET belt = ?, stripes = ?, last_graduation_date = ?,
+           classes_since_graduation = 0, hours_since_graduation = 0
+       WHERE id = ?`,
       [new_belt, new_stripes, date, req.params.id]
     );
 

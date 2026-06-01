@@ -273,11 +273,13 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
         const hoursToAdd = Math.round(durationMinutes / 60);
         await conn.execute(
           `UPDATE students
-           SET total_classes   = total_classes + 1,
-               total_hours     = total_hours + ?,
-               last_attendance = GREATEST(COALESCE(last_attendance, ?), ?)
+           SET total_classes              = total_classes + 1,
+               total_hours                = total_hours + ?,
+               classes_since_graduation   = classes_since_graduation + 1,
+               hours_since_graduation     = hours_since_graduation + ?,
+               last_attendance            = GREATEST(COALESCE(last_attendance, ?), ?)
            WHERE id = ?`,
-          [hoursToAdd, activeDate, activeDate, student_id]
+          [hoursToAdd, hoursToAdd, activeDate, activeDate, student_id]
         );
 
         const [rows] = await conn.execute<any[]>('SELECT * FROM attendance_records WHERE id = ?', [id]);
@@ -302,11 +304,13 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
         const hoursToAdd = duration_minutes ? Math.round(Number(duration_minutes) / 60) : 0;
         await conn.execute(
           `UPDATE students
-           SET total_classes   = total_classes + 1,
-               total_hours     = total_hours + ?,
-               last_attendance = GREATEST(COALESCE(last_attendance, ?), ?)
+           SET total_classes              = total_classes + 1,
+               total_hours                = total_hours + ?,
+               classes_since_graduation   = classes_since_graduation + 1,
+               hours_since_graduation     = hours_since_graduation + ?,
+               last_attendance            = GREATEST(COALESCE(last_attendance, ?), ?)
            WHERE id = ?`,
-          [hoursToAdd, date, date, student_id]
+          [hoursToAdd, hoursToAdd, date, date, student_id]
         );
 
         const [rows] = await conn.execute<any[]>('SELECT * FROM attendance_records WHERE id = ?', [id]);
@@ -338,10 +342,12 @@ router.delete('/:id', requireAuth, requireRole('admin', 'superuser', 'instructor
     await withTransaction(async (conn) => {
       await conn.execute(
         `UPDATE students
-         SET total_classes = GREATEST(0, total_classes - 1),
-             total_hours   = GREATEST(0, total_hours - ?)
+         SET total_classes            = GREATEST(0, total_classes - 1),
+             total_hours              = GREATEST(0, total_hours - ?),
+             classes_since_graduation = GREATEST(0, classes_since_graduation - 1),
+             hours_since_graduation   = GREATEST(0, hours_since_graduation - ?)
          WHERE id = ?`,
-        [hoursToRemove, record.student_id]
+        [hoursToRemove, hoursToRemove, record.student_id]
       );
       await conn.execute('DELETE FROM attendance_records WHERE id = ?', [req.params.id]);
     });
