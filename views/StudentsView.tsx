@@ -60,6 +60,13 @@ import { BELT_COLORS } from '../constants';
 
 // Funções utilitárias para máscaras removidas daqui e movidas para services/cep.ts
 
+const fmtDate = (d?: string | null) => {
+  if (!d) return '—';
+  const part = d.split('T')[0];
+  const [y, m, day] = part.split('-');
+  return `${day}/${m}/${y}`;
+};
+
 /**
  * Função para redimensionar e comprimir imagem Base64
  */
@@ -1683,7 +1690,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                                     <span className="text-[10px] font-black text-emerald-600 uppercase italic">{h.newBelt}</span>
                                   </div>
                                   <p className="text-[9px] text-slate-400 font-bold mt-0.5">
-                                    {h.newStripes}º Grau • {new Date(h.date).toLocaleDateString()}
+                                    {h.newStripes}º Grau • {fmtDate(h.date)}
                                   </p>
                                 </div>
                               </div>
@@ -2095,7 +2102,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-[10px] font-medium text-slate-500">{new Date(history.date).toLocaleDateString()}</p>
+                            <p className="text-[10px] font-medium text-slate-500">{fmtDate(history.date)}</p>
                           </div>
                         </div>
                       ))}

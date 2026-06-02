@@ -28,9 +28,9 @@ const monthsSince = (dateStr?: string): number => {
 };
 
 const getMetric = (student: Student, mode: GraduationRules['mode']): number => {
-  if (mode === 'hours') return student.totalHours ?? 0;
+  if (mode === 'hours') return student.hoursSinceGraduation ?? 0;
   if (mode === 'months') return monthsSince(student.lastGraduationDate);
-  return student.totalClasses;
+  return student.classesSinceGraduation ?? 0;
 };
 
 export const isReadyForGraduation = (student: Student, rules?: GraduationRules) => {

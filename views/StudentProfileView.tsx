@@ -36,6 +36,13 @@ import { QRCodeSVG } from 'qrcode.react';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
 import { BELT_COLORS } from '../constants';
 
+const fmtDate = (d?: string | null) => {
+  if (!d) return '—';
+  const part = d.split('T')[0];
+  const [y, m, day] = part.split('-');
+  return `${day}/${m}/${y}`;
+};
+
 import {
   Radar,
   RadarChart,
@@ -858,7 +865,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
                       )}
                     </div>
                     <span className="text-[10px] font-bold text-slate-400 shrink-0 ml-auto">
-                      {item.date ? new Date(item.date).toLocaleDateString('pt-BR') : '—'}
+                      {fmtDate(item.date)}
                     </span>
                   </div>
                 ))}
