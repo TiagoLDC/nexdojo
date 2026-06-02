@@ -37,49 +37,37 @@ export const isReadyForGraduation = (
   const metric = getMetric(student, mode);
 
   if (age < 16 && isKidsBelt(student.belt)) {
-    const beltT  = rules?.kids?.beltThreshold  ?? 100;
+    const beltT   = rules?.kids?.beltThreshold  ?? 100;
     const stripeT = rules?.kids?.stripeThreshold ?? 25;
     return {
-      readyForBelt: metric >= beltT,
-      readyForStripe:
-        metric >= stripeT &&
-        Math.floor(metric / stripeT) > student.stripes &&
-        student.stripes < 4,
+      readyForBelt:   metric >= beltT,
+      readyForStripe: metric >= stripeT && student.stripes < 4,
     };
   }
 
   if (student.belt === Belt.WHITE) {
-    const beltT  = rules?.white?.beltThreshold  ?? 80;
+    const beltT   = rules?.white?.beltThreshold  ?? 80;
     const stripeT = rules?.white?.stripeThreshold ?? 20;
     return {
-      readyForBelt: metric >= beltT,
-      readyForStripe:
-        metric >= stripeT &&
-        Math.floor(metric / stripeT) > student.stripes &&
-        student.stripes < 4,
+      readyForBelt:   metric >= beltT,
+      readyForStripe: metric >= stripeT && student.stripes < 4,
     };
   }
 
   if ([Belt.BLUE, Belt.PURPLE, Belt.BROWN].includes(student.belt)) {
-    const beltT  = rules?.intermediate?.beltThreshold  ?? 160;
+    const beltT   = rules?.intermediate?.beltThreshold  ?? 160;
     const stripeT = rules?.intermediate?.stripeThreshold ?? 40;
     return {
-      readyForBelt: metric >= beltT,
-      readyForStripe:
-        metric >= stripeT &&
-        Math.floor(metric / stripeT) > student.stripes &&
-        student.stripes < 4,
+      readyForBelt:   metric >= beltT,
+      readyForStripe: metric >= stripeT && student.stripes < 4,
     };
   }
 
   if (student.belt === Belt.BLACK) {
     const stripeT = rules?.black?.stripeThreshold ?? 300;
     return {
-      readyForBelt: false,
-      readyForStripe:
-        metric >= stripeT &&
-        Math.floor(metric / stripeT) > student.stripes &&
-        student.stripes < 6,
+      readyForBelt:   false,
+      readyForStripe: metric >= stripeT && student.stripes < 6,
     };
   }
 
