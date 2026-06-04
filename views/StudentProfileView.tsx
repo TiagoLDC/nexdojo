@@ -363,7 +363,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
                   const rules = academy.graduationRules;
                   const mode = rules?.mode ?? 'classes';
                   const threshold = getGraduationThreshold(profile, rules, 'belt');
-                  const current = mode === 'hours' ? (profile.totalHours ?? 0) : mode === 'months' ? 0 : profile.totalClasses;
+                  const current = mode === 'hours' ? (profile.hoursSinceGraduation ?? 0) : mode === 'months' ? 0 : (profile.classesSinceGraduation ?? 0);
                   const unit = mode === 'hours' ? 'Horas' : mode === 'months' ? 'Meses' : 'Treinos';
                   const remaining = Math.max(0, threshold - current);
                   return (

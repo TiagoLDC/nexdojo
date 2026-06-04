@@ -402,6 +402,10 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
       'SELECT * FROM student_documents WHERE student_id = ? ORDER BY created_at DESC',
       [req.params.id]
     );
+    const [grad] = await pool.execute<any[]>(
+      'SELECT * FROM graduation_history WHERE student_id = ? ORDER BY date DESC',
+      [req.params.id]
+    );
     const mapDoc = (d: any) => ({
       id: d.id,
       name: d.name,
@@ -410,7 +414,7 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
       base64: d.url,
       uploadedAt: d.created_at,
     });
-    res.json({ ...rows[0], documents: (docs as any[]).map(mapDoc) });
+    res.json({ ...rows[0], documents: (docs as any[]).map(mapDoc), graduationHistory: grad });
   } catch (err) {
     next(err);
   }
@@ -494,7 +498,11 @@ router.post('/:id/graduate', requireAuth, requireRole('admin', 'superuser'), asy
     );
 
     const [updated] = await pool.execute<any[]>('SELECT * FROM students WHERE id = ?', [req.params.id]);
-    res.json(updated[0]);
+    const [grad] = await pool.execute<any[]>(
+      'SELECT * FROM graduation_history WHERE student_id = ? ORDER BY date DESC',
+      [req.params.id]
+    );
+    res.json({ ...updated[0], graduationHistory: grad });
   } catch (err) {
     next(err);
   }
