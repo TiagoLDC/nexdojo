@@ -608,7 +608,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
   return (
     <div className="min-h-[100dvh] h-[100dvh] overflow-y-auto login-app flex flex-col items-center justify-start py-8 px-4 relative custom-scrollbar">
-      <div className="w-full max-w-5xl space-y-8 py-10">
+      <div className="w-full max-w-5xl space-y-8 py-6 md:py-10">
 
         {/* Header Comum */}
         {view === 'choice' && (
@@ -742,11 +742,11 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                 </div>
               )}
               {alias && (
-                <div className="flex gap-0">
-                  <div className="w-64">
+                <div className="flex flex-col sm:flex-row gap-4 w-full max-w-lg">
+                  <div className="flex-1">
                     <ChoiceCard icon={<Users size={28} />} title="Sou Aluno" desc="Fazer matrícula agora." onClick={() => setView('signup-student')} />
                   </div>
-                  <div className="w-64">
+                  <div className="flex-1">
                     <ChoiceCard icon={<Award size={28} />} title="Sou Instrutor" desc="Ficha técnica do instrutor." onClick={() => setView('signup-instructor')} />
                   </div>
                 </div>
@@ -838,7 +838,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                 />
               </div>
 
-              <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 space-y-4">
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 md:p-6 rounded-3xl border border-slate-200 dark:border-slate-700 space-y-4">
                 <div className="flex items-start gap-3">
                   <input
                     type="checkbox"
@@ -861,12 +861,12 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
         {/* VIEW: SIGNUP STUDENT */}
         {view === 'signup-student' && (
-          <div className="bg-white dark:bg-slate-900 rounded-[40px] p-6 md:p-12 shadow-2xl space-y-10 animate-in slide-in-from-bottom duration-500 pb-40">
+          <div className="bg-white dark:bg-slate-900 rounded-[40px] p-6 md:p-12 shadow-2xl space-y-6 md:space-y-10 animate-in slide-in-from-bottom duration-500 pb-40">
             <header className="flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900 py-4 z-20 border-b dark:border-slate-800 -mx-6 md:-mx-12 px-6 md:px-12">
               <div className="flex items-center gap-4">
                 <div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-lg shadow-indigo-600/20"><Users size={28} /></div>
                 <div>
-                  <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Nova Matrícula</h2>
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Nova Matrícula</h2>
                   <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Portal do Atleta</p>
                 </div>
               </div>
@@ -905,10 +905,10 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               </div>
             )}
 
-            <div className="space-y-12">
+            <div className="space-y-8 md:space-y-12">
               <div className="flex flex-col items-center gap-4">
-                <div onClick={() => photoRef.current?.click()} className="w-40 h-40 rounded-[40px] bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 overflow-hidden relative group cursor-pointer shadow-inner">
-                  {studentData.photo ? <img src={studentData.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-400"><Camera size={40} /><span className="text-[10px] font-black uppercase tracking-widest mt-2">Sua Foto</span></div>}
+                <div onClick={() => photoRef.current?.click()} className="w-28 h-28 sm:w-40 sm:h-40 rounded-[40px] bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 overflow-hidden relative group cursor-pointer shadow-inner">
+                  {studentData.photo ? <img src={studentData.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-400"><Camera size={36} /><span className="text-[10px] font-black uppercase tracking-widest mt-2">Sua Foto</span></div>}
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white"><Camera size={24} /></div>
                 </div>
                 <input type="file" ref={photoRef} className="hidden" accept="image/*" onChange={e => handlePhotoUpload(e, 'student')} />
@@ -983,7 +983,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                 </div>
               </div>
 
-              <div className={`p-8 rounded-[32px] border-2 transition-all ${isMinor ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/30' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800 opacity-60'}`}>
+              <div className={`p-4 md:p-8 rounded-[32px] border-2 transition-all ${isMinor ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/30' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800 opacity-60'}`}>
                 <div className="flex items-center justify-between mb-6">
                   <SectionHeader icon={<Users size={16} />} title="Responsável Legal" />
                   {isMinor && <span className="bg-amber-500 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase animate-pulse">Obrigatório</span>}
@@ -1005,7 +1005,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                     ))}
                   </div>
 
-                  <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-100 dark:border-slate-800">
+                  <div className="bg-slate-50 dark:bg-slate-800/50 p-4 md:p-6 rounded-3xl border border-slate-100 dark:border-slate-800">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Graus na Faixa</label>
                     <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${BELT_COLORS[studentData.belt || Belt.WHITE]}`}>
                       <button type="button" onClick={() => setStudentData({...studentData, stripes: Math.max(0, (studentData.stripes || 0) - 1)})} className="bg-black/30 hover:bg-black/50 border border-white/20 text-white rounded-xl p-2 transition-all outline-none"><Minus size={20} /></button>
@@ -1028,7 +1028,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
               <div className="space-y-6">
                 <SectionHeader icon={<Heart size={16} />} title="Saúde e Observações" />
-                <textarea value={studentData.medicalNotes || ''} onChange={e => setStudentData({...studentData, medicalNotes: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 outline-none text-sm min-h-[120px] text-slate-700 dark:text-white" placeholder="Possui alguma lesão ou condição especial?" />
+                <textarea value={studentData.medicalNotes || ''} onChange={e => setStudentData({...studentData, medicalNotes: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-4 md:p-6 outline-none text-sm min-h-[120px] text-slate-700 dark:text-white" placeholder="Possui alguma lesão ou condição especial?" />
               </div>
 
               {academyPlans.length > 0 && (
@@ -1080,7 +1080,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                 </div>
               )}
 
-              <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 space-y-4">
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 md:p-6 rounded-3xl border border-slate-200 dark:border-slate-700 space-y-4">
                 <div className="flex items-start gap-3">
                   <input
                     type="checkbox"
@@ -1104,12 +1104,12 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
         {/* VIEW: SIGNUP INSTRUCTOR */}
         {view === 'signup-instructor' && (
-          <div className="bg-white dark:bg-slate-900 rounded-[40px] p-6 md:p-12 shadow-2xl space-y-10 animate-in slide-in-from-bottom duration-500 pb-40">
+          <div className="bg-white dark:bg-slate-900 rounded-[40px] p-6 md:p-12 shadow-2xl space-y-6 md:space-y-10 animate-in slide-in-from-bottom duration-500 pb-40">
             <header className="flex items-center justify-between sticky top-0 bg-white dark:bg-slate-900 py-4 z-20 border-b dark:border-slate-800 -mx-6 md:-mx-12 px-6 md:px-12">
               <div className="flex items-center gap-4">
                 <div className="bg-slate-900 dark:bg-slate-800 p-3 rounded-2xl text-white shadow-lg"><Award size={28} /></div>
                 <div>
-                  <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Ficha do Instrutor</h2>
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Ficha do Instrutor</h2>
                   <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Corpo Docente</p>
                 </div>
               </div>
@@ -1148,10 +1148,10 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
               </div>
             )}
 
-            <div className="space-y-12">
+            <div className="space-y-8 md:space-y-12">
               <div className="flex flex-col items-center gap-4">
-                <div onClick={() => photoRef.current?.click()} className="w-40 h-40 rounded-[40px] bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 overflow-hidden relative group cursor-pointer shadow-inner">
-                  {instructorData.photo ? <img src={instructorData.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-400"><Camera size={40} /><span className="text-[10px] font-black uppercase tracking-widest mt-2">Sua Foto</span></div>}
+                <div onClick={() => photoRef.current?.click()} className="w-32 h-32 sm:w-40 sm:h-40 rounded-[40px] bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 overflow-hidden relative group cursor-pointer shadow-inner">
+                  {instructorData.photo ? <img src={instructorData.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-400"><Camera size={36} /><span className="text-[10px] font-black uppercase tracking-widest mt-2">Sua Foto</span></div>}
                 </div>
                 <input type="file" ref={photoRef} className="hidden" accept="image/*" onChange={e => handlePhotoUpload(e, 'instructor')} />
               </div>
@@ -1228,7 +1228,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
               <div className="space-y-8">
                 <SectionHeader icon={<GraduationCap size={16} />} title="Carreira & Especialidades" />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                   <div className="space-y-6">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2">Selecione sua Graduação</label>
                     <div className="grid grid-cols-2 gap-2">
@@ -1237,7 +1237,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                       ))}
                     </div>
 
-                    <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 mt-4">
+                    <div className="bg-slate-50 dark:bg-slate-800/50 p-4 md:p-6 rounded-3xl border border-slate-100 dark:border-slate-800 mt-4">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Graus na Faixa</label>
                     <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${BELT_COLORS[instructorData.belt || Belt.BLACK]}`}>
                         <button type="button" onClick={() => setInstructorData({...instructorData, stripes: Math.max(0, (instructorData.stripes || 0) - 1)})} className="text-white/50 hover:scale-125 transition-all outline-none"><Minus size={20} /></button>
@@ -1260,7 +1260,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                 </div>
               </div>
 
-              <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 space-y-4">
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-4 md:p-6 rounded-3xl border border-slate-200 dark:border-slate-700 space-y-4">
                 <div className="flex items-start gap-3">
                   <input
                     type="checkbox"
@@ -1285,20 +1285,20 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         {/* Modal de Termos */}
         {showTermsModal && (
           <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[3000] flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[40px] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in duration-300">
-              <div className="p-8 border-b dark:border-slate-800 flex items-center justify-between">
+            <div className="bg-white dark:bg-slate-900 w-full max-w-[95vw] sm:max-w-2xl rounded-[40px] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in duration-300">
+              <div className="p-4 sm:p-8 border-b dark:border-slate-800 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-indigo-600 rounded-2xl text-white">
                     <ShieldCheck size={28} />
                   </div>
-                  <h3 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight italic">Termos e Condições</h3>
+                  <h3 className="text-lg sm:text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight italic">Termos e Condições</h3>
                 </div>
                 <button onClick={() => setShowTermsModal(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 transition-colors">
                   <X size={24} />
                 </button>
               </div>
 
-              <div className="p-8 overflow-y-auto custom-scrollbar prose dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 text-sm leading-relaxed space-y-6">
+              <div className="p-4 sm:p-8 overflow-y-auto custom-scrollbar prose dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 text-sm leading-relaxed space-y-6">
                 <div>
                   <h4 className="font-black text-slate-800 dark:text-white uppercase text-xs tracking-widest mb-2 italic">1. Riscos da Atividade</h4>
                   <p>Compreendo que a prática de artes marciais (BJJ, Muay Thai, etc.) envolve contato físico intenso e riscos inerentes de lesões. Declaro estar em perfeitas condições físicas e mentais, não possuindo impedimento médico para tais atividades.</p>
@@ -1329,7 +1329,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                 </div>
               </div>
 
-              <div className="p-8 bg-slate-50 dark:bg-slate-800/50 border-t dark:border-slate-800">
+              <div className="p-4 sm:p-8 bg-slate-50 dark:bg-slate-800/50 border-t dark:border-slate-800">
                 <button
                   onClick={() => {
                     setAcceptedTerms(true);
@@ -1358,8 +1358,8 @@ const SectionHeader: React.FC<{ icon: React.ReactNode; title: string }> = ({ ico
 );
 
 const ChoiceCard: React.FC<{ icon: React.ReactNode; title: string; desc: string; onClick: () => void }> = ({ icon, title, desc, onClick }) => (
-  <button onClick={onClick} className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 text-left hover:scale-105 hover:shadow-2xl transition-all group border-b-8 border-b-transparent hover:border-b-indigo-500">
-    <div className="bg-indigo-50 dark:bg-indigo-900/20 w-16 h-16 rounded-2xl flex items-center justify-center text-indigo-600 mb-8 group-hover:bg-indigo-600 group-hover:text-white transition-colors">{icon}</div>
+  <button onClick={onClick} className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 text-left hover:scale-105 hover:shadow-2xl transition-all group border-b-8 border-b-transparent hover:border-b-indigo-500 w-full">
+    <div className="bg-indigo-50 dark:bg-indigo-900/20 w-16 h-16 rounded-2xl flex items-center justify-center text-indigo-600 mb-4 sm:mb-8 group-hover:bg-indigo-600 group-hover:text-white transition-colors">{icon}</div>
     <h3 className="font-black text-slate-800 dark:text-white text-xl tracking-tighter mb-2">{title}</h3>
     <p className="text-sm text-slate-400 dark:text-slate-500 font-medium leading-relaxed">{desc}</p>
   </button>
