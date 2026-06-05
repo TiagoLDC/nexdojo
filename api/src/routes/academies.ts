@@ -42,7 +42,7 @@ router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunct
 router.get('/by-alias/:alias', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const [rows] = await pool.execute<any[]>(
-      'SELECT id, name, alias, logo FROM academies WHERE alias = ?',
+      'SELECT id, name, alias, logo, owner_name AS ownerName FROM academies WHERE alias = ?',
       [String(req.params.alias).toLowerCase().trim()]
     );
     if (!rows[0]) { res.status(404).json({ error: 'Academia não encontrada' }); return; }

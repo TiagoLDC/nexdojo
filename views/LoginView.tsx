@@ -535,6 +535,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                 </div>
                 <div className="login-academy-meta">
                   <span className="login-academy-name">{linkedAcademy.name}</span>
+                  {linkedAcademy.ownerName && (
+                    <span className="login-academy-owner">{linkedAcademy.ownerName}</span>
+                  )}
                   <span className="login-academy-tag">Academia verificada</span>
                 </div>
               </div>
@@ -629,6 +632,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                     )}
                   </div>
                   <h1 className="text-2xl md:text-4xl font-black text-white tracking-tighter uppercase leading-none">{linkedAcademy.name}</h1>
+                  {linkedAcademy.ownerName && (
+                    <p className="text-indigo-400 font-black text-xs uppercase tracking-[0.25em] mt-2">{linkedAcademy.ownerName}</p>
+                  )}
                   <p className="text-slate-400 mt-3 font-bold text-xs uppercase tracking-[0.3em] opacity-80">{t.legacyContinues}</p>
                 </div>
               </div>
@@ -890,6 +896,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   <div>
                     <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none mb-1">Você está se matriculando na:</p>
                     <p className="text-sm font-black text-indigo-600 uppercase italic tracking-tight">{linkedAcademy?.name || 'Academia Selecionada'}</p>
+                    {linkedAcademy?.ownerName && (
+                      <p className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest leading-none mt-0.5">{linkedAcademy.ownerName}</p>
+                    )}
                   </div>
                 </div>
                 <div className="bg-indigo-600 text-white p-1 rounded-full px-2 text-[8px] font-black uppercase tracking-tighter shadow-sm">Ativo</div>
@@ -1130,6 +1139,9 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   <div>
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Vínculo Profissional com:</p>
                     <p className="text-sm font-black text-white uppercase italic tracking-tight">{linkedAcademy?.name || 'Academia Selecionada'}</p>
+                    {linkedAcademy?.ownerName && (
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mt-0.5">{linkedAcademy.ownerName}</p>
+                    )}
                   </div>
                 </div>
                 <div className="bg-emerald-500 text-white p-1 rounded-full px-2 text-[8px] font-black uppercase tracking-tighter shadow-sm">Confirmado</div>

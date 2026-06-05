@@ -94,9 +94,16 @@ export const Sidebar: React.FC = () => {
                   <Award className="text-white" size={14} />
                 )}
               </div>
-              <span className="text-xs font-bold text-slate-300 leading-tight line-clamp-2 flex-1">
-                {academy?.name ?? '—'}
-              </span>
+              <div className="flex-1 min-w-0">
+                <span className="text-xs font-bold text-slate-300 leading-tight line-clamp-2 block">
+                  {academy?.name ?? '—'}
+                </span>
+                {academy?.ownerName && (
+                  <span className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.15em] leading-none block mt-0.5 truncate">
+                    {academy.ownerName}
+                  </span>
+                )}
+              </div>
             </div>
             {/* User info row */}
             {(() => {
