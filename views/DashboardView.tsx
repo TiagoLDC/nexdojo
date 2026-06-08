@@ -68,6 +68,7 @@ import {
 import { BeltBadge } from '../components/BeltBadge';
 import { BELT_COLORS } from '../constants';
 import { DateSelectInput } from '@/components/ui';
+import { QRCodeSVG } from 'qrcode.react';
 
 
 const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAcademy?: (a: Academy) => void }> = ({ academy, user, onSwitchAcademy }) => {
@@ -763,10 +764,10 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
             </button>
             <button
               onClick={() => setShowPasswordModal(true)}
-              className="hidden md:flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:border-slate-300 transition-all shadow-sm cursor-pointer"
+              className="flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:border-slate-300 transition-all shadow-sm cursor-pointer"
             >
               <KeyRound size={14} />
-              <span>Alterar Senha</span>
+              <span className="hidden md:inline">Alterar Senha</span>
             </button>
             <Link to="/profile" className="hidden md:flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:border-indigo-200 transition-all shadow-sm">
               Meus Dados
@@ -892,31 +893,29 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
           
           {/* CARTÃO VIRTUAL - DESTAQUE */}
           <motion.div variants={itemVariants} className="md:col-span-4 space-y-4">
-             <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-8 rounded-[40px] text-white shadow-2xl relative overflow-hidden group h-full">
-               <div className="relative z-10 flex flex-col justify-between h-full min-h-[220px]">
+             <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-[40px] text-white shadow-2xl relative overflow-hidden group h-full">
+               <div className="relative z-10 flex flex-col gap-4 h-full min-h-[220px]">
                  <div className="flex justify-between items-start">
                    <div>
-                     <h2 className="text-2xl font-black italic tracking-tighter uppercase leading-none">{t.digitalId}</h2>
+                     <h2 className="text-xl font-black italic tracking-tighter uppercase leading-none">{t.digitalId}</h2>
                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">{academy?.name}</p>
                    </div>
-                   <Trophy size={32} className="text-indigo-400 opacity-50" />
+                   <Trophy size={28} className="text-indigo-400 opacity-50 shrink-0" />
                  </div>
 
-                 <div className="mt-8">
+                 <div>
                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">{t.students.slice(0, -1)}</p>
-                   <h3 className="text-xl font-black uppercase italic tracking-tight">{profile.name}</h3>
-                   <div className="mt-2 flex items-center gap-2">
+                   <h3 className="text-lg font-black uppercase italic tracking-tight leading-none">{profile.name}</h3>
+                   <div className="mt-2 flex items-center gap-2 flex-wrap">
                      <BeltBadge belt={profile.belt} stripes={profile.stripes} />
                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Status: {profile.status === 'Active' ? (language === 'pt' ? 'Ativo' : 'Active') : (language === 'pt' ? 'Pendente' : 'Pending')}</span>
                    </div>
                  </div>
 
-                 <div className="absolute right-4 bottom-4 bg-white dark:bg-slate-800 p-2 rounded-2xl shadow-xl transform rotate-3 group-hover:rotate-0 transition-transform duration-500">
-                    <img 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=oss_id_${profile.id}`} 
-                      alt="QR Entry" 
-                      className="w-16 h-16 md:w-20 md:h-20 grayscale hover:grayscale-0 transition-all"
-                    />
+                 <div className="flex-1 flex items-center justify-center py-2">
+                   <div className="bg-white p-2 rounded-2xl shadow-xl">
+                     <QRCodeSVG value={profile.id} size={120} level="M" includeMargin={true} style={{ maxWidth: '100%', height: 'auto', display: 'block' }} />
+                   </div>
                  </div>
                </div>
                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -mr-16 -mt-16" />
@@ -925,7 +924,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
 
           {/* ESTATÍSTICAS E PROGRESSO */}
           <div className="md:col-span-8 flex flex-col gap-6">
-            <motion.div variants={itemVariants} className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <motion.div variants={itemVariants} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               <StatCard 
                 icon={<TrendingUp className="text-indigo-600" />} 
                 label={t.totalClasses} 
@@ -1149,10 +1148,10 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
           </button>
           <button
             onClick={() => setShowPasswordModal(true)}
-            className="hidden md:flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:border-slate-300 transition-all shadow-sm cursor-pointer"
+            className="flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:border-slate-300 transition-all shadow-sm cursor-pointer"
           >
             <KeyRound size={14} />
-            <span>Alterar Senha</span>
+            <span className="hidden md:inline">Alterar Senha</span>
           </button>
           {user.role === 'instructor' && (
             <Link
@@ -2082,9 +2081,9 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
             <div className="space-y-4">
               {recentActivity.length > 0 ? (
                 recentActivity.map(att => (
-                  <div key={att.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800 group hover:shadow-md transition-all">
-                    <div className="flex items-center gap-4">
-                      <div className="relative">
+                  <div key={att.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800 group hover:shadow-md transition-all gap-2">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="relative shrink-0">
                         {att.studentPhoto ? (
                           <img src={att.studentPhoto} className="w-12 h-12 rounded-2xl object-cover" />
                         ) : (
@@ -2094,9 +2093,9 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                         )}
                         <div className="absolute -right-1 -bottom-1 bg-green-500 w-4 h-4 rounded-full border-2 border-white dark:border-slate-800" />
                       </div>
-                      <div>
-                        <h4 className="font-black text-slate-800 dark:text-white text-sm leading-tight uppercase italic">{att.studentName}</h4>
-                        <div className="flex items-center gap-2 mt-1">
+                      <div className="min-w-0">
+                        <h4 className="font-black text-slate-800 dark:text-white text-sm leading-tight uppercase italic truncate">{att.studentName}</h4>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <BeltBadge belt={att.studentBelt} stripes={0} />
                           <span className="text-[10px] font-bold text-slate-400 capitalize">
                             {new Date(att.date).toLocaleDateString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
@@ -2104,8 +2103,8 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                       <p className="text-[10px] font-black text-indigo-600 uppercase tracking-tighter">Check-in Realizado</p>
+                    <div className="text-right shrink-0">
+                       <p className="text-[10px] font-black text-indigo-600 uppercase tracking-tighter whitespace-nowrap">Check-in Realizado</p>
                     </div>
                   </div>
                 ))
