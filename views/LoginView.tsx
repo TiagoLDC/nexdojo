@@ -31,7 +31,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  ShieldCheck
+  ShieldCheck,
+  Upload
 } from 'lucide-react';
 import { BELT_COLORS } from '../constants';
 
@@ -211,6 +212,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   });
 
   const photoRef = useRef<HTMLInputElement>(null);
+  const photoCameraRef = useRef<HTMLInputElement>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -907,11 +909,19 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
             <div className="space-y-8 md:space-y-12">
               <div className="flex flex-col items-center gap-4">
-                <div onClick={() => photoRef.current?.click()} className="w-28 h-28 sm:w-40 sm:h-40 rounded-[40px] bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 overflow-hidden relative group cursor-pointer shadow-inner">
+                <div className="w-28 h-28 sm:w-40 sm:h-40 rounded-[40px] bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 overflow-hidden relative group shadow-inner">
                   {studentData.photo ? <img src={studentData.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-400"><Camera size={36} /><span className="text-[10px] font-black uppercase tracking-widest mt-2">Sua Foto</span></div>}
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white"><Camera size={24} /></div>
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity text-white">
+                    <button type="button" onClick={() => photoCameraRef.current?.click()} title="Tirar Foto" className="bg-indigo-600 p-2 rounded-full"><Camera size={18} /></button>
+                    <button type="button" onClick={() => photoRef.current?.click()} title="Escolher da Galeria" className="bg-white/20 p-2 rounded-full"><Upload size={18} /></button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 w-40 sm:w-52">
+                  <button type="button" onClick={() => photoCameraRef.current?.click()} className="text-[9px] font-black uppercase tracking-widest text-white bg-indigo-600 py-2 rounded-xl flex items-center justify-center gap-1.5"><Camera size={12} /> Câmera</button>
+                  <button type="button" onClick={() => photoRef.current?.click()} className="text-[9px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 py-2 rounded-xl flex items-center justify-center gap-1.5"><Upload size={12} /> Galeria</button>
                 </div>
                 <input type="file" ref={photoRef} className="hidden" accept="image/*" onChange={e => handlePhotoUpload(e, 'student')} />
+                <input type="file" ref={photoCameraRef} className="hidden" accept="image/*" capture="user" onChange={e => handlePhotoUpload(e, 'student')} />
               </div>
 
               <div className="space-y-6">
@@ -1150,10 +1160,19 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
             <div className="space-y-8 md:space-y-12">
               <div className="flex flex-col items-center gap-4">
-                <div onClick={() => photoRef.current?.click()} className="w-32 h-32 sm:w-40 sm:h-40 rounded-[40px] bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 overflow-hidden relative group cursor-pointer shadow-inner">
+                <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-[40px] bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-200 dark:border-slate-700 overflow-hidden relative group shadow-inner">
                   {instructorData.photo ? <img src={instructorData.photo} className="w-full h-full object-cover" /> : <div className="w-full h-full flex flex-col items-center justify-center text-slate-400"><Camera size={36} /><span className="text-[10px] font-black uppercase tracking-widest mt-2">Sua Foto</span></div>}
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity text-white">
+                    <button type="button" onClick={() => photoCameraRef.current?.click()} title="Tirar Foto" className="bg-indigo-600 p-2 rounded-full"><Camera size={18} /></button>
+                    <button type="button" onClick={() => photoRef.current?.click()} title="Escolher da Galeria" className="bg-white/20 p-2 rounded-full"><Upload size={18} /></button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 w-40 sm:w-52">
+                  <button type="button" onClick={() => photoCameraRef.current?.click()} className="text-[9px] font-black uppercase tracking-widest text-white bg-indigo-600 py-2 rounded-xl flex items-center justify-center gap-1.5"><Camera size={12} /> Câmera</button>
+                  <button type="button" onClick={() => photoRef.current?.click()} className="text-[9px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 py-2 rounded-xl flex items-center justify-center gap-1.5"><Upload size={12} /> Galeria</button>
                 </div>
                 <input type="file" ref={photoRef} className="hidden" accept="image/*" onChange={e => handlePhotoUpload(e, 'instructor')} />
+                <input type="file" ref={photoCameraRef} className="hidden" accept="image/*" capture="user" onChange={e => handlePhotoUpload(e, 'instructor')} />
               </div>
 
               <div className="space-y-8">

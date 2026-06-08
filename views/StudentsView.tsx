@@ -145,6 +145,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editPhotoInputRef = useRef<HTMLInputElement>(null);
+  const editCameraInputRef = useRef<HTMLInputElement>(null);
 
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [isLoadingCep, setIsLoadingCep] = useState(false);
@@ -1168,9 +1169,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                 </h3>
                 <div className="flex flex-col md:flex-row gap-8 items-start">
                     <div className="flex flex-col items-center gap-3 shrink-0">
-                      <div
-                        className="w-32 h-32 rounded-3xl bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 overflow-hidden relative group shadow-sm"
-                      >
+                      <div className="w-32 h-32 rounded-3xl bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 overflow-hidden relative group shadow-sm">
                         {editingStudent.photo ? (
                           <img src={editingStudent.photo} alt={editingStudent.name} className="w-full h-full object-cover" />
                         ) : (
@@ -1179,36 +1178,17 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                             <span className="text-[10px] font-black uppercase tracking-widest mt-2">Sem Foto</span>
                           </div>
                         )}
-                        <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white gap-2">
-                          <button
-                            onClick={() => editPhotoInputRef.current?.click()}
-                            className="bg-indigo-600 p-2 rounded-full hover:bg-indigo-700 transition-all"
-                            title="Escolher Foto ou Tirar Foto"
-                          >
-                            <Camera size={20} />
-                          </button>
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity text-white">
+                          <button onClick={() => editCameraInputRef.current?.click()} className="bg-indigo-600 p-2 rounded-full hover:bg-indigo-700 transition-all" title="Tirar Foto"><Camera size={18} /></button>
+                          <button onClick={() => editPhotoInputRef.current?.click()} className="bg-white/20 p-2 rounded-full hover:bg-white/40 transition-all" title="Escolher da Galeria"><Upload size={16} /></button>
                         </div>
                       </div>
-                      <div className="flex flex-col gap-1 w-full">
-                        <button
-                          onClick={() => {
-                            if (editPhotoInputRef.current) {
-                              editPhotoInputRef.current.removeAttribute('capture');
-                              editPhotoInputRef.current.click();
-                            }
-                          }}
-                          className="text-[9px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 py-2 rounded-xl border border-indigo-100 hover:bg-indigo-100 transition-all flex items-center justify-center gap-1.5"
-                        >
-                          <Upload size={12} /> Galeria / Camera
-                        </button>
+                      <div className="grid grid-cols-2 gap-1 w-full">
+                        <button onClick={() => editCameraInputRef.current?.click()} className="text-[9px] font-black uppercase tracking-widest text-white bg-indigo-600 py-2 rounded-xl flex items-center justify-center gap-1.5"><Camera size={12} /> Câmera</button>
+                        <button onClick={() => editPhotoInputRef.current?.click()} className="text-[9px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 py-2 rounded-xl border border-indigo-100 flex items-center justify-center gap-1.5"><Upload size={12} /> Galeria</button>
                       </div>
-                      <input
-                        type="file"
-                        ref={editPhotoInputRef}
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handlePhotoCapture}
-                      />
+                      <input type="file" ref={editPhotoInputRef} accept="image/*" className="hidden" onChange={handlePhotoCapture} />
+                      <input type="file" ref={editCameraInputRef} accept="image/*" capture="user" className="hidden" onChange={handlePhotoCapture} />
                     </div>
 
                   <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">

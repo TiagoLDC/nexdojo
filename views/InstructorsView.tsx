@@ -73,6 +73,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editPhotoInputRef = useRef<HTMLInputElement>(null);
+  const editCameraInputRef = useRef<HTMLInputElement>(null);
   const [editingInstructor, setEditingInstructor] = useState<Instructor | null>(null);
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [newInstructorPassword, setNewInstructorPassword] = useState('');
@@ -536,10 +537,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   <div className="flex flex-col items-center gap-3 shrink-0">
-                    <div
-                      className="w-32 h-32 rounded-3xl bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 overflow-hidden relative group cursor-pointer shadow-sm"
-                      onClick={() => editPhotoInputRef.current?.click()}
-                    >
+                    <div className="w-32 h-32 rounded-3xl bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 overflow-hidden relative group shadow-sm">
                       {editingInstructor.photo ? (
                         <img src={editingInstructor.photo} alt={editingInstructor.name} className="w-full h-full object-cover" />
                       ) : (
@@ -548,12 +546,17 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                           <span className="text-[10px] font-black uppercase tracking-widest mt-2">{t.noPhoto}</span>
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white">
-                        <Camera size={24} />
-                        <span className="text-[10px] font-bold uppercase mt-1">{t.edit}</span>
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity text-white">
+                        <button onClick={() => editCameraInputRef.current?.click()} className="bg-indigo-600 p-2 rounded-full hover:bg-indigo-700 transition-all" title="Tirar Foto"><Camera size={18} /></button>
+                        <button onClick={() => editPhotoInputRef.current?.click()} className="bg-white/20 p-2 rounded-full hover:bg-white/40 transition-all" title="Escolher da Galeria"><Upload size={16} /></button>
                       </div>
                     </div>
+                    <div className="grid grid-cols-2 gap-1 w-full">
+                      <button onClick={() => editCameraInputRef.current?.click()} className="text-[9px] font-black uppercase tracking-widest text-white bg-indigo-600 py-2 rounded-xl flex items-center justify-center gap-1.5"><Camera size={12} /> Câmera</button>
+                      <button onClick={() => editPhotoInputRef.current?.click()} className="text-[9px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 py-2 rounded-xl border border-indigo-100 flex items-center justify-center gap-1.5"><Upload size={12} /> Galeria</button>
+                    </div>
                     <input type="file" ref={editPhotoInputRef} accept="image/*" className="hidden" onChange={handlePhotoCapture} />
+                    <input type="file" ref={editCameraInputRef} accept="image/*" capture="user" className="hidden" onChange={handlePhotoCapture} />
                   </div>
 
                   <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
