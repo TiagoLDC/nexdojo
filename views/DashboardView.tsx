@@ -67,6 +67,7 @@ import {
 } from 'recharts';
 import { BeltBadge } from '../components/BeltBadge';
 import { BELT_COLORS } from '../constants';
+import { DateSelectInput } from '@/components/ui';
 
 
 const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAcademy?: (a: Academy) => void }> = ({ academy, user, onSwitchAcademy }) => {
@@ -1731,12 +1732,13 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
 
                 <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Prazo de Vencimento (Licença)</label>
-                    <input 
-                      type="date"
+                    <DateSelectInput
+                      label="Prazo de Vencimento (Licença)"
+                      labelClassName="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block mb-2"
                       value={selectedAcademy.planExpirationDate || ''}
-                      onChange={(e) => setSelectedAcademy({ ...selectedAcademy, planExpirationDate: e.target.value })}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-600/20 transition-all font-mono"
+                      onChange={v => setSelectedAcademy({ ...selectedAcademy, planExpirationDate: v })}
+                      yearFrom={new Date().getFullYear()}
+                      yearTo={new Date().getFullYear() + 10}
                     />
                   </div>
                 </div>

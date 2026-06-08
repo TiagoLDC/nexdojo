@@ -26,6 +26,7 @@ import {
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
 import { BELT_COLORS } from '../constants';
 import { useTranslation } from '../services/LanguageContext';
+import { DateSelectInput } from '@/components/ui';
 
 const Loader2 = ({ size, className }: { size: number, className: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -332,8 +333,8 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
                 </select>
               </div>
               <div>
-                <FieldInput label="Nascimento *" type="date" disabled={!isEditing}
-                  value={editData.birthDate || ''}
+                <DateSelectInput label="Nascimento *" disabled={!isEditing}
+                  value={(editData.birthDate || '').split('T')[0]}
                   onChange={v => setEditData({...editData, birthDate: v})}
                 />
               </div>
@@ -504,9 +505,10 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
                   </div>
                 </div>
 
-                <FieldInput label="Data da Última Graduação" type="date" disabled={!isEditing}
+                <DateSelectInput label="Data da Última Graduação" disabled={!isEditing}
                   value={((editData as Instructor).lastGraduationDate || '').split('T')[0]}
                   onChange={v => setEditData({...editData, lastGraduationDate: v} as Instructor)}
+                  yearFrom={2000}
                 />
 
                 <FieldInput label="Minhas Especialidades" disabled={!isEditing}

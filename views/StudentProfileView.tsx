@@ -35,6 +35,7 @@ import {
 import { QRCodeSVG } from 'qrcode.react';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
 import { BELT_COLORS } from '../constants';
+import { DateSelectInput } from '@/components/ui';
 
 const fmtDate = (d?: string | null) => {
   if (!d) return '—';
@@ -295,7 +296,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
               <span className="text-[10px] font-black uppercase tracking-widest">Editar Perfil</span>
             </button>
           )}
-          <div className="hidden md:flex items-center gap-2 ml-2 border-l border-slate-100 dark:border-slate-800 pl-4">
+          <div className="flex items-center gap-2 ml-2 border-l border-slate-100 dark:border-slate-800 pl-4">
             <button
               onClick={() => setIsQRModalOpen(true)}
               className="p-3 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-2xl transition-all"
@@ -305,7 +306,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
             </button>
             <button
               onClick={() => window.print()}
-              className="p-3 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-2xl transition-all"
+              className="hidden md:block p-3 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-2xl transition-all"
               title="Imprimir Ficha"
             >
               <Printer size={24} />
@@ -473,13 +474,11 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1">NASCIMENTO *</label>
-                  <input
+                  <DateSelectInput
+                    label="NASCIMENTO *"
+                    value={editData.birthDate || ''}
+                    onChange={v => setEditData({...editData, birthDate: v})}
                     disabled={!isEditing}
-                    type="date"
-                    value={editData.birthDate}
-                    onChange={(e) => setEditData({...editData, birthDate: e.target.value})}
-                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-indigo-500 outline-none font-black text-slate-800 dark:text-white text-lg transition-all disabled:opacity-60"
                   />
                 </div>
                 <div>
@@ -760,12 +759,13 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
                   </p>
                 </div>
 
-                <Input
+                <DateSelectInput
                   label="Data da última graduação"
-                  type="date"
                   value={editData.lastGraduationDate || ''}
                   onChange={v => setEditData({...editData, lastGraduationDate: v})}
                   disabled={!isEditing}
+                  yearFrom={2000}
+                  labelClassName="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider ml-1 mb-2"
                 />
 
                 <div className="space-y-1">

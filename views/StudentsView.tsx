@@ -57,6 +57,7 @@ import {
 } from 'lucide-react';
 import { BeltBadge } from '../components/BeltBadge';
 import { BELT_COLORS } from '../constants';
+import { DateSelectInput } from '@/components/ui';
 
 // Funções utilitárias para máscaras removidas daqui e movidas para services/cep.ts
 
@@ -1745,14 +1746,17 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   </div>
                   ) : null}
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Próximo Vencimento</label>
                     <div className="flex items-center gap-2">
-                      <input
-                        type="date"
-                        value={(editingStudent.nextPaymentDate || '').split('T')[0]}
-                        onChange={(e) => setEditingStudent({...editingStudent, nextPaymentDate: e.target.value})}
-                        className="flex-1 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700 dark:text-slate-200"
-                      />
+                      <div className="flex-1">
+                        <DateSelectInput
+                          label="Próximo Vencimento"
+                          labelClassName="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1"
+                          value={(editingStudent.nextPaymentDate || '').split('T')[0]}
+                          onChange={v => setEditingStudent({...editingStudent, nextPaymentDate: v})}
+                          yearFrom={new Date().getFullYear() - 1}
+                          yearTo={new Date().getFullYear() + 5}
+                        />
+                      </div>
                       {!isNewStudent && editingStudent.nextPaymentDate && (
                         <button
                           type="button"

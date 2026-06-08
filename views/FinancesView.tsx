@@ -36,6 +36,7 @@ import {
 } from 'recharts';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { DateSelectInput } from '@/components/ui';
 
 const PrintHeader: React.FC<{ title: string; academy: Academy }> = ({ title, academy }) => {
   return (
@@ -616,13 +617,13 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1">Data</label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.date}
-                    onChange={(e) => setFormData({...formData, date: e.target.value})}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none font-bold text-slate-800 dark:text-white"
+                  <DateSelectInput
+                    label="Data"
+                    labelClassName="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 ml-1"
+                    value={formData.date || ''}
+                    onChange={v => setFormData({...formData, date: v})}
+                    yearFrom={new Date().getFullYear() - 5}
+                    yearTo={new Date().getFullYear() + 1}
                   />
                 </div>
               </div>

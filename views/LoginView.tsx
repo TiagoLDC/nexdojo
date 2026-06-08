@@ -7,6 +7,7 @@ import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../servi
 import { authService } from '@/features/auth/services/authService';
 import { academyService } from '@/features/settings/services/academyService';
 import { api, setApiToken } from '@/lib/api';
+import { DateSelectInput } from '@/components/ui';
 import {
   Trophy,
   Mail,
@@ -971,7 +972,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                       <option value="Outro">Outro</option>
                     </select>
                   </div>
-                  <Input label="Data de Nascimento" required type="date" value={studentData.birthDate || ''} onChange={v => setStudentData({...studentData, birthDate: v})} />
+                  <DateSelectInput label="Data de Nascimento *" value={studentData.birthDate || ''} onChange={v => setStudentData({...studentData, birthDate: v})} labelClassName="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 mb-1" />
                   <Input label="E-mail (Para Login)" required type="email" autoComplete="off" value={studentData.email || ''} onChange={v => setStudentData({...studentData, email: v})} placeholder="seu@email.com" />
                   <div className="md:col-span-1">
                     <Input label="Definir Senha" required type="password" autoComplete="new-password" value={regPassword} onChange={setRegPassword} placeholder="••••••••" icon={<Lock size={18} />} />
@@ -1221,7 +1222,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                       <option value="Outro">Outro</option>
                     </select>
                   </div>
-                  <Input label="Data de Nascimento" required type="date" value={instructorData.birthDate || ''} onChange={v => setInstructorData({...instructorData, birthDate: v})} />
+                  <DateSelectInput label="Data de Nascimento *" value={instructorData.birthDate || ''} onChange={v => setInstructorData({...instructorData, birthDate: v})} labelClassName="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 mb-1" />
                   <Input label="E-mail (Para Login)" required type="email" autoComplete="off" value={instructorData.email || ''} onChange={v => setInstructorData({...instructorData, email: v})} placeholder="mestre@ct.com" />
                   <div className="md:col-span-1">
                     <Input label="Definir Senha" required type="password" autoComplete="new-password" value={regPassword} onChange={setRegPassword} placeholder="••••••••" icon={<Lock size={18} />} />
@@ -1302,7 +1303,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   </div>
                   <div className="space-y-6">
                     <Input label="Especialidades" value={instructorData.specialties || ''} onChange={v => setInstructorData({...instructorData, specialties: v})} placeholder="Ex: Kids, No-Gi, Competição" />
-                    <Input label="Data da Última Graduação" type="date" value={instructorData.lastGraduationDate || ''} onChange={v => setInstructorData({...instructorData, lastGraduationDate: v})} />
+                    <DateSelectInput label="Data da Última Graduação" value={instructorData.lastGraduationDate || ''} onChange={v => setInstructorData({...instructorData, lastGraduationDate: v})} yearFrom={2000} labelClassName="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 mb-1" />
                   </div>
                 </div>
               </div>

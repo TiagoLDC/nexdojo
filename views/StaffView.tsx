@@ -4,6 +4,7 @@ import { Staff, Academy, User } from '../types';
 import { staffService } from '@/features/staff/services/staffService';
 import { useTranslation } from '../services/LanguageContext';
 import { fetchAddressByCep, maskCEP, maskPhone } from '../services/cep';
+import { DateSelectInput } from '@/components/ui';
 import {
   UserPlus,
   Search,
@@ -321,8 +322,12 @@ const StaffView: React.FC<{ academy: Academy; user: User }> = ({ academy }) => {
                 </div>
 
                 <div>
-                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Data de Nascimento *</label>
-                   <input type="date" value={(editingStaff.birthDate || '').split('T')[0]} onChange={(e) => setEditingStaff({...editingStaff, birthDate: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none" />
+                  <DateSelectInput
+                    label="Data de Nascimento *"
+                    labelClassName="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1"
+                    value={(editingStaff.birthDate || '').split('T')[0]}
+                    onChange={v => setEditingStaff({...editingStaff, birthDate: v})}
+                  />
                 </div>
 
                 <div>

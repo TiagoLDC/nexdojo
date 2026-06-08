@@ -28,7 +28,6 @@ import {
   Check,
   Camera,
   User as UserIcon,
-  CalendarClock,
   Award,
   MapPin,
   Mail,
@@ -42,6 +41,7 @@ import {
 } from 'lucide-react';
 import { BeltBadge } from '../components/BeltBadge';
 import { BELT_COLORS } from '../constants';
+import { DateSelectInput } from '@/components/ui';
 
 // Funções utilitárias removidas e unificadas em services/cep.ts
 
@@ -565,8 +565,12 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                       <input type="text" value={editingInstructor.name} onChange={(e) => setEditingInstructor({...editingInstructor, name: e.target.value})} placeholder="Ex: Instrutor Hélio Gracie" className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none font-medium" />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">{t.birthDate} <span className="text-red-500">*</span></label>
-                      <input type="date" value={(editingInstructor.birthDate || '').split('T')[0]} onChange={(e) => setEditingInstructor({...editingInstructor, birthDate: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none font-bold text-slate-800 dark:text-slate-100 text-lg" />
+                      <DateSelectInput
+                        label={`${t.birthDate} *`}
+                        labelClassName="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1"
+                        value={(editingInstructor.birthDate || '').split('T')[0]}
+                        onChange={v => setEditingInstructor({...editingInstructor, birthDate: v})}
+                      />
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">{t.gender}</label>
@@ -757,10 +761,13 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                       </p>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase ml-1 mb-2 flex items-center gap-1">
-                        <CalendarClock size={12} /> {t.lastGraduationDate}
-                      </label>
-                      <input type="date" value={(editingInstructor.lastGraduationDate || '').split('T')[0]} onChange={(e) => setEditingInstructor({...editingInstructor, lastGraduationDate: e.target.value})} className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none font-medium" />
+                      <DateSelectInput
+                        label={t.lastGraduationDate}
+                        labelClassName="block text-[10px] font-bold text-slate-400 uppercase ml-1 mb-1"
+                        value={(editingInstructor.lastGraduationDate || '').split('T')[0]}
+                        onChange={v => setEditingInstructor({...editingInstructor, lastGraduationDate: v})}
+                        yearFrom={2000}
+                      />
                     </div>
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase ml-1 mb-2">{t.specialtiesFocus}</label>

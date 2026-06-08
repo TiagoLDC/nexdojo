@@ -11,6 +11,7 @@ import { staffService } from '@/features/staff/services/staffService';
 import { academyService } from '@/features/settings/services/academyService';
 import { plansService } from '@/features/plans/services/plansService';
 import { useTranslation } from '../services/LanguageContext';
+import { DateSelectInput } from '@/components/ui';
 
 /**
  * Função para redimensionar e comprimir imagem Base64
@@ -1612,12 +1613,11 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Data de Nascimento</label>
-                      <input 
-                        type="date" 
+                      <DateSelectInput
+                        label="Data de Nascimento"
+                        labelClassName="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1"
                         value={(editProfile as any).birthDate || ''}
-                        onChange={(e) => setEditProfile({ ...editProfile, birthDate: e.target.value } as any)}
-                        className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                        onChange={v => setEditProfile({ ...editProfile, birthDate: v } as any)}
                       />
                     </div>
                     <div>

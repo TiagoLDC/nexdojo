@@ -397,20 +397,20 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =>
               <div className="flex items-center gap-2 animate-in slide-in-from-right duration-300">
                 <div className="flex flex-col">
                   <span className="text-[8px] font-black uppercase text-slate-400 ml-2 mb-0.5">Início</span>
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-[10px] font-bold text-slate-600 dark:text-slate-300 outline-none"
+                    className="w-full min-w-0 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-[10px] font-bold text-slate-600 dark:text-slate-300 outline-none"
                   />
                 </div>
                 <div className="flex flex-col">
                   <span className="text-[8px] font-black uppercase text-slate-400 ml-2 mb-0.5">Fim</span>
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-[10px] font-bold text-slate-600 dark:text-slate-300 outline-none"
+                    className="w-full min-w-0 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-[10px] font-bold text-slate-600 dark:text-slate-300 outline-none"
                   />
                 </div>
               </div>
