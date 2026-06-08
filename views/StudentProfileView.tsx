@@ -264,6 +264,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
   ];
 
   return (
+    <>
     <div className="max-w-4xl mx-auto space-y-8 pb-20 animate-in fade-in duration-700">
       {/* Header Premium - Estilo Ficha do Aluno */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 bg-white dark:bg-slate-900 p-6 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm">
@@ -976,10 +977,12 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
         </div>
       </div>
 
+    </div>
+
       {/* Modal Carteirinha Digital Premium (QR Code Expandido) */}
       {isQRModalOpen && (
         <div
-          className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[100] flex items-center justify-center p-4 cursor-pointer"
+          className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[500] flex items-center justify-center p-4 cursor-pointer"
           onClick={() => setIsQRModalOpen(false)}
         >
           <div
@@ -1055,7 +1058,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

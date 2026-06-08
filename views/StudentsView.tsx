@@ -1051,7 +1051,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
       {/* Modal QR Code / Carteirinha Digital */}
       {isQRModalOpen && qrStudent && (
         <div
-          className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[150] flex items-center justify-center p-4 cursor-pointer"
+          className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[400] flex items-center justify-center p-4 cursor-pointer"
           onClick={() => setIsQRModalOpen(false)}
         >
           <div
