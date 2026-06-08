@@ -1586,7 +1586,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                           {[...Array(editingStudent.belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
                             <div
                               key={i}
-                              className={`w-2.5 h-7 rounded-sm transition-all ${i < (editingStudent.stripes || 0) ? 'bg-white dark:bg-slate-800 shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-y-110' : 'bg-white/10'}`}
+                              className={`w-2.5 h-7 rounded-sm transition-all ${i < (editingStudent.stripes || 0) ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)] scale-y-110' : 'bg-white/10'}`}
                             />
                           ))}
                         </div>

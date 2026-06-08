@@ -491,7 +491,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
                        {[...Array((editData as Instructor).belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
                         <div
                           key={i}
-                          className={`w-3 h-8 rounded-sm transition-all ${i < ((editData as Instructor).stripes || 0) ? 'bg-white dark:bg-slate-800 shadow-[0_0_12px_rgba(255,255,255,0.7)] scale-y-110' : 'bg-white/10'}`}
+                          className={`w-3 h-8 rounded-sm transition-all ${i < ((editData as Instructor).stripes || 0) ? 'bg-white shadow-[0_0_12px_rgba(255,255,255,0.7)] scale-y-110' : 'bg-white/10'}`}
                         />
                       ))}
                     </div>
