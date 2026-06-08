@@ -1290,7 +1290,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       {(user.role === 'admin' || user.role === 'superuser') && academy && (
         <motion.div variants={itemVariants} className="px-2">
           <div className="bg-white dark:bg-slate-900 border border-indigo-100 dark:border-indigo-900/30 rounded-[28px] sm:rounded-[32px] p-4 sm:p-6 shadow-xl shadow-indigo-500/5 overflow-hidden relative group">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 relative z-10">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 lg:gap-6 relative z-10">
               <div className="flex items-center gap-3 sm:gap-4">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0 shadow-inner">
                   <Smartphone size={20} className="sm:size-[24px]" />
@@ -1300,9 +1300,9 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                   <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">{t.sendInviteLink}</p>
                 </div>
               </div>
-              
-              <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto">
-                <div className="hidden lg:block bg-slate-50 dark:bg-slate-800 px-4 py-3 rounded-2xl border border-slate-100 dark:border-slate-800 max-w-[200px] xl:max-w-[250px]">
+
+              <div className="flex items-center gap-2 sm:gap-3 w-full lg:w-auto">
+                <div className="hidden xl:block bg-slate-50 dark:bg-slate-800 px-4 py-3 rounded-2xl border border-slate-100 dark:border-slate-800 max-w-[200px] xl:max-w-[250px]">
                   <p className="text-[9px] font-mono text-slate-400 truncate tracking-tighter">
                     {`${window.location.origin}/login/${academy.alias || academy.id}`}
                   </p>
@@ -1313,20 +1313,19 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                     navigator.clipboard.writeText(link);
                     showNotification(t.linkCopied, 'success');
                   }}
-                  className="p-3.5 sm:p-4 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-indigo-600 rounded-2xl transition-all active:scale-95 border border-slate-100 dark:border-slate-800 shrink-0"
+                  className="p-3.5 bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-indigo-600 rounded-2xl transition-all active:scale-95 border border-slate-100 dark:border-slate-800 shrink-0"
                   title={t.copyLink}
                 >
-                  <Copy size={18} className="sm:size-[20px]" />
+                  <Copy size={18} />
                 </button>
                 <a
                   href={`https://wa.me/?text=${encodeURIComponent(t.whatsappShareText.replace('{academy}', academy.name).replace('{link}', `${window.location.origin}/login/${academy.alias || academy.id}`))}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 md:flex-none bg-[#25D366] hover:bg-[#128C7E] text-white px-5 sm:px-8 py-3.5 sm:py-4 rounded-2xl font-black text-[10px] sm:text-xs uppercase tracking-widest flex items-center justify-center gap-2 sm:gap-3 shadow-lg shadow-green-500/20 transition-all active:scale-95"
+                  className="flex-1 lg:flex-none bg-[#25D366] hover:bg-[#128C7E] text-white px-5 py-3.5 rounded-2xl font-black text-[10px] sm:text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-green-500/20 transition-all active:scale-95"
                 >
-                  <Share2 size={16} className="sm:size-[18px]" />
-                  <span className="hidden xs:inline">WhatsApp</span>
-                  <span className="xs:hidden">{t.confirm}</span>
+                  <Share2 size={16} />
+                  <span>WhatsApp</span>
                 </a>
               </div>
             </div>
