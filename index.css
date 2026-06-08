@@ -542,6 +542,26 @@
   color: oklch(0.48 0.02 260);
 }
 
+/* Mobile-only brand header (hidden on desktop when hero is visible) */
+.login-mobile-brand {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.login-mobile-brand-academy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+@media (max-width: 960px) {
+  .login-mobile-brand { display: flex; flex-direction: column; align-items: flex-start; }
+}
+
 /* ── Form panel ── */
 .login-form-side {
   position: relative;

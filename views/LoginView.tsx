@@ -559,6 +559,34 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
           {/* ── Form Panel ── */}
           <main className="login-form-side">
             <div className="login-form-shell">
+              {/* Mobile-only brand: shown only when hero panel is hidden (< 960px) */}
+              <div className="login-mobile-brand">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div className="login-brand-card" style={{ width: 32, height: 32, borderRadius: 8 }}>
+                    <img src="/logo.png" alt="NexDojo" style={{ width: 20, height: 20, objectFit: 'contain' }} />
+                  </div>
+                  <span className="login-brand-name" style={{ fontSize: 18 }}>
+                    <span className="login-brand-nex">Nex</span><span className="login-brand-dojo">Dojo</span>
+                  </span>
+                </div>
+                {linkedAcademy && (
+                  <div className="login-mobile-brand-academy">
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', overflow: 'hidden', background: 'rgba(99,102,241,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {linkedAcademy.logo ? (
+                        <img src={linkedAcademy.logo} alt={linkedAcademy.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <span style={{ fontSize: 9, fontWeight: 900, color: '#818cf8' }}>{academyInitials}</span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <span style={{ fontSize: 11, fontWeight: 900, color: 'rgba(255,255,255,0.75)', letterSpacing: '0.04em', lineHeight: 1.2 }}>{linkedAcademy.name}</span>
+                      {linkedAcademy.ownerName && (
+                        <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em', textTransform: 'uppercase', lineHeight: 1.2 }}>{linkedAcademy.ownerName}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
 <h2 className="login-form-title">{t.accessPortal}</h2>
               <p className="login-form-sub">Entre com suas credenciais para continuar</p>
 

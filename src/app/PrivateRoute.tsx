@@ -4,10 +4,12 @@ import { useAuthStore } from '@/stores/authStore';
 
 export const PrivateRoute: React.FC = () => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const lastAcademyAlias = useAuthStore((s) => s.lastAcademyAlias);
   const location = useLocation();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    const loginPath = lastAcademyAlias ? `/login/${lastAcademyAlias}` : '/login';
+    return <Navigate to={loginPath} state={{ from: location }} replace />;
   }
 
   return <Outlet />;
