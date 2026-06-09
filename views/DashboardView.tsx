@@ -501,11 +501,18 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     }).sort((a, b) => a.name.localeCompare(b.name));
   }, [students, academy]);
 
-  const birthdaysToday = useMemo(() => {
+  const currentMonthDay = useMemo(() => {
     const today = new Date();
-    const currentMonthDay = `${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    return `${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  }, []);
+
+  const studentBirthdaysToday = useMemo(() => {
     return students.filter(s => s.birthDate && s.birthDate.substring(5) === currentMonthDay);
-  }, [students]);
+  }, [students, currentMonthDay]);
+
+  const instructorBirthdaysToday = useMemo(() => {
+    return instructors.filter(i => i.birthDate && i.birthDate.substring(5) === currentMonthDay);
+  }, [instructors, currentMonthDay]);
 
   const financialSummary = useMemo(() => {
     const income = finances.filter(f => f.type === 'income').reduce((acc, f) => acc + Number(f.amount), 0);
@@ -888,6 +895,24 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
           </motion.div>
         )}
 
+        {/* FELICITAÇÕES DO ALUNO */}
+        {profile.birthDate && profile.birthDate.substring(5) === currentMonthDay && (
+          <motion.div variants={itemVariants} className="px-2">
+            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-6 rounded-[32px] text-white shadow-xl shadow-emerald-500/20 relative overflow-hidden">
+              <div className="flex items-center gap-5 relative z-10">
+                <div className="bg-white/20 p-4 rounded-2xl shrink-0">
+                  <Trophy size={32} />
+                </div>
+                <div>
+                  <h3 className="font-black text-xl uppercase italic tracking-tight leading-none">Feliz Aniversário, {profile.name.split(' ')[0]}!</h3>
+                  <p className="text-emerald-100 font-medium opacity-90 mt-1 text-sm">Que este dia seja tão especial quanto você é para o nosso dojo!</p>
+                </div>
+              </div>
+              <Star size={160} className="absolute -right-12 -bottom-12 text-white/10 pointer-events-none" />
+            </div>
+          </motion.div>
+        )}
+
         {/* BENTO GRID - STUDENT */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 px-2">
           
@@ -1215,9 +1240,27 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
         </motion.div>
       )}
 
+      {/* FELICITAÇÕES DO INSTRUTOR */}
+      {user.role === 'instructor' && instructorProfile?.birthDate && instructorProfile.birthDate.substring(5) === currentMonthDay && (
+        <motion.div variants={itemVariants} className="px-2">
+          <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-6 rounded-[32px] text-white shadow-xl shadow-emerald-500/20 relative overflow-hidden">
+            <div className="flex items-center gap-5 relative z-10">
+              <div className="bg-white/20 p-4 rounded-2xl shrink-0">
+                <Trophy size={32} />
+              </div>
+              <div>
+                <h3 className="font-black text-xl uppercase italic tracking-tight leading-none">Feliz Aniversário, {instructorProfile.name.split(' ')[0]}!</h3>
+                <p className="text-emerald-100 font-medium opacity-90 mt-1 text-sm">Que este dia seja tão especial quanto você é para o nosso dojo!</p>
+              </div>
+            </div>
+            <Star size={160} className="absolute -right-12 -bottom-12 text-white/10 pointer-events-none" />
+          </div>
+        </motion.div>
+      )}
+
       {/* AVISO DE MENSAGENS NO MURAL */}
       {hasNewMessages && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           className="px-2"
@@ -2180,26 +2223,61 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
             </div>
           )}
 
-          {birthdaysToday.length > 0 && (
+          {(studentBirthdaysToday.length > 0 || instructorBirthdaysToday.length > 0) && (
             <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-emerald-100 dark:border-emerald-900/30 shadow-xl shadow-emerald-500/5 relative overflow-hidden group">
               <div className="relative z-10">
-                <h3 className="text-lg font-black text-emerald-600 uppercase italic tracking-tight mb-6 flex items-center gap-3">
+                <h3 className="text-lg font-black text-emerald-600 uppercase italic tracking-tight mb-2 flex items-center gap-3">
                   <Medal size={24} />
                   Dia de Celebração
                 </h3>
-                <div className="space-y-4">
-                  {birthdaysToday.map(s => (
-                    <div key={s.id} className="flex items-center gap-4 bg-emerald-50/50 dark:bg-emerald-900/20 p-4 rounded-3xl border border-emerald-100 dark:border-emerald-900/30">
-                      <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-black text-xl shadow-sm">
-                        {s.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-black text-slate-800 dark:text-white uppercase italic tracking-tight leading-none mb-1">{s.name.split(' ')[0]}</p>
-                        <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{calculateAge(s.birthDate)} Aniversário</p>
-                      </div>
-                    </div>
-                  ))}
+                <div className="flex gap-3 mb-5">
+                  {studentBirthdaysToday.length > 0 && (
+                    <span className="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
+                      {studentBirthdaysToday.length} Aluno{studentBirthdaysToday.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                  {instructorBirthdaysToday.length > 0 && (
+                    <span className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
+                      {instructorBirthdaysToday.length} Instrutor{instructorBirthdaysToday.length !== 1 ? 'es' : ''}
+                    </span>
+                  )}
                 </div>
+                {studentBirthdaysToday.length > 0 && (
+                  <div className="space-y-3 mb-4">
+                    {instructorBirthdaysToday.length > 0 && (
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Alunos</p>
+                    )}
+                    {studentBirthdaysToday.map(s => (
+                      <div key={s.id} className="flex items-center gap-4 bg-emerald-50/50 dark:bg-emerald-900/20 p-4 rounded-3xl border border-emerald-100 dark:border-emerald-900/30">
+                        <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-black text-xl shadow-sm">
+                          {s.name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-black text-slate-800 dark:text-white uppercase italic tracking-tight leading-none mb-1">{s.name.split(' ')[0]}</p>
+                          <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">{calculateAge(s.birthDate)}º Aniversário</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {instructorBirthdaysToday.length > 0 && (
+                  <div className="space-y-3">
+                    {studentBirthdaysToday.length > 0 && (
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Instrutores</p>
+                    )}
+                    {instructorBirthdaysToday.map(i => (
+                      <div key={i.id} className="flex items-center gap-4 bg-indigo-50/50 dark:bg-indigo-900/20 p-4 rounded-3xl border border-indigo-100 dark:border-indigo-900/30">
+                        <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-black text-xl shadow-sm">
+                          {i.name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-black text-slate-800 dark:text-white uppercase italic tracking-tight leading-none mb-1">{i.name.split(' ')[0]}</p>
+                          <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">{calculateAge(i.birthDate)}º Aniversário</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <Trophy size={140} className="absolute -bottom-20 -right-20 text-emerald-50 dark:text-emerald-900/10 -rotate-12 group-hover:rotate-0 transition-all duration-700" />
             </div>
