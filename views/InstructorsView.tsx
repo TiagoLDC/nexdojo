@@ -120,6 +120,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
       cpf: '',
       rg: '',
       address: '',
+      addressNumber: '',
       medicalNotes: '',
       specialties: '',
       graduationHistory: []
@@ -709,8 +710,8 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                       )}
                     </div>
                   )}
-                  <div className="md:col-span-2">
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1 flex items-center justify-between">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1 flex items-center gap-1">
                       CEP
                       {isLoadingCep && <Loader2 size={10} className="animate-spin text-indigo-500" />}
                     </label>
@@ -725,11 +726,21 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                       />
                     </div>
                   </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Número</label>
+                    <input
+                      type="text"
+                      value={editingInstructor.addressNumber || ''}
+                      onChange={(e) => setEditingInstructor({...editingInstructor, addressNumber: e.target.value})}
+                      placeholder="Nº"
+                      className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 outline-none font-medium"
+                    />
+                  </div>
                   <div className="md:col-span-2">
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">{t.homeAddress}</label>
                     <div className="relative">
                       <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
-                      <input type="text" value={editingInstructor.address || ''} onChange={(e) => setEditingInstructor({...editingInstructor, address: e.target.value})} placeholder="Rua, Número, Bairro, Cidade - UF" className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 outline-none font-medium" />
+                      <input type="text" value={editingInstructor.address || ''} onChange={(e) => setEditingInstructor({...editingInstructor, address: e.target.value})} placeholder="Rua, Bairro, Cidade - UF" className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 outline-none font-medium" />
                     </div>
                   </div>
                 </div>
