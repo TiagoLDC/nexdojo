@@ -354,7 +354,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     try {
       const nextDate = advancePaymentDate(oldDueDate);
       const updated = await studentService.update(student.id, { nextPaymentDate: nextDate } as any);
-      await financeService.create(academy!.id, {
+      const newFinance = await financeService.create(academy!.id, {
         description: plan?.name ?? 'Mensalidade',
         amount: plan?.price ?? 0,
         type: 'income',
@@ -366,6 +366,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
         dueDate: oldDueDate,
       });
       setStudents(prev => prev.map(s => s.id === updated.id ? updated : s));
+      setFinances(prev => [...prev, newFinance]);
       showNotification(
         `Mensalidade de ${student.name} registrada. Próx. vencimento: ${new Date(nextDate + 'T12:00:00').toLocaleDateString('pt-BR')}`
       );
