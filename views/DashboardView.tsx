@@ -1207,8 +1207,9 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                   </p>
                 </div>
               </div>
-              <Link 
-                to="/students" 
+              <Link
+                to="/students"
+                state={{ openGraduationCenter: true }}
                 className="w-full md:w-auto bg-white dark:bg-slate-800 text-amber-600 px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.1em] shadow-xl hover:scale-105 active:scale-95 transition-all text-center"
               >
                 {t.manageGraduations}

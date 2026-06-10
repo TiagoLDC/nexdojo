@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Student, Belt, StudentDocument, ClassTemplate, Academy, User } from '../types';
 import { studentService } from '@/features/students/services/studentService';
 import { financeService } from '@/features/finances/services/financeService';
@@ -125,6 +126,7 @@ interface StudentsViewProps {
 
 const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
   const { t, language, showNotification } = useTranslation();
+  const location = useLocation();
   const [students, setStudents] = useState<Student[]>([]);
   const [templates, _setTemplates] = useState<ClassTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -261,6 +263,12 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
         .finally(() => setIsLoading(false));
     }
   }, [academy?.id]);
+
+  useEffect(() => {
+    if ((location.state as { openGraduationCenter?: boolean } | null)?.openGraduationCenter) {
+      setIsGraduationCenterOpen(true);
+    }
+  }, []);
 
   const exportStudentsToCSV = () => {
     if (students.length === 0) return;
