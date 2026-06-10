@@ -1687,7 +1687,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
           {/* MODAL DE GERENCIAMENTO DE ACADEMIA (SUPERUSER) */}
           {isManageModalOpen && selectedAcademy && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
-              <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[40px] shadow-2xl p-8 space-y-8 animate-in zoom-in-95 duration-300">
+              <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[32px] md:rounded-[40px] shadow-2xl p-4 md:p-8 space-y-4 md:space-y-8 animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar">
                 <header className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 overflow-hidden">
