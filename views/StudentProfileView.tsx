@@ -854,11 +854,11 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
                 {[...(profile.graduationHistory)].reverse().map((item, idx) => (
                   <div key={item.id ?? idx} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl px-4 py-3 border border-slate-100 dark:border-slate-800">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase text-white shrink-0 ${BELT_COLORS[item.previousBelt]?.split(' ')[0] ?? 'bg-slate-400'}`}>
+                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase shrink-0 border ${BELT_COLORS[item.previousBelt] ?? 'bg-slate-400 text-white border-slate-500'}`}>
                         {item.previousBelt} {item.previousStripes > 0 ? `${item.previousStripes}°` : ''}
                       </span>
                       <ChevronRight size={14} className="text-slate-400 shrink-0" />
-                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase text-white shrink-0 ${BELT_COLORS[item.newBelt]?.split(' ')[0] ?? 'bg-slate-400'}`}>
+                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase shrink-0 border ${BELT_COLORS[item.newBelt] ?? 'bg-slate-400 text-white border-slate-500'}`}>
                         {item.newBelt} {item.newStripes > 0 ? `${item.newStripes}°` : ''}
                       </span>
                       {item.notes && (
