@@ -353,6 +353,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         guardianRelation: studentData.guardianRelation,
         guardianCpf: studentData.guardianCpf,
         medicalNotes: studentData.medicalNotes,
+        lastGraduationDate: studentData.lastGraduationDate || undefined,
         photo: studentData.photo,
         planId: studentData.planId || undefined,
       });
@@ -1062,6 +1063,13 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                       {studentData.belt === Belt.BLACK ? 'Faixa preta possui até 6 graus.' : 'Faixas coloridas possuem até 4 graus.'}
                     </p>
                   </div>
+                  <DateSelectInput
+                    label="Data da Última Graduação"
+                    labelClassName="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 mb-1"
+                    value={studentData.lastGraduationDate || ''}
+                    onChange={v => setStudentData({...studentData, lastGraduationDate: v})}
+                    yearFrom={2000}
+                  />
                 </div>
               </div>
 

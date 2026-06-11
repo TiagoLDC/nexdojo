@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 const MONTHS = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril',
@@ -18,6 +18,11 @@ interface DateSelectInputProps {
   labelClassName?: string;
 }
 
+const parseValue = (v: string): [string, string, string] => {
+  const parts = v ? v.split('T')[0].split('-') : [];
+  return [parts[0] ?? '', parts[1] ?? '', parts[2] ?? ''];
+};
+
 export const DateSelectInput: React.FC<DateSelectInputProps> = ({
   label,
   value,
@@ -33,17 +38,24 @@ export const DateSelectInput: React.FC<DateSelectInputProps> = ({
   const minYear = yearFrom ?? 1920;
   const maxYear = yearTo ?? currentYear;
 
-  const parts = value ? value.split('T')[0].split('-') : [];
-  const yearVal  = parts[0] ?? '';
-  const monthVal = parts[1] ?? '';
-  const dayVal   = parts[2] ?? '';
+  const [localYear, setLocalYear] = useState(() => parseValue(value)[0]);
+  const [localMonth, setLocalMonth] = useState(() => parseValue(value)[1]);
+  const [localDay, setLocalDay] = useState(() => parseValue(value)[2]);
+
+  // Sync from external resets (e.g., form clear after submit)
+  useEffect(() => {
+    const [y, m, d] = parseValue(value);
+    setLocalYear(y);
+    setLocalMonth(m);
+    setLocalDay(d);
+  }, [value]);
 
   const daysInMonth =
-    yearVal && monthVal
-      ? new Date(parseInt(yearVal), parseInt(monthVal), 0).getDate()
+    localYear && localMonth
+      ? new Date(parseInt(localYear), parseInt(localMonth), 0).getDate()
       : 31;
 
-  const emit = (y: string, m: string, d: string) => {
+  const fireChange = (y: string, m: string, d: string) => {
     if (!y || !m || !d) { onChange(''); return; }
     const maxDay = new Date(parseInt(y), parseInt(m), 0).getDate();
     const safeDay = Math.min(parseInt(d), maxDay).toString().padStart(2, '0');
@@ -62,8 +74,8 @@ export const DateSelectInput: React.FC<DateSelectInputProps> = ({
       <div className="flex gap-2">
         <select
           disabled={disabled}
-          value={dayVal}
-          onChange={e => emit(yearVal, monthVal, e.target.value)}
+          value={localDay}
+          onChange={e => { setLocalDay(e.target.value); fireChange(localYear, localMonth, e.target.value); }}
           className={sel}
         >
           <option value="">Dia</option>
@@ -74,8 +86,8 @@ export const DateSelectInput: React.FC<DateSelectInputProps> = ({
 
         <select
           disabled={disabled}
-          value={monthVal}
-          onChange={e => emit(yearVal, e.target.value, dayVal)}
+          value={localMonth}
+          onChange={e => { setLocalMonth(e.target.value); fireChange(localYear, e.target.value, localDay); }}
           className={`${sel} flex-[1.8]`}
         >
           <option value="">Mês</option>
@@ -86,8 +98,8 @@ export const DateSelectInput: React.FC<DateSelectInputProps> = ({
 
         <select
           disabled={disabled}
-          value={yearVal}
-          onChange={e => emit(e.target.value, monthVal, dayVal)}
+          value={localYear}
+          onChange={e => { setLocalYear(e.target.value); fireChange(e.target.value, localMonth, localDay); }}
           className={`${sel} flex-[1.5]`}
         >
           <option value="">Ano</option>
