@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { RecycleBinItem, Academy, User } from '../types';
 import { useTranslation } from '../services/LanguageContext';
 import { recycleBinService } from '@/features/recycleBin/services/recycleBinService';
+import { ConfirmDialog } from '@/components/ui';
 import {
   Trash2,
   RotateCcw,
@@ -26,6 +27,12 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy })
   const [typeFilter, setTypeFilter] = useState<string>('All');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: React.ReactNode;
+    onConfirm: () => void;
+  }>({ open: false, title: '', message: '', onConfirm: () => {} });
 
   const loadItems = () => {
     if (academy) {
@@ -95,16 +102,28 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy })
 
   const handleBulkDelete = () => {
     if (selectedIds.size === 0) return;
-    if (window.confirm(`Deseja excluir permanentemente os ${selectedIds.size} itens selecionados?`)) {
-      deleteMany(Array.from(selectedIds));
-    }
+    setConfirmDialog({
+      open: true,
+      title: 'Excluir permanentemente?',
+      message: <>Deseja excluir permanentemente os <strong className="text-slate-900 dark:text-white">{selectedIds.size} itens selecionados</strong>? Esta ação não pode ser desfeita.</>,
+      onConfirm: () => {
+        setConfirmDialog(d => ({ ...d, open: false }));
+        deleteMany(Array.from(selectedIds));
+      },
+    });
   };
 
   const handleEmptyBin = () => {
     if (items.length === 0) return;
-    if (window.confirm("Deseja realmente esvaziar a lixeira? Todos os dados serão perdidos para sempre.")) {
-      deleteMany(items.map(i => i.id));
-    }
+    setConfirmDialog({
+      open: true,
+      title: 'Esvaziar lixeira?',
+      message: 'Todos os dados serão perdidos para sempre. Esta ação não pode ser desfeita.',
+      onConfirm: () => {
+        setConfirmDialog(d => ({ ...d, open: false }));
+        deleteMany(items.map(i => i.id));
+      },
+    });
   };
 
   return (
@@ -250,9 +269,15 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy })
                   <RotateCcw size={18} />
                 </button>
                 <button
-                  onClick={() => {
-                    if(window.confirm("Excluir permanentemente?")) deleteMany([item.id]);
-                  }}
+                  onClick={() => setConfirmDialog({
+                    open: true,
+                    title: 'Excluir permanentemente?',
+                    message: <>Deseja realmente excluir <strong className="text-slate-900 dark:text-white">{item.originalData.name}</strong>? Esta ação não pode ser desfeita.</>,
+                    onConfirm: () => {
+                      setConfirmDialog(d => ({ ...d, open: false }));
+                      deleteMany([item.id]);
+                    },
+                  })}
                   className="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all"
                   title="Excluir Permanentemente"
                 >
@@ -279,6 +304,16 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy })
           </p>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog(d => ({ ...d, open: false }))}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmLabel="Excluir permanentemente"
+        variant="danger"
+      />
     </div>
   );
 };
