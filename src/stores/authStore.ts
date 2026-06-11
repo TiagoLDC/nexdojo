@@ -9,6 +9,7 @@ interface AuthStore {
   academy: Academy | null;
   isAuthenticated: boolean;
   lastAcademyAlias: string | null;
+  justLoggedOut: boolean;
   login: (user: User, token: string, academy: Academy | null) => void;
   logout: () => void;
   setAcademy: (academy: Academy) => void;
@@ -22,19 +23,20 @@ export const useAuthStore = create<AuthStore>()(
       academy: null,
       isAuthenticated: false,
       lastAcademyAlias: null,
+      justLoggedOut: false,
 
       login: (user, token, academy) => {
         setApiToken(token);
         set({
-          user, token, academy, isAuthenticated: true,
+          user, token, academy, isAuthenticated: true, justLoggedOut: false,
           ...(academy?.alias ? { lastAcademyAlias: academy.alias } : {}),
         });
       },
 
       logout: () => {
         setApiToken(null);
-        set({ user: null, token: null, academy: null, isAuthenticated: false });
-        // lastAcademyAlias is intentionally preserved so PrivateRoute can redirect back
+        // justLoggedOut enables alias redirect only on explicit logout, not direct navigation
+        set({ user: null, token: null, academy: null, isAuthenticated: false, justLoggedOut: true });
       },
 
       setAcademy: (academy) => {
@@ -49,6 +51,9 @@ export const useAuthStore = create<AuthStore>()(
       onRehydrateStorage: () => (state) => {
         if (state?.token) {
           setApiToken(state.token);
+        }
+        if (state) {
+          state.justLoggedOut = false;
         }
         setUnauthorizedHandler(() => {
           useAuthStore.getState().logout();
