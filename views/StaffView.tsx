@@ -4,7 +4,7 @@ import { Staff, Academy, User } from '../types';
 import { staffService } from '@/features/staff/services/staffService';
 import { useTranslation } from '../services/LanguageContext';
 import { fetchAddressByCep, maskCEP, maskPhone } from '../services/cep';
-import { DateSelectInput } from '@/components/ui';
+import { DateSelectInput, ConfirmDialog } from '@/components/ui';
 import {
   UserPlus,
   Search,
@@ -381,24 +381,14 @@ const StaffView: React.FC<{ academy: Academy; user: User }> = ({ academy }) => {
         </div>
       )}
 
-      {/* Modal Deletar */}
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[300] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[32px] p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 text-center">
-            <div className="w-16 h-16 bg-red-100 dark:bg-red-950/30 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Trash2 size={32} />
-            </div>
-            <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase italic mb-2">Excluir Colaborador?</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed mb-8">
-              Esta ação é permanente e removerá todos os dados de <strong>{editingStaff?.name}</strong>.
-            </p>
-            <div className="flex flex-col gap-2">
-               <button onClick={handleDeleteStaff} className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-red-600/20 active:scale-95 transition-all text-sm uppercase tracking-widest italic">Sim, Remover</button>
-               <button onClick={() => setIsDeleteModalOpen(false)} className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-4 rounded-2xl active:scale-95 transition-all text-sm uppercase">Cancelar</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDeleteStaff}
+        title="Excluir Colaborador?"
+        message={<>Esta ação é permanente e removerá todos os dados de <strong className="text-slate-900 dark:text-white">{editingStaff?.name}</strong>.</>}
+        confirmLabel="Sim, Remover"
+      />
     </div>
   );
 };

@@ -67,7 +67,7 @@ import {
 } from 'recharts';
 import { BeltBadge } from '../components/BeltBadge';
 import { BELT_COLORS } from '../constants';
-import { DateSelectInput } from '@/components/ui';
+import { DateSelectInput, ConfirmDialog } from '@/components/ui';
 import { QRCodeSVG } from 'qrcode.react';
 
 
@@ -1829,33 +1829,13 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                   )}
                 </div>
 
-                {isConfirmingDelete ? (
-                  <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-3xl border border-red-100 dark:border-red-900/30 animate-in slide-in-from-bottom-2 duration-300">
-                    <p className="text-xs font-black text-red-600 dark:text-red-400 uppercase tracking-widest mb-4">Confirmar Exclusão Permanente?</p>
-                    <div className="flex gap-2">
-                       <button 
-                         onClick={() => handleDeleteAcademy(selectedAcademy.id)}
-                         className="flex-1 bg-red-600 text-white font-black py-4 rounded-xl text-[10px] uppercase tracking-widest shadow-lg shadow-red-600/20 active:scale-95 transition-all"
-                       >
-                         Sim, Excluir
-                       </button>
-                       <button 
-                         onClick={() => setIsConfirmingDelete(false)}
-                         className="flex-1 bg-white dark:bg-slate-800 text-slate-500 font-bold py-4 rounded-xl text-[10px] uppercase tracking-widest border border-slate-100 dark:border-slate-700 active:scale-95 transition-all"
-                       >
-                         Cancelar
-                       </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button 
+                  <button
                     onClick={() => setIsConfirmingDelete(true)}
                     className="w-full bg-red-50 hover:bg-red-100 text-red-600 font-black py-4 rounded-2xl active:scale-95 transition-all text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
                   >
                     <Trash2 size={16} />
                     Excluir Unidade Permanentemente
                   </button>
-                )}
               </div>
             </div>
           )}
@@ -2561,6 +2541,14 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
         </div>
       </div>
     )}
+      <ConfirmDialog
+        open={isConfirmingDelete && !!selectedAcademy}
+        onClose={() => setIsConfirmingDelete(false)}
+        onConfirm={() => selectedAcademy && handleDeleteAcademy(selectedAcademy.id)}
+        title="Excluir Unidade Permanentemente?"
+        message={<>Esta ação não pode ser desfeita. Todos os dados da unidade <strong className="text-slate-900 dark:text-white">{selectedAcademy?.name}</strong> serão removidos definitivamente.</>}
+        confirmLabel="Sim, Excluir"
+      />
     </>
   );
 };

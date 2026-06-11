@@ -17,7 +17,6 @@ import {
   Wallet,
   PieChart as PieChartIcon,
   Trash2,
-  AlertTriangle,
   Loader2,
   Copy,
   Share2,
@@ -36,7 +35,7 @@ import {
 } from 'recharts';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { DateSelectInput } from '@/components/ui';
+import { DateSelectInput, ConfirmDialog } from '@/components/ui';
 
 const PrintHeader: React.FC<{ title: string; academy: Academy }> = ({ title, academy }) => {
   return (
@@ -703,38 +702,14 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =
         </div>
       )}
 
-      {/* Modal de Confirmação de Exclusão */}
-      {isDeleteModalOpen && transactionToDelete && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl text-center">
-            <div className="bg-red-100 dark:bg-red-950/30 w-20 h-20 rounded-full flex items-center justify-center text-red-600 dark:text-red-400 mx-auto mb-6">
-              <AlertTriangle size={40} />
-            </div>
-            <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-2 tracking-tight">Excluir Lançamento?</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-8 leading-relaxed">
-              Deseja realmente remover o lançamento <span className="text-slate-900 dark:text-white font-bold italic">"{transactionToDelete.description}"</span>?
-              Esta ação não poderá ser desfeita.
-            </p>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={handleDelete}
-                className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-5 rounded-3xl shadow-xl shadow-red-600/20 transition-all active:scale-95 flex items-center justify-center gap-2"
-              >
-                Sim, Remover Agora
-              </button>
-              <button
-                onClick={() => {
-                  setIsDeleteModalOpen(false);
-                  setTransactionToDelete(null);
-                }}
-                className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold py-5 rounded-3xl transition-all active:scale-95"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={isDeleteModalOpen && !!transactionToDelete}
+        onClose={() => { setIsDeleteModalOpen(false); setTransactionToDelete(null); }}
+        onConfirm={handleDelete}
+        title="Excluir Lançamento?"
+        message={<>Deseja realmente remover o lançamento <strong className="text-slate-900 dark:text-white italic">"{transactionToDelete?.description}"</strong>? Esta ação não poderá ser desfeita.</>}
+        confirmLabel="Sim, Remover Agora"
+      />
     </div>
   </div>
   );

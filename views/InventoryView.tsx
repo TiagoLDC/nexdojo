@@ -5,6 +5,7 @@ import { financeService } from '@/features/finances/services/financeService';
 import { useTranslation } from '../services/LanguageContext';
 import { Search, Package, Plus, Edit2, Trash2, X, Tag, DollarSign, Box, Camera, Image as ImageIcon, ShoppingBag, QrCode, Clipboard, CheckCircle2, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { ConfirmDialog } from '@/components/ui';
 
 const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
   const { t, showNotification } = useTranslation();
@@ -672,30 +673,15 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
         )}
       </AnimatePresence>
 
-      {isDeleting && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[28px] md:rounded-[32px] p-5 md:p-8 text-center shadow-2xl"
-          >
-            <div className="bg-red-50 dark:bg-red-950/20 w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6">
-              <Trash2 className="text-red-500" size={32} />
-            </div>
-            <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase italic tracking-tight mb-2">{t.deleteProductQuestion}</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 font-medium">{t.deleteProductText}</p>
-            <div className="flex gap-3">
-              <button onClick={() => setIsDeleting(null)} className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-500 font-bold py-4 rounded-2xl transition-all">{t.cancel}</button>
-              <button
-                onClick={() => handleDeleteProduct(isDeleting)}
-                className="flex-1 bg-red-600 text-white font-black text-xs uppercase tracking-widest py-4 rounded-2xl transition-all shadow-lg shadow-red-600/20 active:scale-95"
-              >
-                {t.delete}
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={!!isDeleting}
+        onClose={() => setIsDeleting(null)}
+        onConfirm={() => isDeleting && handleDeleteProduct(isDeleting)}
+        title={t.deleteProductQuestion}
+        message={t.deleteProductText}
+        confirmLabel={t.delete}
+        cancelLabel={t.cancel}
+      />
     </div>
   );
 };

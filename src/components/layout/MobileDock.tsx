@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, CheckCircle2, DollarSign, Users, Calendar, UserCircle, LayoutGrid } from 'lucide-react';
+import { Home, CheckCircle2, Users, Calendar, UserCircle, LayoutGrid } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 

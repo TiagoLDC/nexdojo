@@ -31,7 +31,6 @@ import {
   Award,
   MapPin,
   Mail,
-  AlertTriangle,
   Loader2,
   Eye,
   EyeOff,
@@ -41,7 +40,7 @@ import {
 } from 'lucide-react';
 import { BeltBadge } from '../components/BeltBadge';
 import { BELT_COLORS } from '../constants';
-import { DateSelectInput } from '@/components/ui';
+import { DateSelectInput, ConfirmDialog } from '@/components/ui';
 
 // Funções utilitárias removidas e unificadas em services/cep.ts
 
@@ -926,34 +925,15 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
         </div>
       )}
 
-      {/* Modal de Confirmação de Exclusão */}
-      {isDeleteModalOpen && editingInstructor && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl text-center">
-            <div className="bg-red-100 w-20 h-20 rounded-full flex items-center justify-center text-red-600 mx-auto mb-6">
-              <AlertTriangle size={40} />
-            </div>
-            <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-2">{t.deleteInstructorQuestion}</h2>
-            <p className="text-sm text-slate-500 font-medium mb-8 leading-relaxed">
-              {t.deleteInstructorText.replace('{name}', editingInstructor.name)}
-            </p>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={handleDeleteInstructor}
-                className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-5 rounded-3xl shadow-xl shadow-red-600/20 transition-all active:scale-95"
-              >
-                {t.confirmDeleteInstructor}
-              </button>
-              <button
-                onClick={() => setIsDeleteModalOpen(false)}
-                className="w-full bg-slate-100 dark:bg-slate-800/50 hover:bg-slate-200 text-slate-600 dark:text-slate-300 font-bold py-5 rounded-3xl transition-all active:scale-95"
-              >
-                {t.cancel}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={isDeleteModalOpen && !!editingInstructor}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDeleteInstructor}
+        title={t.deleteInstructorQuestion}
+        message={editingInstructor ? t.deleteInstructorText.replace('{name}', editingInstructor.name) : ''}
+        confirmLabel={t.confirmDeleteInstructor}
+        cancelLabel={t.cancel}
+      />
     </div>
   );
 };

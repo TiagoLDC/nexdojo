@@ -11,7 +11,7 @@ import { staffService } from '@/features/staff/services/staffService';
 import { academyService } from '@/features/settings/services/academyService';
 import { plansService } from '@/features/plans/services/plansService';
 import { useTranslation } from '../services/LanguageContext';
-import { DateSelectInput } from '@/components/ui';
+import { DateSelectInput, ConfirmDialog } from '@/components/ui';
 
 /**
  * Função para redimensionar e comprimir imagem Base64
@@ -2045,41 +2045,23 @@ const SettingsView: React.FC<SettingsViewProps> = ({
       )}
 
       {/* Modal Checkout Simulation */}
-      {isCheckingOut && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[300] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[32px] md:rounded-[40px] p-6 md:p-10 animate-in zoom-in duration-300 shadow-2xl text-center border border-slate-100 dark:border-slate-800">
-            <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center text-indigo-600 dark:text-indigo-400 mx-auto mb-6">
-              <CreditCard size={40} />
-            </div>
-            <h3 className="text-2xl font-black text-slate-800 dark:text-white mb-2 uppercase italic tracking-tighter">Finalizar Compra</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-8">
-              Você está assinando o plano <span className="text-indigo-600 font-bold">{isCheckingOut}</span>. 
-              Deseja confirmar a transação segura?
-            </p>
-            
-            <div className="space-y-3">
-              <button 
-                onClick={() => {
-                  onUpdateAcademy({ ...academy, currentPlan: isCheckingOut as any, planStatus: 'Active' });
-                  setIsCheckingOut(null);
-                  setIsEditingPlans(false);
-                  setShowPlanNotification(true);
-                  setTimeout(() => setShowPlanNotification(false), 4000);
-                }}
-                className="w-full py-5 bg-indigo-600 text-white rounded-3xl font-black uppercase tracking-widest text-xs hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/30"
-              >
-                Pagar com Cartão / Pix
-              </button>
-              <button 
-                onClick={() => setIsCheckingOut(null)}
-                className="w-full py-4 text-slate-400 font-bold uppercase tracking-widest text-[10px] hover:text-slate-600 dark:hover:text-slate-300"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={!!isCheckingOut}
+        onClose={() => setIsCheckingOut(null)}
+        onConfirm={() => {
+          if (!isCheckingOut) return;
+          onUpdateAcademy({ ...academy, currentPlan: isCheckingOut as any, planStatus: 'Active' });
+          setIsCheckingOut(null);
+          setIsEditingPlans(false);
+          setShowPlanNotification(true);
+          setTimeout(() => setShowPlanNotification(false), 4000);
+        }}
+        title="Finalizar Compra"
+        message={<>Você está assinando o plano <span className="text-indigo-600 font-bold">{isCheckingOut}</span>. Deseja confirmar a transação segura?</>}
+        confirmLabel="Pagar com Cartão / Pix"
+        variant="primary"
+        icon={<CreditCard size={32} />}
+      />
 
       {/* Notificação de Plano Ativado */}
       {showPlanNotification && (

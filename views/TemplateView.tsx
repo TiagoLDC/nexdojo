@@ -5,6 +5,7 @@ import { calculateAge } from '../services/graduation';
 import { useTranslation } from '../services/LanguageContext';
 import { BeltBadge } from '../components/BeltBadge';
 import { templateService } from '@/features/schedules/services/templateService';
+import { ConfirmDialog } from '@/components/ui';
 import { studentService } from '@/features/students/services/studentService';
 import { chatService } from '@/features/chat/services/chatService';
 import {
@@ -19,7 +20,6 @@ import {
   CheckCircle2,
   Edit2,
   Trash2,
-  AlertTriangle,
   Type,
   Loader2
 } from 'lucide-react';
@@ -674,36 +674,14 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
         </div>
       )}
 
-      {/* Modal de Confirmação de Exclusão */}
-      {isDeleteModalOpen && templateToDelete && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[60] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl text-center">
-            <div className="bg-red-100 w-20 h-20 rounded-full flex items-center justify-center text-red-600 mx-auto mb-6">
-              <AlertTriangle size={40} />
-            </div>
-
-            <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-2">Excluir Turma?</h2>
-            <p className="text-sm text-slate-500 font-medium mb-8 leading-relaxed">
-              Deseja realmente excluir a turma <span className="text-slate-800 dark:text-slate-100 font-bold">"{templateToDelete.name}"</span>?
-            </p>
-
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={handleDelete}
-                className="w-full bg-red-600 hover:bg-red-700 text-white font-black py-5 rounded-3xl shadow-xl shadow-red-600/20 transition-all active:scale-95"
-              >
-                Sim, Excluir Agora
-              </button>
-              <button
-                onClick={() => setIsDeleteModalOpen(false)}
-                className="w-full bg-slate-100 dark:bg-slate-800/50 hover:bg-slate-200 text-slate-600 dark:text-slate-300 font-bold py-5 rounded-3xl transition-all"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={isDeleteModalOpen && !!templateToDelete}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        title="Excluir Turma?"
+        message={<>Deseja realmente excluir a turma <strong className="text-slate-800 dark:text-slate-100">"{templateToDelete?.name}"</strong>?</>}
+        confirmLabel="Sim, Excluir Agora"
+      />
     </div>
   );
 };

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { BeltBadge } from '../components/BeltBadge';
 import { BELT_COLORS } from '../constants';
+import { ConfirmDialog } from '@/components/ui';
 
 declare const Html5Qrcode: any;
 
@@ -822,68 +823,34 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
       )}
 
       {/* ── Age warning dialog ─────────────────────────────────────────────── */}
-      {ageWarningStudent && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[300] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl text-center">
-            <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-[24px] flex items-center justify-center mx-auto mb-5">
-              <AlertCircle size={32} className="text-amber-500" />
-            </div>
-            <h2 className="text-xl font-black text-slate-800 dark:text-white mb-1 tracking-tight">Divergência de Idade</h2>
-            <p className="text-base font-bold text-indigo-600 dark:text-indigo-400 mb-3">{ageWarningStudent.name}</p>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 leading-snug">{ageWarningMsg}</p>
-            <p className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-8">Deseja registrar a presença mesmo assim?</p>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={handleAgeWarningConfirm}
-                disabled={isProcessing}
-                className="w-full bg-amber-500 hover:bg-amber-600 disabled:bg-slate-400 text-white font-black py-5 rounded-3xl shadow-xl shadow-amber-500/20 transition-all active:scale-95 flex items-center justify-center gap-2"
-              >
-                {isProcessing ? <Loader2 size={20} className="animate-spin" /> : <CheckCircle size={20} />}
-                {isProcessing ? 'Aguarde...' : 'Sim, registrar mesmo assim'}
-              </button>
-              <button
-                onClick={handleAgeWarningCancel}
-                disabled={isProcessing}
-                className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold py-5 rounded-3xl transition-all active:scale-95"
-              >
-                Não
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={!!ageWarningStudent}
+        onClose={handleAgeWarningCancel}
+        onConfirm={handleAgeWarningConfirm}
+        title="Divergência de Idade"
+        message={
+          <>
+            <span className="block font-bold text-indigo-600 dark:text-indigo-400 mb-1">{ageWarningStudent?.name}</span>
+            <span className="block mb-2">{ageWarningMsg}</span>
+            Deseja registrar a presença mesmo assim?
+          </>
+        }
+        confirmLabel="Sim, registrar mesmo assim"
+        cancelLabel="Não"
+        variant="warning"
+        loading={isProcessing}
+      />
 
       {/* ── Remove attendance confirm dialog ───────────────────────────────── */}
-      {removingAttendanceId && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[300] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl text-center">
-            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-[24px] flex items-center justify-center mx-auto mb-5">
-              <Trash2 size={28} className="text-red-500" />
-            </div>
-            <h2 className="text-xl font-black text-slate-800 dark:text-white mb-2 tracking-tight">Remover Presença?</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 leading-snug">
-              Esta ação irá remover o registro de presença e descontar 1 aula do total do aluno.
-            </p>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={handleRemoveAttendance}
-                disabled={isRemoving}
-                className="w-full bg-red-600 hover:bg-red-700 disabled:bg-slate-400 text-white font-black py-5 rounded-3xl shadow-xl shadow-red-600/20 transition-all active:scale-95 flex items-center justify-center gap-2"
-              >
-                {isRemoving ? <Loader2 size={20} className="animate-spin" /> : <Trash2 size={20} />}
-                {isRemoving ? 'Removendo...' : 'Sim, remover'}
-              </button>
-              <button
-                onClick={() => setRemovingAttendanceId(null)}
-                disabled={isRemoving}
-                className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold py-5 rounded-3xl transition-all active:scale-95"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={!!removingAttendanceId}
+        onClose={() => setRemovingAttendanceId(null)}
+        onConfirm={handleRemoveAttendance}
+        title="Remover Presença?"
+        message="Esta ação irá remover o registro de presença e descontar 1 aula do total do aluno."
+        confirmLabel="Sim, remover"
+        loading={isRemoving}
+      />
 
       {/* ── QR Scanner / Kiosk ─────────────────────────────────────────────── */}
       {(isScannerOpen || isKioskMode) && (

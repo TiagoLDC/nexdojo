@@ -84,8 +84,10 @@ export interface Student {
   documents?: StudentDocument[];
   totalClasses: number;
   totalHours: number;
+  classesSinceGraduation: number;
+  hoursSinceGraduation: number;
   lastAttendance?: string;
-  absentCount: number; 
+  absentCount: number;
   status: 'Active' | 'Inactive' | 'Dropped' | 'Pending';
   joinDate: string;
   absenceLimit?: number;
@@ -240,6 +242,9 @@ export interface AcademyPlan {
   maxAge?: number;
   instructorId?: string;
   active?: boolean;
+  freeSchedule?: boolean;
+  freeDays?: boolean;
+  freeAge?: boolean;
   toleranceBeforeMinutes?: number;
   toleranceAfterStartMinutes?: number;
   schedules?: PlanSchedule[];
@@ -313,5 +318,6 @@ export interface FinanceTransaction {
   date: string;
   paymentMethod: string;
   status: 'paid' | 'pending';
-  studentId?: string; // Para mensalidades vinculadas
+  studentId?: string;
+  dueDate?: string;
 }
