@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 const MONTHS = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril',
@@ -38,17 +38,23 @@ export const DateSelectInput: React.FC<DateSelectInputProps> = ({
   const minYear = yearFrom ?? 1920;
   const maxYear = yearTo ?? currentYear;
 
+  // Local state keeps each field independent so partial fills aren't lost
   const [localYear, setLocalYear] = useState(() => parseValue(value)[0]);
   const [localMonth, setLocalMonth] = useState(() => parseValue(value)[1]);
   const [localDay, setLocalDay] = useState(() => parseValue(value)[2]);
+  // Track which external value we last synced from
+  const [syncedValue, setSyncedValue] = useState(value);
 
-  // Sync from external resets (e.g., form clear after submit)
-  useEffect(() => {
+  // Derived state (synchronous, during render): sync when the external value
+  // changes. This correctly handles form resets and opening different records
+  // without a post-render timing gap that useEffect would introduce.
+  if (value !== syncedValue) {
+    setSyncedValue(value);
     const [y, m, d] = parseValue(value);
     setLocalYear(y);
     setLocalMonth(m);
     setLocalDay(d);
-  }, [value]);
+  }
 
   const daysInMonth =
     localYear && localMonth
@@ -75,7 +81,7 @@ export const DateSelectInput: React.FC<DateSelectInputProps> = ({
         <select
           disabled={disabled}
           value={localDay}
-          onChange={e => { setLocalDay(e.target.value); fireChange(localYear, localMonth, e.target.value); }}
+          onChange={e => { const v = e.target.value; setLocalDay(v); fireChange(localYear, localMonth, v); }}
           className={sel}
         >
           <option value="">Dia</option>
@@ -87,7 +93,7 @@ export const DateSelectInput: React.FC<DateSelectInputProps> = ({
         <select
           disabled={disabled}
           value={localMonth}
-          onChange={e => { setLocalMonth(e.target.value); fireChange(localYear, e.target.value, localDay); }}
+          onChange={e => { const v = e.target.value; setLocalMonth(v); fireChange(localYear, v, localDay); }}
           className={`${sel} flex-[1.8]`}
         >
           <option value="">Mês</option>
@@ -99,7 +105,7 @@ export const DateSelectInput: React.FC<DateSelectInputProps> = ({
         <select
           disabled={disabled}
           value={localYear}
-          onChange={e => { setLocalYear(e.target.value); fireChange(e.target.value, localMonth, localDay); }}
+          onChange={e => { const v = e.target.value; setLocalYear(v); fireChange(v, localMonth, localDay); }}
           className={`${sel} flex-[1.5]`}
         >
           <option value="">Ano</option>
