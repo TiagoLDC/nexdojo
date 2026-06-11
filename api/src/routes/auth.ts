@@ -214,7 +214,7 @@ router.post('/register/student', async (req: Request, res: Response, next: NextF
 
     await pool.execute(
       `INSERT INTO students (id, academy_id, name, email, belt, stripes, birth_date, gender, phone, cpf, rg, weight, height, blood_type, emergency_contact, emergency_phone, cep, address, address_number, guardian_name, guardian_phone, guardian_relation, guardian_cpf, medical_notes, photo, plan_id, last_graduation_date, status, join_date, total_classes, total_hours, absent_count)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW(), 0, 0, 0)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW(), 0, 0, 0)`,
       [studentId, academyId, name, String(email).toLowerCase().trim(), belt, stripes || 0, birthDate,
        gender || null, phone || null, cpf || null, rg || null,
        weight || null, height || null, bloodType || null,
