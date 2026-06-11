@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Academy, User, Student, Instructor, Staff, AcademyPlan, Language, GraduationRules } from '../types';
-import { Settings, Bell, Shield, LogOut, ChevronRight, User as UserIcon, Palette, MapPin, Moon, Sun, X, CreditCard, Wallet, Loader2, Save, CheckCircle2, Crown, Zap, Star as StarIcon, Award, Trophy, Book, Users, Plus, Trash2, Globe, AlertTriangle, Smartphone, Check, Briefcase, Clock, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Settings, Bell, Shield, LogOut, ChevronRight, User as UserIcon, Palette, MapPin, Moon, Sun, X, CreditCard, Wallet, Loader2, Save, CheckCircle2, Crown, Zap, Star as StarIcon, Award, Trophy, Book, Users, Plus, Trash2, Globe, AlertTriangle, Smartphone, Check, Briefcase, Clock, ToggleLeft, ToggleRight, Copy } from 'lucide-react';
 import { fetchAddressByCep, maskCEP, maskPhone } from '../services/cep';
 import { PrivacyValue } from '../components/PrivacyValue';
 import { studentService } from '@/features/students/services/studentService';
@@ -945,12 +945,26 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                           <span className="text-lg font-black text-indigo-600 dark:text-indigo-400 italic">
                             R$ {plan.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </span>
-                          <button
-                            onClick={() => { setEditingPlan({ ...plan }); setIsAddingAcademyPlan(true); }}
-                            className="bg-white dark:bg-slate-700 p-2 rounded-xl text-slate-400 hover:text-indigo-600 shadow-sm border border-slate-100 dark:border-slate-600 transition-colors"
-                          >
-                            <Save size={14} />
-                          </button>
+                          <div className="flex gap-1.5">
+                            <button
+                              onClick={() => {
+                                const { id: _id, ...rest } = plan;
+                                setEditingPlan({ ...rest, name: `${plan.name} - Cópia`, schedules: (plan.schedules || []).map(({ id: _sid, ...s }) => s) });
+                                setIsAddingAcademyPlan(true);
+                              }}
+                              title="Duplicar plano"
+                              className="bg-white dark:bg-slate-700 p-2 rounded-xl text-slate-400 hover:text-orange-500 shadow-sm border border-slate-100 dark:border-slate-600 transition-colors"
+                            >
+                              <Copy size={14} />
+                            </button>
+                            <button
+                              onClick={() => { setEditingPlan({ ...plan }); setIsAddingAcademyPlan(true); }}
+                              title="Editar plano"
+                              className="bg-white dark:bg-slate-700 p-2 rounded-xl text-slate-400 hover:text-indigo-600 shadow-sm border border-slate-100 dark:border-slate-600 transition-colors"
+                            >
+                              <Save size={14} />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );
