@@ -310,7 +310,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   const deletePlan = async (id: string) => {
     try {
       await plansService.delete(id);
-      setLocalPlans(prev => prev.filter(p => p.id !== id));
+      const updatedPlans = localPlans.filter(p => p.id !== id);
+      setLocalPlans(updatedPlans);
+      onUpdateAcademy({ ...academy, plans: updatedPlans });
       showNotification('Plano removido.', 'delete' as any);
     } catch (e) {
       console.error(e);
@@ -322,13 +324,16 @@ const SettingsView: React.FC<SettingsViewProps> = ({
     if (!editingPlan?.name || !editingPlan?.price || !editingPlan?.durationMonths) return;
     setIsSavingPlan(true);
     try {
+      let updatedPlans: AcademyPlan[];
       if (editingPlan.id) {
         const updated = await plansService.update(editingPlan.id, editingPlan);
-        setLocalPlans(prev => prev.map(p => p.id === updated.id ? updated : p));
+        updatedPlans = localPlans.map(p => p.id === updated.id ? updated : p);
       } else {
         const created = await plansService.create(academy.id, editingPlan);
-        setLocalPlans(prev => [...prev, created]);
+        updatedPlans = [...localPlans, created];
       }
+      setLocalPlans(updatedPlans);
+      onUpdateAcademy({ ...academy, plans: updatedPlans });
       setIsAddingAcademyPlan(false);
       setEditingPlan(null);
       showNotification('Plano salvo com sucesso!');
