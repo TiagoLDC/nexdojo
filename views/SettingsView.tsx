@@ -753,8 +753,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             {/* Modo */}
             <div className="mb-6">
               <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Métrica de Avaliação</label>
-              <div className="grid grid-cols-3 gap-2">
-                {(['classes', 'hours', 'months'] as const).map(m => (
+              <div className="grid grid-cols-2 gap-2">
+                {(['classes', 'months'] as const).map(m => (
                   <button
                     key={m}
                     onClick={() => setEditGraduationRules(r => ({ ...r, mode: m }))}
@@ -764,20 +764,19 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                         : 'border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:border-indigo-300'
                     }`}
                   >
-                    {m === 'classes' ? 'Treinos' : m === 'hours' ? 'Horas' : 'Meses'}
+                    {m === 'classes' ? 'Treinos' : 'Meses'}
                   </button>
                 ))}
               </div>
               <p className="text-[9px] text-slate-400 mt-2 ml-1 italic">
                 {editGraduationRules.mode === 'classes' && 'Critério baseado no número de presenças registradas.'}
-                {editGraduationRules.mode === 'hours'   && 'Critério baseado no total de horas treinadas (calculado automaticamente via duração das aulas).'}
                 {editGraduationRules.mode === 'months'  && 'Critério baseado nos meses desde a última graduação.'}
               </p>
             </div>
 
             {/* Tabela de thresholds */}
             {(() => {
-              const unit = editGraduationRules.mode === 'classes' ? 'Treinos' : editGraduationRules.mode === 'hours' ? 'Horas' : 'Meses';
+              const unit = editGraduationRules.mode === 'months' ? 'Meses' : 'Treinos';
               const groups: Array<{
                 key: 'kids' | 'white' | 'intermediate' | 'black';
                 label: string;
