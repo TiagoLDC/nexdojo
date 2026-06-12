@@ -96,9 +96,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({
 
   const defaultGraduationRules = (): GraduationRules => ({
     mode: 'classes',
-    kids:         { beltThreshold: 100, stripeThreshold: 25 },
-    white:        { beltThreshold: 80,  stripeThreshold: 20 },
-    intermediate: { beltThreshold: 160, stripeThreshold: 40 },
+    kids:         { stripeThreshold: 25 },
+    white:        { stripeThreshold: 20 },
+    intermediate: { stripeThreshold: 40 },
     black:        { stripeThreshold: 300 },
   });
 
@@ -781,48 +781,35 @@ const SettingsView: React.FC<SettingsViewProps> = ({
               const groups: Array<{
                 key: 'kids' | 'white' | 'intermediate' | 'black';
                 label: string;
-                hasBelt: boolean;
-                defaults: { belt: number; stripe: number };
+                defaultStripe: number;
               }> = [
-                { key: 'kids',         label: 'Infantil (< 16 anos)',          hasBelt: true,  defaults: { belt: 100, stripe: 25 } },
-                { key: 'white',        label: 'Branca (adulto)',                hasBelt: true,  defaults: { belt: 80,  stripe: 20 } },
-                { key: 'intermediate', label: 'Intermediárias (Azul/Roxa/Marrom)', hasBelt: true, defaults: { belt: 160, stripe: 40 } },
-                { key: 'black',        label: 'Faixa Preta',                   hasBelt: false, defaults: { belt: 0,   stripe: 300 } },
+                { key: 'kids',         label: 'Infantil (< 16 anos)',              defaultStripe: 25  },
+                { key: 'white',        label: 'Branca (adulto)',                   defaultStripe: 20  },
+                { key: 'intermediate', label: 'Intermediárias (Azul/Roxa/Marrom)', defaultStripe: 40  },
+                { key: 'black',        label: 'Faixa Preta',                       defaultStripe: 300 },
               ];
               return (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-2 mb-1">
+                  <p className="text-[9px] text-slate-400 italic ml-1">
+                    Cada grau exige a mesma quantidade de {unit.toLowerCase()}. Ao atingir o 4º grau, a próxima graduação avança para a próxima faixa automaticamente.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 mb-1">
                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Grupo</span>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Grau ({unit})</span>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Faixa ({unit})</span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Por Grau ({unit})</span>
                   </div>
                   {groups.map(g => (
-                    <div key={g.key} className="grid grid-cols-3 gap-2 items-center">
+                    <div key={g.key} className="grid grid-cols-2 gap-2 items-center">
                       <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">{g.label}</span>
                       <input
                         type="number"
                         min="1"
-                        value={(editGraduationRules[g.key] as any)?.stripeThreshold ?? g.defaults.stripe}
+                        value={(editGraduationRules[g.key] as any)?.stripeThreshold ?? g.defaultStripe}
                         onChange={e => setEditGraduationRules(r => ({
                           ...r,
                           [g.key]: { ...(r[g.key] as any), stripeThreshold: parseInt(e.target.value) || 1 },
                         }))}
                         className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
                       />
-                      {g.hasBelt ? (
-                        <input
-                          type="number"
-                          min="1"
-                          value={(editGraduationRules[g.key] as any)?.beltThreshold ?? g.defaults.belt}
-                          onChange={e => setEditGraduationRules(r => ({
-                            ...r,
-                            [g.key]: { ...(r[g.key] as any), beltThreshold: parseInt(e.target.value) || 1 },
-                          }))}
-                          className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
-                        />
-                      ) : (
-                        <div className="bg-slate-50 dark:bg-slate-800 rounded-xl px-3 py-2.5 text-center text-[10px] text-slate-400 italic">—</div>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -1920,7 +1907,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                   const r = academy.graduationRules;
                   if (!r) return 'Padrão do sistema (treinos)';
                   const modeLabel = r.mode === 'hours' ? 'horas' : r.mode === 'months' ? 'meses' : 'treinos';
-                  return `Por ${modeLabel} · Branca: ${r.white?.beltThreshold ?? 80} · Intermediária: ${r.intermediate?.beltThreshold ?? 160}`;
+                  return `Por ${modeLabel} · Branca: ${r.white?.stripeThreshold ?? 20} · Intermediária: ${r.intermediate?.stripeThreshold ?? 40}`;
                 })()}
                 onClick={() => {
                   setEditGraduationRules(academy.graduationRules ?? defaultGraduationRules());
