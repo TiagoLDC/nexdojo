@@ -14,7 +14,7 @@ import { calendarService } from '@/features/calendar/services/calendarService';
 import { chatService } from '@/features/chat/services/chatService';
 import { academyService } from '@/features/settings/services/academyService';
 import { PrivacyValue } from '../components/PrivacyValue';
-import { calculateAge, isReadyForGraduation } from '../services/graduation';
+import { calculateAge, isReadyForGraduation, getGraduationThreshold } from '../services/graduation';
 import {
   Users,
   TrendingUp,
@@ -993,9 +993,31 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
             <motion.div variants={itemVariants}>
               {(() => {
                 const theme = getBeltTheme(profile.belt);
-                const target = profile.belt === Belt.WHITE ? 80 : 160;
-                const progress = Math.min(100, Math.floor((profile.totalClasses / target) * 100));
-                
+                const rules = academy?.graduationRules;
+                const mode = rules?.mode ?? 'classes';
+                const target = getGraduationThreshold(profile, rules);
+                const unit = mode === 'hours' ? 'Horas' : mode === 'months' ? 'Meses' : 'Treinos';
+
+                let current: number;
+                if (mode === 'hours') {
+                  current = profile.hoursSinceGraduation ?? 0;
+                } else if (mode === 'months') {
+                  const lastGrad = profile.lastGraduationDate;
+                  if (lastGrad) {
+                    const [y, mo, d] = lastGrad.split('-').map(Number);
+                    const past = new Date(y, mo - 1, d);
+                    const now = new Date();
+                    current = (now.getFullYear() - past.getFullYear()) * 12 + (now.getMonth() - past.getMonth());
+                  } else {
+                    current = 0;
+                  }
+                } else {
+                  current = profile.classesSinceGraduation ?? 0;
+                }
+
+                const progress = target > 0 ? Math.min(100, Math.floor((current / target) * 100)) : 0;
+                const remaining = Math.max(0, target - current);
+
                 return (
                   <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden relative group">
                     <div className="relative z-10 text-left">
@@ -1005,7 +1027,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                           {t.graduationJourney}
                         </h2>
                         <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                          {profile.totalClasses} / {target} {t.totalClasses.split(' ')[2]}
+                          {current} / {target} {unit}
                         </div>
                       </div>
 
@@ -1021,20 +1043,20 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                               <span className="text-sm font-black text-indigo-600">{progress}%</span>
                             </div>
                             <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-1 shadow-inner">
-                              <motion.div 
+                              <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${progress}%` }}
                                 transition={{ duration: 1.5, ease: 'easeOut' }}
-                                className={`h-full ${theme.bg} rounded-full shadow-lg`} 
+                                className={`h-full ${theme.bg} rounded-full shadow-lg`}
                               />
                             </div>
                           </div>
                         </div>
                         <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl text-center">
                            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-tight">
-                              {target - profile.totalClasses > 0 
-                                ? (language === 'pt' ? `Mantenha a constância! Faltam ${target - profile.totalClasses} treinos para sua evolução.` : `Keep it up! ${target - profile.totalClasses} trainings left for your evolution.`)
-                                : (language === 'pt' ? 'Meta de aulas atingida! Aguarde a avaliação técnica.' : 'Class goal reached! Wait for technical evaluation.')}
+                              {remaining > 0
+                                ? (language === 'pt' ? `Mantenha a constância! Faltam ${remaining} ${unit.toLowerCase()} para sua evolução.` : `Keep it up! ${remaining} ${unit.toLowerCase()} left for your evolution.`)
+                                : (language === 'pt' ? 'Meta atingida! Aguarde a avaliação técnica.' : 'Goal reached! Wait for technical evaluation.')}
                            </p>
                         </div>
                       </div>

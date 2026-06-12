@@ -20,9 +20,14 @@ export const calculateAge = (birthDate: string) => {
   return age;
 };
 
+const parseLocalDate = (dateStr: string): Date => {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+
 const monthsSince = (dateStr?: string): number => {
   if (!dateStr) return 0;
-  const past = new Date(dateStr);
+  const past = parseLocalDate(dateStr);
   const now = new Date();
   return (now.getFullYear() - past.getFullYear()) * 12 + (now.getMonth() - past.getMonth());
 };
