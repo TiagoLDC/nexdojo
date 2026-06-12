@@ -24,7 +24,9 @@ const monthsSince = (dateStr?: string): number => {
   if (!dateStr) return 0;
   const past = parseLocalDate(dateStr);
   const now = new Date();
-  return (now.getFullYear() - past.getFullYear()) * 12 + (now.getMonth() - past.getMonth());
+  let months = (now.getFullYear() - past.getFullYear()) * 12 + (now.getMonth() - past.getMonth());
+  if (now.getDate() < past.getDate()) months--;
+  return Math.max(0, months);
 };
 
 const getMetric = (student: Student, mode: GraduationRules['mode']): number => {

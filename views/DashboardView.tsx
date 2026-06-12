@@ -1007,7 +1007,9 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                     const [y, mo, d] = lastGrad.split('-').map(Number);
                     const past = new Date(y, mo - 1, d);
                     const now = new Date();
-                    current = (now.getFullYear() - past.getFullYear()) * 12 + (now.getMonth() - past.getMonth());
+                    let months = (now.getFullYear() - past.getFullYear()) * 12 + (now.getMonth() - past.getMonth());
+                    if (now.getDate() < past.getDate()) months--;
+                    current = Math.max(0, months);
                   } else {
                     current = 0;
                   }
