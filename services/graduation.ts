@@ -25,7 +25,7 @@ const parseLocalDate = (dateStr: string): Date => {
   return new Date(y, m - 1, d);
 };
 
-const monthsSince = (dateStr?: string): number => {
+export const monthsSince = (dateStr?: string): number => {
   if (!dateStr) return 0;
   const past = parseLocalDate(dateStr);
   const now = new Date();

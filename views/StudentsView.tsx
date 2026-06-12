@@ -7,7 +7,7 @@ import { financeService } from '@/features/finances/services/financeService';
 import { usersService } from '@/features/users/services/usersService';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
 import { advancePaymentDate } from '@/utils/paymentUtils';
-import { calculateAge, isReadyForGraduation, getNextRank } from '../services/graduation';
+import { calculateAge, isReadyForGraduation, getNextRank, monthsSince, getGraduationThreshold } from '../services/graduation';
 import { useTranslation } from '../services/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -1901,7 +1901,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     <p className="text-3xl font-black text-emerald-500 leading-none">
                       {students.filter(s => {
                         if (!s.lastGraduationDate) return false;
-                        const date = new Date(s.lastGraduationDate);
+                        const [y, m, d] = s.lastGraduationDate.split('-').map(Number);
+                        const date = new Date(y, m - 1, d);
                         const thirtyDaysAgo = new Date();
                         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
                         return date > thirtyDaysAgo;
@@ -1909,6 +1910,46 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     </p>
                   </div>
                 </div>
+
+                {/* CONFIGURAÇÃO ATIVA */}
+                {academy.graduationRules ? (
+                  <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-4 flex flex-wrap gap-6">
+                    <div>
+                      <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Critério</p>
+                      <p className="text-sm font-black text-white">
+                        {academy.graduationRules.mode === 'months' ? 'Meses' : academy.graduationRules.mode === 'hours' ? 'Horas' : 'Treinos'}
+                      </p>
+                    </div>
+                    {academy.graduationRules.kids && (
+                      <div>
+                        <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Infantil</p>
+                        <p className="text-sm font-black text-white">{academy.graduationRules.kids.stripeThreshold}</p>
+                      </div>
+                    )}
+                    {academy.graduationRules.white && (
+                      <div>
+                        <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Branca</p>
+                        <p className="text-sm font-black text-white">{academy.graduationRules.white.stripeThreshold}</p>
+                      </div>
+                    )}
+                    {academy.graduationRules.intermediate && (
+                      <div>
+                        <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Intermediário</p>
+                        <p className="text-sm font-black text-white">{academy.graduationRules.intermediate.stripeThreshold}</p>
+                      </div>
+                    )}
+                    {academy.graduationRules.black && (
+                      <div>
+                        <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Preta</p>
+                        <p className="text-sm font-black text-white">{academy.graduationRules.black.stripeThreshold}</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-amber-400 text-xs font-bold">
+                    Sem critérios configurados — usando padrões: Treinos (Infantil: 25 | Branca: 20 | Intermediário: 40 | Preta: 300)
+                  </div>
+                )}
 
                 {/* FILA DE PROMOÇÃO */}
                 <div>
@@ -1960,14 +2001,25 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {students
-                      .filter(s => {
-                        const { readyForBelt, readyForStripe } = isReadyForGraduation(s, academy.graduationRules);
-                        return readyForBelt || readyForStripe;
-                      })
-                      .sort((a, b) => (b.classesSinceGraduation ?? 0) - (a.classesSinceGraduation ?? 0))
-                      .map(student => {
-                        const { nextBelt, nextStripes } = getNextRank(student.belt, student.stripes);
+                    {(() => {
+                      const gradMode = academy.graduationRules?.mode ?? 'classes';
+                      const getStudentMetric = (s: any): number => {
+                        if (gradMode === 'months') return monthsSince(s.lastGraduationDate);
+                        if (gradMode === 'hours') return s.hoursSinceGraduation ?? 0;
+                        return s.classesSinceGraduation ?? 0;
+                      };
+                      const metricLabel = gradMode === 'months' ? 'Meses desde última graduação' : gradMode === 'hours' ? 'Horas nesta faixa' : 'Treinos nesta faixa';
+                      const metricUnit = gradMode === 'months' ? 'meses' : gradMode === 'hours' ? 'h' : 'aulas';
+                      return students
+                        .filter(s => {
+                          const { readyForBelt, readyForStripe } = isReadyForGraduation(s, academy.graduationRules);
+                          return readyForBelt || readyForStripe;
+                        })
+                        .sort((a, b) => getStudentMetric(b) - getStudentMetric(a))
+                        .map(student => {
+                          const { nextBelt, nextStripes } = getNextRank(student.belt, student.stripes);
+                          const metric = getStudentMetric(student);
+                          const threshold = getGraduationThreshold(student, academy.graduationRules);
 
                         return (
                           <motion.div
@@ -2011,8 +2063,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                               </div>
                               <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
                                 <div className="shrink-0">
-                                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Treinos nesta faixa</p>
-                                  <p className="text-sm font-black text-white">{student.classesSinceGraduation ?? 0} aulas</p>
+                                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">{metricLabel}</p>
+                                  <p className="text-sm font-black text-white">{metric} / {threshold} {metricUnit}</p>
                                 </div>
                                 <button
                                   onClick={() => handlePromoteStudent(student, nextBelt, nextStripes)}
@@ -2025,7 +2077,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                             </div>
                           </motion.div>
                         );
-                      })}
+                      });
+                    })()}
 
                     {students.filter(s => {
                       const { readyForBelt, readyForStripe } = isReadyForGraduation(s, academy.graduationRules);
