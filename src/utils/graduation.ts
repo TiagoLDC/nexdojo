@@ -43,7 +43,10 @@ export const isReadyForGraduation = (
   const mode = rules?.mode ?? 'classes';
   const metric = getMetric(student, mode);
 
-  if (age < 16 && isKidsBelt(student.belt)) {
+  const isKidsPath = [Belt.GREY, Belt.YELLOW, Belt.ORANGE, Belt.GREEN].includes(student.belt)
+    || (age < 16 && student.belt === Belt.WHITE);
+
+  if (isKidsPath) {
     const stripeT = rules?.kids?.stripeThreshold ?? 25;
     return {
       readyForBelt:   student.stripes >= 4 && metric >= stripeT,
@@ -102,7 +105,8 @@ export const getGraduationThreshold = (
   rules?: GraduationRules,
 ): number => {
   const age = calculateAge(student.birthDate);
-  const isKids = age < 16 && isKidsBelt(student.belt);
+  const isKids = [Belt.GREY, Belt.YELLOW, Belt.ORANGE, Belt.GREEN].includes(student.belt)
+    || (age < 16 && student.belt === Belt.WHITE);
 
   if (isKids) return rules?.kids?.stripeThreshold ?? 25;
   if (student.belt === Belt.WHITE) return rules?.white?.stripeThreshold ?? 20;
