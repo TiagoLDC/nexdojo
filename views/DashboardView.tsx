@@ -2376,7 +2376,14 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
           <div className="md:col-span-2 bg-white dark:bg-slate-900 p-6 md:p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Atletas por Graduação</p>
             <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-4 overflow-y-auto max-h-[300px] md:max-h-none pr-1 custom-scrollbar">
-              {[Belt.WHITE, Belt.GREY, Belt.YELLOW, Belt.ORANGE, Belt.GREEN, Belt.BLUE, Belt.PURPLE, Belt.BROWN, Belt.BLACK].map(belt => {
+              {[
+                Belt.WHITE,
+                Belt.GREY_WHITE, Belt.GREY, Belt.GREY_BLACK,
+                Belt.YELLOW_WHITE, Belt.YELLOW, Belt.YELLOW_BLACK,
+                Belt.ORANGE_WHITE, Belt.ORANGE, Belt.ORANGE_BLACK,
+                Belt.GREEN_WHITE, Belt.GREEN, Belt.GREEN_BLACK,
+                Belt.BLUE, Belt.PURPLE, Belt.BROWN, Belt.BLACK,
+              ].map(belt => {
                 const count = (students || []).filter(s => s.belt === belt && s.status === 'Active').length;
                 if (count === 0) return null;
                 const isLightBelt = belt === Belt.WHITE || belt === Belt.YELLOW;

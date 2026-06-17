@@ -1,11 +1,21 @@
 export type Language = 'pt' | 'en' | 'es';
 
 export enum Belt {
+  // Kids (até 15 anos)
   WHITE = 'Branca',
+  GREY_WHITE = 'Cinza e Branca',
   GREY = 'Cinza',
+  GREY_BLACK = 'Cinza e Preta',
+  YELLOW_WHITE = 'Amarela e Branca',
   YELLOW = 'Amarela',
+  YELLOW_BLACK = 'Amarela e Preta',
+  ORANGE_WHITE = 'Laranja e Branca',
   ORANGE = 'Laranja',
+  ORANGE_BLACK = 'Laranja e Preta',
+  GREEN_WHITE = 'Verde e Branca',
   GREEN = 'Verde',
+  GREEN_BLACK = 'Verde e Preta',
+  // Adultos (16+ anos)
   BLUE = 'Azul',
   PURPLE = 'Roxa',
   BROWN = 'Marrom',

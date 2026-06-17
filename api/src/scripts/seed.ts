@@ -27,8 +27,12 @@ const ACAD_2 = 'mock_acad_2';
 const ACAD_3 = 'mock_acad_3';
 
 const B = {
-  WHITE: 'Branca', GREY: 'Cinza', YELLOW: 'Amarela', ORANGE: 'Laranja',
-  GREEN: 'Verde', BLUE: 'Azul', PURPLE: 'Roxa', BROWN: 'Marrom',
+  WHITE: 'Branca',
+  GREY_WHITE: 'Cinza e Branca', GREY: 'Cinza', GREY_BLACK: 'Cinza e Preta',
+  YELLOW_WHITE: 'Amarela e Branca', YELLOW: 'Amarela', YELLOW_BLACK: 'Amarela e Preta',
+  ORANGE_WHITE: 'Laranja e Branca', ORANGE: 'Laranja', ORANGE_BLACK: 'Laranja e Preta',
+  GREEN_WHITE: 'Verde e Branca', GREEN: 'Verde', GREEN_BLACK: 'Verde e Preta',
+  BLUE: 'Azul', PURPLE: 'Roxa', BROWN: 'Marrom',
   BLACK: 'Preta', CORAL: 'Coral', RED: 'Vermelha',
 };
 
@@ -100,7 +104,7 @@ const CREATE_STATEMENTS = [
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255),
     phone VARCHAR(20),
-    belt ENUM('Branca','Cinza','Amarela','Laranja','Verde','Azul','Roxa','Marrom','Preta','Coral','Vermelha') DEFAULT 'Branca',
+    belt ENUM('Branca','Cinza e Branca','Cinza','Cinza e Preta','Amarela e Branca','Amarela','Amarela e Preta','Laranja e Branca','Laranja','Laranja e Preta','Verde e Branca','Verde','Verde e Preta','Azul','Roxa','Marrom','Preta','Coral','Vermelha') DEFAULT 'Branca',
     stripes TINYINT DEFAULT 0,
     birth_date DATE,
     gender ENUM('Masculino','Feminino','Outro'),
@@ -165,7 +169,7 @@ const CREATE_STATEMENTS = [
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255),
     phone VARCHAR(20),
-    belt ENUM('Branca','Cinza','Amarela','Laranja','Verde','Azul','Roxa','Marrom','Preta','Coral','Vermelha') DEFAULT 'Branca',
+    belt ENUM('Branca','Cinza e Branca','Cinza','Cinza e Preta','Amarela e Branca','Amarela','Amarela e Preta','Laranja e Branca','Laranja','Laranja e Preta','Verde e Branca','Verde','Verde e Preta','Azul','Roxa','Marrom','Preta','Coral','Vermelha') DEFAULT 'Branca',
     stripes TINYINT DEFAULT 0,
     birth_date DATE,
     gender ENUM('Masculino','Feminino','Outro'),

@@ -13,7 +13,13 @@ export const calculateAge = (birthDate: string): number => {
 };
 
 export const isKidsBelt = (belt: Belt): boolean =>
-  [Belt.WHITE, Belt.GREY, Belt.YELLOW, Belt.ORANGE, Belt.GREEN].includes(belt);
+  [
+    Belt.WHITE,
+    Belt.GREY_WHITE, Belt.GREY, Belt.GREY_BLACK,
+    Belt.YELLOW_WHITE, Belt.YELLOW, Belt.YELLOW_BLACK,
+    Belt.ORANGE_WHITE, Belt.ORANGE, Belt.ORANGE_BLACK,
+    Belt.GREEN_WHITE, Belt.GREEN, Belt.GREEN_BLACK,
+  ].includes(belt);
 
 const parseLocalDate = (dateStr: string): Date => {
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -43,7 +49,14 @@ export const isReadyForGraduation = (
   const mode = rules?.mode ?? 'classes';
   const metric = getMetric(student, mode);
 
-  const isKidsPath = [Belt.GREY, Belt.YELLOW, Belt.ORANGE, Belt.GREEN].includes(student.belt)
+  const KIDS_MIXED = [
+    Belt.GREY_WHITE, Belt.GREY, Belt.GREY_BLACK,
+    Belt.YELLOW_WHITE, Belt.YELLOW, Belt.YELLOW_BLACK,
+    Belt.ORANGE_WHITE, Belt.ORANGE, Belt.ORANGE_BLACK,
+    Belt.GREEN_WHITE, Belt.GREEN, Belt.GREEN_BLACK,
+  ];
+
+  const isKidsPath = KIDS_MIXED.includes(student.belt)
     || (age < 16 && student.belt === Belt.WHITE);
 
   if (isKidsPath) {
@@ -105,7 +118,13 @@ export const getGraduationThreshold = (
   rules?: GraduationRules,
 ): number => {
   const age = calculateAge(student.birthDate);
-  const isKids = [Belt.GREY, Belt.YELLOW, Belt.ORANGE, Belt.GREEN].includes(student.belt)
+  const KIDS_MIXED = [
+    Belt.GREY_WHITE, Belt.GREY, Belt.GREY_BLACK,
+    Belt.YELLOW_WHITE, Belt.YELLOW, Belt.YELLOW_BLACK,
+    Belt.ORANGE_WHITE, Belt.ORANGE, Belt.ORANGE_BLACK,
+    Belt.GREEN_WHITE, Belt.GREEN, Belt.GREEN_BLACK,
+  ];
+  const isKids = KIDS_MIXED.includes(student.belt)
     || (age < 16 && student.belt === Belt.WHITE);
 
   if (isKids) return rules?.kids?.stripeThreshold ?? 25;

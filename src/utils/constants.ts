@@ -2,10 +2,18 @@ import { Belt } from '@/types';
 
 export const BELT_COLORS: Record<Belt, string> = {
   [Belt.WHITE]: 'bg-white text-slate-800 border-slate-300',
-  [Belt.GREY]: 'bg-slate-400 text-white border-slate-500',
-  [Belt.YELLOW]: 'bg-yellow-400 text-slate-900 border-yellow-500',
-  [Belt.ORANGE]: 'bg-orange-500 text-white border-orange-600',
-  [Belt.GREEN]: 'bg-green-600 text-white border-green-700',
+  [Belt.GREY_WHITE]:   '[background:linear-gradient(to_bottom,#94a3b8_35%,#fff_35%,#fff_65%,#94a3b8_65%)] text-white border-slate-400',
+  [Belt.GREY]:         'bg-slate-400 text-white border-slate-500',
+  [Belt.GREY_BLACK]:   '[background:linear-gradient(to_bottom,#94a3b8_35%,#18181b_35%,#18181b_65%,#94a3b8_65%)] text-white border-slate-500',
+  [Belt.YELLOW_WHITE]: '[background:linear-gradient(to_bottom,#facc15_35%,#fff_35%,#fff_65%,#facc15_65%)] text-slate-900 border-yellow-400',
+  [Belt.YELLOW]:       'bg-yellow-400 text-slate-900 border-yellow-500',
+  [Belt.YELLOW_BLACK]: '[background:linear-gradient(to_bottom,#facc15_35%,#18181b_35%,#18181b_65%,#facc15_65%)] text-slate-900 border-yellow-500',
+  [Belt.ORANGE_WHITE]: '[background:linear-gradient(to_bottom,#f97316_35%,#fff_35%,#fff_65%,#f97316_65%)] text-white border-orange-500',
+  [Belt.ORANGE]:       'bg-orange-500 text-white border-orange-600',
+  [Belt.ORANGE_BLACK]: '[background:linear-gradient(to_bottom,#f97316_35%,#18181b_35%,#18181b_65%,#f97316_65%)] text-white border-orange-600',
+  [Belt.GREEN_WHITE]:  '[background:linear-gradient(to_bottom,#16a34a_35%,#fff_35%,#fff_65%,#16a34a_65%)] text-white border-green-600',
+  [Belt.GREEN]:        'bg-green-600 text-white border-green-700',
+  [Belt.GREEN_BLACK]:  '[background:linear-gradient(to_bottom,#16a34a_35%,#18181b_35%,#18181b_65%,#16a34a_65%)] text-white border-green-700',
   [Belt.BLUE]: 'bg-blue-600 text-white border-blue-700',
   [Belt.PURPLE]: 'bg-purple-700 text-white border-purple-800',
   [Belt.BROWN]: 'bg-amber-800 text-white border-amber-900',
@@ -25,10 +33,18 @@ export const DAYS_MAP = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Se
 
 export const BELT_ORDER: Belt[] = [
   Belt.WHITE,
+  Belt.GREY_WHITE,
   Belt.GREY,
+  Belt.GREY_BLACK,
+  Belt.YELLOW_WHITE,
   Belt.YELLOW,
+  Belt.YELLOW_BLACK,
+  Belt.ORANGE_WHITE,
   Belt.ORANGE,
+  Belt.ORANGE_BLACK,
+  Belt.GREEN_WHITE,
   Belt.GREEN,
+  Belt.GREEN_BLACK,
   Belt.BLUE,
   Belt.PURPLE,
   Belt.BROWN,
@@ -39,10 +55,18 @@ export const BELT_ORDER: Belt[] = [
 
 export const KIDS_BELTS: Belt[] = [
   Belt.WHITE,
+  Belt.GREY_WHITE,
   Belt.GREY,
+  Belt.GREY_BLACK,
+  Belt.YELLOW_WHITE,
   Belt.YELLOW,
+  Belt.YELLOW_BLACK,
+  Belt.ORANGE_WHITE,
   Belt.ORANGE,
+  Belt.ORANGE_BLACK,
+  Belt.GREEN_WHITE,
   Belt.GREEN,
+  Belt.GREEN_BLACK,
 ];
 
 export const ADULT_BELTS: Belt[] = [
@@ -53,6 +77,17 @@ export const ADULT_BELTS: Belt[] = [
   Belt.BLACK,
   Belt.CORAL,
   Belt.RED,
+];
+
+export const MIXED_KIDS_BELTS: Belt[] = [
+  Belt.GREY_WHITE,
+  Belt.GREY_BLACK,
+  Belt.YELLOW_WHITE,
+  Belt.YELLOW_BLACK,
+  Belt.ORANGE_WHITE,
+  Belt.ORANGE_BLACK,
+  Belt.GREEN_WHITE,
+  Belt.GREEN_BLACK,
 ];
 
 export const MAX_STRIPES = 4;

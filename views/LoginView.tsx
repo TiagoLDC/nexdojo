@@ -1040,7 +1040,14 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                 <SectionHeader icon={<GraduationCap size={16} />} title="Sua Graduação" />
                 <div className="space-y-4">
                   <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
-                    {[Belt.WHITE, Belt.GREY, Belt.YELLOW, Belt.ORANGE, Belt.GREEN, Belt.BLUE, Belt.PURPLE, Belt.BROWN, Belt.BLACK].map(b => (
+                    {[
+                      Belt.WHITE,
+                      Belt.GREY_WHITE, Belt.GREY, Belt.GREY_BLACK,
+                      Belt.YELLOW_WHITE, Belt.YELLOW, Belt.YELLOW_BLACK,
+                      Belt.ORANGE_WHITE, Belt.ORANGE, Belt.ORANGE_BLACK,
+                      Belt.GREEN_WHITE, Belt.GREEN, Belt.GREEN_BLACK,
+                      Belt.BLUE, Belt.PURPLE, Belt.BROWN, Belt.BLACK,
+                    ].map(b => (
                       <button key={b} onClick={() => setStudentData({...studentData, belt: b, stripes: 0})} className={`py-4 rounded-2xl border-2 font-black text-[10px] uppercase transition-all ${studentData.belt === b ? `${BELT_COLORS[b]} scale-105 shadow-lg` : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-400'}`}>{b}</button>
                     ))}
                   </div>

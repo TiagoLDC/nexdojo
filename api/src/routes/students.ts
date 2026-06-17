@@ -11,7 +11,11 @@ import { autoLinkEntityToUser } from '../utils/linkEntityUser';
 const router = Router();
 
 const BELT_VALUES = [
-  'Branca', 'Cinza', 'Amarela', 'Laranja', 'Verde',
+  'Branca',
+  'Cinza e Branca', 'Cinza', 'Cinza e Preta',
+  'Amarela e Branca', 'Amarela', 'Amarela e Preta',
+  'Laranja e Branca', 'Laranja', 'Laranja e Preta',
+  'Verde e Branca', 'Verde', 'Verde e Preta',
   'Azul', 'Roxa', 'Marrom', 'Preta', 'Coral', 'Vermelha',
 ];
 

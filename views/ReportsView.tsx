@@ -217,27 +217,26 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =>
   // Belt distribution with actual colors
   const beltDistribution = useMemo(() => {
     const order = [
-      Belt.WHITE, 
-      Belt.GREY, 
-      Belt.YELLOW, 
-      Belt.ORANGE, 
-      Belt.GREEN, 
-      Belt.BLUE, 
-      Belt.PURPLE, 
-      Belt.BROWN, 
-      Belt.BLACK
+      Belt.WHITE,
+      Belt.GREY_WHITE, Belt.GREY, Belt.GREY_BLACK,
+      Belt.YELLOW_WHITE, Belt.YELLOW, Belt.YELLOW_BLACK,
+      Belt.ORANGE_WHITE, Belt.ORANGE, Belt.ORANGE_BLACK,
+      Belt.GREEN_WHITE, Belt.GREEN, Belt.GREEN_BLACK,
+      Belt.BLUE, Belt.PURPLE, Belt.BROWN, Belt.BLACK,
     ];
+    const colorMap: Record<Belt, string> = {
+      [Belt.WHITE]: '#f8fafc',
+      [Belt.GREY_WHITE]: '#cbd5e1', [Belt.GREY]: '#94a3b8', [Belt.GREY_BLACK]: '#475569',
+      [Belt.YELLOW_WHITE]: '#fde68a', [Belt.YELLOW]: '#facc15', [Belt.YELLOW_BLACK]: '#a16207',
+      [Belt.ORANGE_WHITE]: '#fdba74', [Belt.ORANGE]: '#fb923c', [Belt.ORANGE_BLACK]: '#c2410c',
+      [Belt.GREEN_WHITE]: '#86efac', [Belt.GREEN]: '#22c55e', [Belt.GREEN_BLACK]: '#065f46',
+      [Belt.BLUE]: '#2563eb', [Belt.PURPLE]: '#9333ea', [Belt.BROWN]: '#78350f',
+      [Belt.BLACK]: '#1e293b', [Belt.CORAL]: '#dc2626', [Belt.RED]: '#b91c1c',
+    };
     return order.map(belt => ({
       name: belt,
       value: students.filter(s => s.belt === belt).length,
-      color: belt === Belt.WHITE ? '#f8fafc' : 
-             belt === Belt.GREY ? '#94a3b8' :
-             belt === Belt.YELLOW ? '#facc15' :
-             belt === Belt.ORANGE ? '#fb923c' :
-             belt === Belt.GREEN ? '#22c55e' :
-             belt === Belt.BLUE ? '#2563eb' : 
-             belt === Belt.PURPLE ? '#9333ea' : 
-             belt === Belt.BROWN ? '#78350f' : '#1e293b'
+      color: colorMap[belt] ?? '#94a3b8',
     })).filter(b => b.value > 0);
   }, [students]);
 

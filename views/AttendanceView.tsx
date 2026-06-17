@@ -44,7 +44,12 @@ const getGraduationMilestone = (student: Student, t: any) => {
   if (student.belt === Belt.WHITE) {
     if (nextTotal === 80) return t.eligibleNewBelt;
     if (nextTotal % 20 === 0 && student.stripes < 4) return t.milestoneStripe?.replace('{stripe}', (nextTotal / 20).toString());
-  } else if ([Belt.GREY, Belt.YELLOW, Belt.ORANGE, Belt.GREEN].includes(student.belt)) {
+  } else if ([
+    Belt.GREY_WHITE, Belt.GREY, Belt.GREY_BLACK,
+    Belt.YELLOW_WHITE, Belt.YELLOW, Belt.YELLOW_BLACK,
+    Belt.ORANGE_WHITE, Belt.ORANGE, Belt.ORANGE_BLACK,
+    Belt.GREEN_WHITE, Belt.GREEN, Belt.GREEN_BLACK,
+  ].includes(student.belt)) {
     if (nextTotal === 100) return t.eligibleNewBelt;
     if (nextTotal % 25 === 0 && student.stripes < 4) return t.milestoneStripe?.replace('{stripe}', (nextTotal / 25).toString());
   } else if ([Belt.BLUE, Belt.PURPLE, Belt.BROWN].includes(student.belt)) {

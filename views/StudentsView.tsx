@@ -619,7 +619,13 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     return matchesSearch && matchesStatus && matchesBelt && matchesReadiness && matchesAbsence;
   }).sort((a, b) => a.name.localeCompare(b.name));
 
-  const kidsBelts = [Belt.WHITE, Belt.GREY, Belt.YELLOW, Belt.ORANGE, Belt.GREEN];
+  const kidsBelts = [
+    Belt.WHITE,
+    Belt.GREY_WHITE, Belt.GREY, Belt.GREY_BLACK,
+    Belt.YELLOW_WHITE, Belt.YELLOW, Belt.YELLOW_BLACK,
+    Belt.ORANGE_WHITE, Belt.ORANGE, Belt.ORANGE_BLACK,
+    Belt.GREEN_WHITE, Belt.GREEN, Belt.GREEN_BLACK,
+  ];
   const adultBelts = [Belt.BLUE, Belt.PURPLE, Belt.BROWN, Belt.BLACK, Belt.CORAL, Belt.RED];
   const allBeltOptions = [...kidsBelts, ...adultBelts];
 
