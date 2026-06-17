@@ -306,7 +306,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
   const allBeltOptions = [Belt.WHITE, Belt.BLUE, Belt.PURPLE, Belt.BROWN, Belt.BLACK, Belt.CORAL, Belt.RED];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 relative">
+    <div className="w-full space-y-6 relative">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{t.instructors}</h1>

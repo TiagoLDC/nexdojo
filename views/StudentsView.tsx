@@ -628,7 +628,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
   const isNewStudent = editingStudent && !editingStudent.id;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 relative">
+    <div className="w-full space-y-6 relative">
       <PrintHeader title="Listagem Geral de Atletas" academy={academy} />
 
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print px-1">
