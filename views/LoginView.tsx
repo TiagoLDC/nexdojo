@@ -321,6 +321,11 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       showNotification("Preencha todos os campos obrigatórios (*).", 'error');
       return;
     }
+    const age = calculateAge(studentData.birthDate || '');
+    if (age > 0 && age < 18 && (!studentData.guardianName || !studentData.guardianPhone)) {
+      showNotification("Para menores de idade, preencha o Nome e o WhatsApp do Responsável Legal.", 'error');
+      return;
+    }
     if (regPassword !== confirmPassword) {
       showNotification("As senhas não coincidem.", 'error');
       return;
