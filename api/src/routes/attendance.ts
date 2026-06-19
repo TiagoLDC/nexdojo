@@ -8,6 +8,15 @@ import { withTransaction } from '../utils/withTransaction';
 
 const router = Router();
 
+const generateDailyQrCode = (academyId: number | string, date: string): string => {
+  const input = `nexdojo-${academyId}-${date}`;
+  let hash = 5381;
+  for (let i = 0; i < input.length; i++) {
+    hash = Math.imul(hash, 33) ^ input.charCodeAt(i);
+  }
+  return `NDQR${(hash >>> 0).toString(36).toUpperCase().padStart(6, '0')}`;
+};
+
 // GET /api/attendance
 router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
@@ -66,6 +75,18 @@ router.post('/qr-checkin', requireAuth, async (req: Request, res: Response, next
   }
 
   try {
+    // Data/hora no fuso Brasília (necessária para validação do código automático)
+    const _brParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false,
+    }).formatToParts(new Date());
+    const _get = (t: string) => parseInt(_brParts.find(p => p.type === t)!.value);
+    const today      = `${_get('year')}-${String(_get('month')).padStart(2,'0')}-${String(_get('day')).padStart(2,'0')}`;
+    const _h         = _get('hour') % 24;
+    const nowTimeStr = `${String(_h).padStart(2,'0')}:${String(_get('minute')).padStart(2,'0')}:${String(_get('second')).padStart(2,'0')}`;
+
     // Valida o código contra o cadastrado na academia
     const [academyRows] = await pool.execute<any[]>(
       'SELECT qr_code_presenca FROM academies WHERE id = ?',
@@ -80,7 +101,12 @@ router.post('/qr-checkin', requireAuth, async (req: Request, res: Response, next
       res.status(400).json({ error: 'Esta academia ainda não configurou o QR Code de presença.' });
       return;
     }
-    if (qr_code.trim() !== academy.qr_code_presenca.trim()) {
+
+    const expectedCode = academy.qr_code_presenca.trim() === '__AUTO__'
+      ? generateDailyQrCode(academyId, today)
+      : academy.qr_code_presenca.trim();
+
+    if (qr_code.trim() !== expectedCode) {
       res.status(400).json({ error: 'Código QR inválido. Aproxime a câmera do QR Code da academia.' });
       return;
     }
@@ -100,18 +126,6 @@ router.post('/qr-checkin', requireAuth, async (req: Request, res: Response, next
       res.status(400).json({ error: 'Aluno inativo. Apenas alunos com status Ativo podem marcar presença.' });
       return;
     }
-
-    // Data/hora no fuso Brasília
-    const _brParts = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/Sao_Paulo',
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-      hour12: false,
-    }).formatToParts(new Date());
-    const _get = (t: string) => parseInt(_brParts.find(p => p.type === t)!.value);
-    const today      = `${_get('year')}-${String(_get('month')).padStart(2,'0')}-${String(_get('day')).padStart(2,'0')}`;
-    const _h         = _get('hour') % 24;
-    const nowTimeStr = `${String(_h).padStart(2,'0')}:${String(_get('minute')).padStart(2,'0')}:${String(_get('second')).padStart(2,'0')}`;
 
     // Idempotência: já marcou hoje?
     const [existingRows] = await pool.execute<any[]>(

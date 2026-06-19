@@ -47,6 +47,24 @@ const compressImage = (base64Str: string, maxWidth = 300, maxHeight = 300): Prom
   });
 };
 
+const getTodayBrasilia = (): string => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date());
+  const get = (t: string) => parts.find(p => p.type === t)!.value;
+  return `${get('year')}-${get('month')}-${get('day')}`;
+};
+
+const generateDailyQrCode = (academyId: number | string, date: string): string => {
+  const input = `nexdojo-${academyId}-${date}`;
+  let hash = 5381;
+  for (let i = 0; i < input.length; i++) {
+    hash = Math.imul(hash, 33) ^ input.charCodeAt(i);
+  }
+  return `NDQR${(hash >>> 0).toString(36).toUpperCase().padStart(6, '0')}`;
+};
+
 interface SettingsViewProps {
   academy: Academy;
   user: User;
@@ -78,7 +96,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   const [isEditingGraduation, setIsEditingGraduation] = React.useState(false);
   const [isEditingPayment, setIsEditingPayment] = React.useState(false);
   const [isEditingQrCode, setIsEditingQrCode] = useState(false);
-  const [editQrCode, setEditQrCode] = useState(academy.qrCodePresenca || '');
+  const [editQrCode, setEditQrCode] = useState(academy.qrCodePresenca === '__AUTO__' ? '' : (academy.qrCodePresenca || ''));
+  const [editQrAutoMode, setEditQrAutoMode] = useState(false);
   const [isSavingQrCode, setIsSavingQrCode] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = React.useState(false);
   const [isEditingPlans, setIsEditingPlans] = useState(false);
@@ -110,6 +129,11 @@ const SettingsView: React.FC<SettingsViewProps> = ({
     academy.graduationRules ?? defaultGraduationRules()
   );
   const logoInputRef = React.useRef<HTMLInputElement>(null);
+
+  const isQrAutoMode = academy.qrCodePresenca === '__AUTO__';
+  const effectiveQrCode = isQrAutoMode
+    ? generateDailyQrCode(academy.id, getTodayBrasilia())
+    : (academy.qrCodePresenca || '');
 
   useEffect(() => {
     setEditAcademy(academy);
@@ -307,7 +331,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   const handleSaveQrCode = async () => {
     setIsSavingQrCode(true);
     try {
-      const saved = await academyService.update(academy.id, { qrCodePresenca: editQrCode.trim() });
+      const codeToSave = editQrAutoMode ? '__AUTO__' : editQrCode.trim();
+      const saved = await academyService.update(academy.id, { qrCodePresenca: codeToSave });
       onUpdateAcademy({ ...academy, ...saved });
       setIsEditingQrCode(false);
       showNotification('Código QR de presença salvo com sucesso!');
@@ -654,12 +679,24 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             {academy.qrCodePresenca ? (
               <div className="flex flex-col sm:flex-row items-center gap-6">
                 <div id="qr-presenca-print" className="bg-white p-3 rounded-2xl shadow-md border border-slate-100 shrink-0">
-                  <QRCodeSVG value={academy.qrCodePresenca} size={140} level="M" includeMargin={false} />
+                  <QRCodeSVG value={effectiveQrCode} size={140} level="M" includeMargin={false} />
                 </div>
                 <div className="flex-1 space-y-3 w-full">
-                  <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl px-4 py-3 border border-slate-100 dark:border-slate-700 font-mono text-[11px] text-slate-600 dark:text-slate-300 break-all">
-                    {academy.qrCodePresenca}
-                  </div>
+                  {isQrAutoMode ? (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
+                        <Zap size={11} />
+                        Código automático · muda todo dia
+                      </div>
+                      <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl px-4 py-3 border border-slate-100 dark:border-slate-700 font-mono text-[11px] text-slate-600 dark:text-slate-300 break-all">
+                        {effectiveQrCode}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl px-4 py-3 border border-slate-100 dark:border-slate-700 font-mono text-[11px] text-slate-600 dark:text-slate-300 break-all">
+                      {effectiveQrCode}
+                    </div>
+                  )}
                   <button
                     onClick={printQrCode}
                     className="w-full bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
@@ -668,7 +705,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                     Imprimir QR Code
                   </button>
                   <button
-                    onClick={() => { setEditQrCode(academy.qrCodePresenca || ''); setIsEditingQrCode(true); }}
+                    onClick={() => { setEditQrAutoMode(isQrAutoMode); setEditQrCode(isQrAutoMode ? '' : (academy.qrCodePresenca || '')); setIsEditingQrCode(true); }}
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2"
                   >
                     <QrCode size={14} />
@@ -678,7 +715,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             ) : (
               <button
-                onClick={() => { setEditQrCode(''); setIsEditingQrCode(true); }}
+                onClick={() => { setEditQrAutoMode(false); setEditQrCode(''); setIsEditingQrCode(true); }}
                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2"
               >
                 <Plus size={14} />
@@ -1943,24 +1980,57 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
 
             <div className="space-y-4">
-              <p className="text-xs text-slate-500 dark:text-slate-400">Digite o código que será usado para registrar presença. Pode ser qualquer texto — ex: <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">Presenca2026</code>.</p>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Código de Presença *</label>
-                <input
-                  type="text"
-                  value={editQrCode}
-                  onChange={(e) => setEditQrCode(e.target.value)}
-                  placeholder="Ex: Presenca20260619"
-                  className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-mono"
-                  autoFocus
-                />
-              </div>
-
-              {editQrCode.trim() && (
-                <div className="flex justify-center py-2">
-                  <div className="bg-white p-3 rounded-2xl shadow-md border border-slate-100">
-                    <QRCodeSVG value={editQrCode.trim()} size={160} level="M" includeMargin={false} />
+              {/* Checkbox Geração Automática */}
+              <label className="flex items-start gap-3 cursor-pointer p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors">
+                <div className="relative mt-0.5 shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={editQrAutoMode}
+                    onChange={(e) => {
+                      setEditQrAutoMode(e.target.checked);
+                      if (e.target.checked) setEditQrCode('');
+                    }}
+                    className="sr-only"
+                  />
+                  <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${editQrAutoMode ? 'bg-emerald-600 border-emerald-600' : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'}`}>
+                    {editQrAutoMode && <Check size={12} className="text-white" />}
                   </div>
+                </div>
+                <div>
+                  <div className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest">Geração Automática</div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">Gera um código diferente a cada dia sem precisar configurar manualmente. Basta imprimir — o leitor reconhece automaticamente.</div>
+                </div>
+              </label>
+
+              {!editQrAutoMode && (
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Código de Presença *</label>
+                  <input
+                    type="text"
+                    value={editQrCode}
+                    onChange={(e) => setEditQrCode(e.target.value)}
+                    placeholder="Ex: Presenca20260619"
+                    className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-mono"
+                    autoFocus={!editQrAutoMode}
+                  />
+                </div>
+              )}
+
+              {(editQrAutoMode || editQrCode.trim()) && (
+                <div className="flex flex-col items-center gap-2 py-2">
+                  <div className="bg-white p-3 rounded-2xl shadow-md border border-slate-100">
+                    <QRCodeSVG
+                      value={editQrAutoMode ? generateDailyQrCode(academy.id, getTodayBrasilia()) : editQrCode.trim()}
+                      size={160}
+                      level="M"
+                      includeMargin={false}
+                    />
+                  </div>
+                  {editQrAutoMode && (
+                    <div className="text-[10px] text-slate-400 font-mono text-center">
+                      {generateDailyQrCode(academy.id, getTodayBrasilia())} · hoje
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1968,7 +2038,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="flex flex-col gap-2 mt-6">
               <button
                 onClick={handleSaveQrCode}
-                disabled={isSavingQrCode || !editQrCode.trim()}
+                disabled={isSavingQrCode || (!editQrAutoMode && !editQrCode.trim())}
                 className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black py-4 rounded-2xl shadow-lg shadow-emerald-600/20 active:scale-95 transition-all text-sm uppercase tracking-widest flex items-center justify-center gap-2"
               >
                 {isSavingQrCode ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
