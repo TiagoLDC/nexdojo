@@ -888,7 +888,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({
 
             {/* Tabela de thresholds */}
             {(() => {
-              const unit = editGraduationRules.mode === 'months' ? 'Meses' : 'Treinos';
+              const unit = editGraduationRules.mode === 'months' ? 'Meses' : editGraduationRules.mode === 'hours' ? 'Horas' : 'Treinos';
+              const warnUnit = editGraduationRules.mode === 'months' ? 'Dias' : editGraduationRules.mode === 'hours' ? 'Horas' : 'Treinos';
               const groups: Array<{
                 key: 'kids' | 'white' | 'intermediate' | 'black';
                 label: string;
@@ -900,29 +901,64 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                 { key: 'black',        label: 'Faixa Preta',                       defaultStripe: 300 },
               ];
               return (
-                <div className="space-y-4">
-                  <p className="text-[9px] text-slate-400 italic ml-1">
-                    Cada grau exige a mesma quantidade de {unit.toLowerCase()}. Ao atingir o 4º grau, a próxima graduação avança para a próxima faixa automaticamente.
-                  </p>
-                  <div className="grid grid-cols-2 gap-2 mb-1">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Grupo</span>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Por Grau ({unit})</span>
-                  </div>
-                  {groups.map(g => (
-                    <div key={g.key} className="grid grid-cols-2 gap-2 items-center">
-                      <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">{g.label}</span>
-                      <input
-                        type="number"
-                        min="1"
-                        value={(editGraduationRules[g.key] as any)?.stripeThreshold ?? g.defaultStripe}
-                        onChange={e => setEditGraduationRules(r => ({
-                          ...r,
-                          [g.key]: { ...(r[g.key] as any), stripeThreshold: parseInt(e.target.value) || 1 },
-                        }))}
-                        className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
-                      />
+                <div className="space-y-5">
+                  {/* Seção 1: Treinos por grau */}
+                  <div className="space-y-3">
+                    <p className="text-[9px] text-slate-400 italic ml-1">
+                      Cada grau exige a mesma quantidade de {unit.toLowerCase()}. Ao atingir o 4º grau, a próxima graduação avança para a próxima faixa automaticamente.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 mb-1">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Grupo</span>
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Por Grau ({unit})</span>
                     </div>
-                  ))}
+                    {groups.map(g => (
+                      <div key={g.key} className="grid grid-cols-2 gap-2 items-center">
+                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">{g.label}</span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={(editGraduationRules[g.key] as any)?.stripeThreshold ?? g.defaultStripe}
+                          onChange={e => setEditGraduationRules(r => ({
+                            ...r,
+                            [g.key]: { ...(r[g.key] as any), stripeThreshold: parseInt(e.target.value) || 1 },
+                          }))}
+                          className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Divisor */}
+                  <div className="border-t border-slate-200 dark:border-slate-700" />
+
+                  {/* Seção 2: Aviso antecipado */}
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">🔔 Avisar Aluno Antes da Graduação</p>
+                      <p className="text-[9px] text-slate-400 italic ml-1">
+                        Quando faltarem X {warnUnit.toLowerCase()} para graduar, um aviso aparece no dashboard do aluno. Use 0 para desativar.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mb-1">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Grupo</span>
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Avisar com X {warnUnit} de antecedência</span>
+                    </div>
+                    {groups.map(g => (
+                      <div key={`warn-${g.key}`} className="grid grid-cols-2 gap-2 items-center">
+                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">{g.label}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={(editGraduationRules[g.key] as any)?.warnBefore ?? 0}
+                          onChange={e => setEditGraduationRules(r => ({
+                            ...r,
+                            [g.key]: { ...(r[g.key] as any), warnBefore: parseInt(e.target.value) || 0 },
+                          }))}
+                          className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               );
             })()}

@@ -131,3 +131,52 @@ export const getGraduationThreshold = (
   if (student.belt === Belt.BLACK) return rules?.black?.stripeThreshold ?? 300;
   return 0;
 };
+
+const KIDS_MIXED_BELTS = [
+  Belt.GREY_WHITE, Belt.GREY, Belt.GREY_BLACK,
+  Belt.YELLOW_WHITE, Belt.YELLOW, Belt.YELLOW_BLACK,
+  Belt.ORANGE_WHITE, Belt.ORANGE, Belt.ORANGE_BLACK,
+  Belt.GREEN_WHITE, Belt.GREEN, Belt.GREEN_BLACK,
+];
+
+const getWarnBefore = (student: Student, rules?: GraduationRules): number => {
+  const age = calculateAge(student.birthDate);
+  const isKids = KIDS_MIXED_BELTS.includes(student.belt) || (age < 16 && student.belt === Belt.WHITE);
+  if (isKids) return rules?.kids?.warnBefore ?? 0;
+  if (student.belt === Belt.WHITE) return rules?.white?.warnBefore ?? 0;
+  if ([Belt.BLUE, Belt.PURPLE, Belt.BROWN].includes(student.belt)) return rules?.intermediate?.warnBefore ?? 0;
+  if (student.belt === Belt.BLACK) return rules?.black?.warnBefore ?? 0;
+  return 0;
+};
+
+export const getGraduationWarning = (
+  student: Student,
+  rules?: GraduationRules,
+): { remaining: number; unit: 'treinos' | 'horas' | 'dias' } | null => {
+  const { readyForBelt, readyForStripe } = isReadyForGraduation(student, rules);
+  if (readyForBelt || readyForStripe) return null;
+
+  const mode = rules?.mode ?? 'classes';
+  const warnBefore = getWarnBefore(student, rules);
+  if (warnBefore <= 0) return null;
+
+  const threshold = getGraduationThreshold(student, rules);
+  if (threshold <= 0) return null;
+
+  if (mode === 'months') {
+    if (!student.lastGraduationDate) return null;
+    const [y, m, d] = student.lastGraduationDate.split('-').map(Number);
+    const graduationDate = new Date(y, m - 1 + threshold, d);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    graduationDate.setHours(0, 0, 0, 0);
+    const daysUntil = Math.round((graduationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysUntil <= 0 || daysUntil > warnBefore) return null;
+    return { remaining: daysUntil, unit: 'dias' };
+  }
+
+  const current = mode === 'hours' ? (student.hoursSinceGraduation ?? 0) : (student.classesSinceGraduation ?? 0);
+  const remaining = threshold - current;
+  if (remaining <= 0 || remaining > warnBefore) return null;
+  return { remaining, unit: mode === 'hours' ? 'horas' : 'treinos' };
+};

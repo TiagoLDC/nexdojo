@@ -37,6 +37,7 @@ export interface StudentDocument {
 export interface GraduationGroupRules {
   beltThreshold?: number;
   stripeThreshold: number;
+  warnBefore?: number;
 }
 
 export interface GraduationRules {
@@ -44,7 +45,7 @@ export interface GraduationRules {
   kids?: GraduationGroupRules;
   white?: GraduationGroupRules;
   intermediate?: GraduationGroupRules;
-  black?: Pick<GraduationGroupRules, 'stripeThreshold'>;
+  black?: Pick<GraduationGroupRules, 'stripeThreshold' | 'warnBefore'>;
 }
 
 export interface GraduationHistoryItem {

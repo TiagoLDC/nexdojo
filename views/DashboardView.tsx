@@ -14,7 +14,7 @@ import { calendarService } from '@/features/calendar/services/calendarService';
 import { chatService } from '@/features/chat/services/chatService';
 import { academyService } from '@/features/settings/services/academyService';
 import { PrivacyValue } from '../components/PrivacyValue';
-import { calculateAge, isReadyForGraduation, getGraduationThreshold } from '../services/graduation';
+import { calculateAge, isReadyForGraduation, getGraduationThreshold, getGraduationWarning, getNextRank } from '../services/graduation';
 import {
   Users,
   TrendingUp,
@@ -828,6 +828,8 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       if (diffDays > 7) return null;
       return { diffDays, price: paymentPlan?.price as number | undefined, planName: paymentPlan?.name as string | undefined };
     })();
+    const graduationWarning = getGraduationWarning(profile, academy?.graduationRules);
+    const studentNextRank = getNextRank(profile.belt, profile.stripes);
 
     return (
       <>
@@ -1001,6 +1003,65 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                 </div>
               </div>
               <Star size={160} className="absolute -right-12 -bottom-12 text-white/10 pointer-events-none" />
+            </div>
+          </motion.div>
+        )}
+
+        {/* AVISO DE GRADUAÇÃO PRÓXIMA */}
+        {graduationWarning && (
+          <motion.div variants={itemVariants} className="px-2">
+            <div className="bg-gradient-to-br from-violet-600 via-indigo-600 to-blue-700 p-6 rounded-[32px] text-white shadow-2xl shadow-indigo-500/30 relative overflow-hidden">
+              <div className="relative z-10 flex items-start gap-4">
+                <div className="relative shrink-0">
+                  <div className="bg-white/20 p-4 rounded-2xl">
+                    <Trophy size={32} className="text-yellow-300" />
+                  </div>
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-300 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-300" />
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Zap size={11} className="text-yellow-300 shrink-0" />
+                    <span className="text-[9px] font-black uppercase tracking-widest text-indigo-200">Graduação Próxima!</span>
+                  </div>
+                  <h3 className="font-black text-xl sm:text-2xl uppercase italic tracking-tight leading-none">
+                    {graduationWarning.remaining === 1
+                      ? `Falta só 1 ${graduationWarning.unit === 'treinos' ? 'treino' : graduationWarning.unit === 'horas' ? 'hora' : 'dia'}!`
+                      : `Faltam ${graduationWarning.remaining} ${graduationWarning.unit}!`}
+                  </h3>
+                  <p className="text-indigo-200 font-semibold text-sm mt-1 opacity-90">
+                    Avise seu professor — você está quase lá!
+                  </p>
+                </div>
+                <div className="shrink-0 text-right hidden sm:block">
+                  <p className="text-[8px] font-black text-indigo-300 uppercase tracking-widest">Faltam</p>
+                  <p className="text-4xl font-black text-yellow-300 leading-none">{graduationWarning.remaining}</p>
+                  <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">{graduationWarning.unit}</p>
+                </div>
+              </div>
+              <div className="relative z-10 mt-5 flex items-center gap-4 bg-white/10 rounded-2xl p-4">
+                <div className="flex flex-col items-center gap-1.5">
+                  <span className="text-[8px] font-black text-indigo-300 uppercase tracking-widest">Sua faixa</span>
+                  <BeltBadge belt={profile.belt} stripes={profile.stripes} />
+                </div>
+                <div className="flex-1 flex flex-col items-center gap-1">
+                  <ChevronRight size={24} className="text-yellow-300" />
+                  <span className="text-[8px] font-black text-indigo-300 uppercase tracking-widest text-center">próximo</span>
+                </div>
+                <div className="flex flex-col items-center gap-1.5">
+                  <span className="text-[8px] font-black text-yellow-300 uppercase tracking-widest">Próximo rank</span>
+                  <BeltBadge belt={studentNextRank.nextBelt} stripes={studentNextRank.nextStripes} />
+                </div>
+                <div className="ml-auto flex flex-col items-center gap-1 sm:hidden">
+                  <p className="text-[8px] font-black text-indigo-300 uppercase tracking-widest">Faltam</p>
+                  <p className="text-3xl font-black text-yellow-300 leading-none">{graduationWarning.remaining}</p>
+                  <p className="text-[8px] font-black text-indigo-300 uppercase tracking-widest">{graduationWarning.unit}</p>
+                </div>
+              </div>
+              <Star size={180} className="absolute -right-14 -bottom-14 text-white/5 pointer-events-none" />
+              <Award size={80} className="absolute -left-6 -top-6 text-white/5 pointer-events-none" />
             </div>
           </motion.div>
         )}
