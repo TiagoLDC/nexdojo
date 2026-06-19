@@ -50,6 +50,136 @@ router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunct
   }
 });
 
+// POST /api/attendance/qr-checkin — auto check-in do aluno via QR Code de Presença
+router.post('/qr-checkin', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { userId, academyId, role } = req.user!;
+
+  if (!academyId) {
+    res.status(400).json({ error: 'Usuário sem academia associada.' });
+    return;
+  }
+
+  const { qr_code } = req.body;
+  if (!qr_code || typeof qr_code !== 'string') {
+    res.status(400).json({ error: 'Código QR não informado.' });
+    return;
+  }
+
+  try {
+    // Valida o código contra o cadastrado na academia
+    const [academyRows] = await pool.execute<any[]>(
+      'SELECT qr_code_presenca FROM academies WHERE id = ?',
+      [academyId]
+    );
+    const academy = academyRows[0];
+    if (!academy) {
+      res.status(404).json({ error: 'Academia não encontrada.' });
+      return;
+    }
+    if (!academy.qr_code_presenca) {
+      res.status(400).json({ error: 'Esta academia ainda não configurou o QR Code de presença.' });
+      return;
+    }
+    if (qr_code.trim() !== academy.qr_code_presenca.trim()) {
+      res.status(400).json({ error: 'Código QR inválido. Aproxime a câmera do QR Code da academia.' });
+      return;
+    }
+
+    // Localiza o aluno pelo user_id
+    const [studentRows] = await pool.execute<any[]>(
+      `SELECT id, status, birth_date, plan_id, total_classes, total_hours
+       FROM students WHERE user_id = ? AND academy_id = ?`,
+      [userId, academyId]
+    );
+    const student = studentRows[0];
+    if (!student) {
+      res.status(404).json({ error: 'Perfil de aluno não encontrado. Entre em contato com a academia.' });
+      return;
+    }
+    if (student.status !== 'Active') {
+      res.status(400).json({ error: 'Aluno inativo. Apenas alunos com status Ativo podem marcar presença.' });
+      return;
+    }
+
+    // Data/hora no fuso Brasília
+    const _brParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false,
+    }).formatToParts(new Date());
+    const _get = (t: string) => parseInt(_brParts.find(p => p.type === t)!.value);
+    const today      = `${_get('year')}-${String(_get('month')).padStart(2,'0')}-${String(_get('day')).padStart(2,'0')}`;
+    const _h         = _get('hour') % 24;
+    const nowTimeStr = `${String(_h).padStart(2,'0')}:${String(_get('minute')).padStart(2,'0')}:${String(_get('second')).padStart(2,'0')}`;
+
+    // Idempotência: já marcou hoje?
+    const [existingRows] = await pool.execute<any[]>(
+      'SELECT id FROM attendance_records WHERE student_id = ? AND academy_id = ? AND date = ? AND class_id IS NULL',
+      [student.id, academyId, today]
+    );
+    if (existingRows.length > 0) {
+      res.status(400).json({ error: 'Presença já registrada hoje.' });
+      return;
+    }
+
+    // Valida plano (se tiver, usa duração do plano; caso contrário usa 60 min de fallback)
+    let durationMinutes = 60;
+    let matchedPlanId: string | null = null;
+    let matchedScheduleId: string | null = null;
+
+    if (student.plan_id) {
+      const [planRows] = await pool.execute<any[]>(
+        'SELECT id, active FROM academy_plans WHERE id = ? AND academy_id = ?',
+        [student.plan_id, academyId]
+      );
+      const plan = planRows[0];
+      if (plan && plan.active) {
+        matchedPlanId = plan.id;
+        const dow = new Date(`${today}T12:00:00Z`).getUTCDay();
+        const [scheduleRows] = await pool.execute<any[]>(
+          'SELECT id, start_time, end_time FROM academy_plan_schedules WHERE plan_id = ? AND day_of_week = ?',
+          [student.plan_id, dow]
+        );
+        if (scheduleRows.length > 0) {
+          const s = scheduleRows[0] as any;
+          matchedScheduleId = s.id;
+          const [sh, sm] = s.start_time.split(':').map(Number);
+          const [eh, em] = s.end_time.split(':').map(Number);
+          durationMinutes = (eh * 60 + em) - (sh * 60 + sm);
+        }
+      }
+    }
+
+    const record = await withTransaction(async (conn) => {
+      const id = crypto.randomUUID();
+      await conn.execute(
+        `INSERT INTO attendance_records
+           (id, academy_id, student_id, class_id, date, duration_minutes, check_in_time, matched_plan_id, matched_schedule_id)
+         VALUES (?,?,?,NULL,?,?,?,?,?)`,
+        [id, academyId, student.id, today, durationMinutes, nowTimeStr, matchedPlanId, matchedScheduleId]
+      );
+      const hoursToAdd = Math.round(durationMinutes / 60);
+      await conn.execute(
+        `UPDATE students
+         SET total_classes              = total_classes + 1,
+             total_hours                = total_hours + ?,
+             classes_since_graduation   = classes_since_graduation + 1,
+             hours_since_graduation     = hours_since_graduation + ?,
+             last_attendance            = GREATEST(COALESCE(last_attendance, ?), ?)
+         WHERE id = ?`,
+        [hoursToAdd, hoursToAdd, today, today, student.id]
+      );
+      const [rows] = await conn.execute<any[]>('SELECT * FROM attendance_records WHERE id = ?', [id]);
+      return rows[0];
+    });
+
+    res.status(201).json(record);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // POST /api/attendance
 // Fluxo novo (Fase 4): valida plano do aluno, horário, idade e idempotência antes de inserir.
 // Legado: se vier class_id no body (fluxo antigo de sessões), aceita sem validar horário.

@@ -229,6 +229,7 @@ export interface UpdateAcademyDTO {
   bankAccount?: string;
   paymentWarningDays?: number;
   graduationRules?: import('./entities').GraduationRules | null;
+  qrCodePresenca?: string;
   plans?: AcademyPlan[];
 }
 

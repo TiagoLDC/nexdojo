@@ -105,7 +105,7 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
     'cep', 'address', 'address_number', 'absence_limit',
     'pix_key', 'pix_type', 'bank_name', 'bank_agency', 'bank_account',
     'current_plan', 'plan_status', 'plan_expiration_date', 'payment_warning_days',
-    'graduation_rules',
+    'graduation_rules', 'qr_code_presenca',
   ];
 
   // Serializar graduation_rules como JSON string para o MySQL

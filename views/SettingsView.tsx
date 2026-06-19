@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Academy, User, Student, Instructor, Staff, AcademyPlan, Language, GraduationRules } from '../types';
-import { Settings, Bell, Shield, LogOut, ChevronRight, User as UserIcon, Palette, MapPin, Moon, Sun, X, CreditCard, Wallet, Loader2, Save, CheckCircle2, Crown, Zap, Star as StarIcon, Award, Trophy, Book, Users, Plus, Trash2, Globe, AlertTriangle, Smartphone, Check, Briefcase, Clock, ToggleLeft, ToggleRight, Copy } from 'lucide-react';
+import { Settings, Bell, Shield, LogOut, ChevronRight, User as UserIcon, Palette, MapPin, Moon, Sun, X, CreditCard, Wallet, Loader2, Save, CheckCircle2, Crown, Zap, Star as StarIcon, Award, Trophy, Book, Users, Plus, Trash2, Globe, AlertTriangle, Smartphone, Check, Briefcase, Clock, ToggleLeft, ToggleRight, Copy, QrCode, Printer } from 'lucide-react';
 import { fetchAddressByCep, maskCEP, maskPhone } from '../services/cep';
 import { PrivacyValue } from '../components/PrivacyValue';
 import { studentService } from '@/features/students/services/studentService';
@@ -12,6 +12,7 @@ import { academyService } from '@/features/settings/services/academyService';
 import { plansService } from '@/features/plans/services/plansService';
 import { useTranslation } from '../services/LanguageContext';
 import { DateSelectInput, ConfirmDialog } from '@/components/ui';
+import { QRCodeSVG } from 'qrcode.react';
 
 /**
  * Função para redimensionar e comprimir imagem Base64
@@ -76,6 +77,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   const [isEditingNotifications, setIsEditingNotifications] = React.useState(false);
   const [isEditingGraduation, setIsEditingGraduation] = React.useState(false);
   const [isEditingPayment, setIsEditingPayment] = React.useState(false);
+  const [isEditingQrCode, setIsEditingQrCode] = useState(false);
+  const [editQrCode, setEditQrCode] = useState(academy.qrCodePresenca || '');
+  const [isSavingQrCode, setIsSavingQrCode] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = React.useState(false);
   const [isEditingPlans, setIsEditingPlans] = useState(false);
   const [isManagingAcademyPlans, setIsManagingAcademyPlans] = useState(false);
@@ -256,6 +260,62 @@ const SettingsView: React.FC<SettingsViewProps> = ({
       showNotification('Erro ao salvar critérios. Tente novamente.', 'error');
     } finally {
       setIsSavingAcademy(false);
+    }
+  };
+
+  const printQrCode = () => {
+    const container = document.getElementById('qr-presenca-print');
+    if (!container) return;
+    const svgEl = container.querySelector('svg');
+    if (!svgEl) return;
+    const svgStr = new XMLSerializer().serializeToString(svgEl);
+    const pw = window.open('', '_blank', 'width=640,height=800');
+    if (!pw) return;
+    pw.document.write(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>QR Code de Presença — ${academy.name}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      min-height:100vh;background:#fff;padding:48px 32px;gap:28px;
+    }
+    .logo{width:80px;height:80px;object-fit:contain;border-radius:16px;}
+    .academy{font-size:14px;font-weight:900;text-transform:uppercase;letter-spacing:.15em;color:#64748b;}
+    .title{font-size:42px;font-weight:900;text-transform:uppercase;letter-spacing:-.02em;color:#0f172a;text-align:center;line-height:1.05;}
+    .qr-wrap{padding:20px;border:3px solid #0f172a;border-radius:20px;line-height:0;}
+    .qr-wrap svg{width:260px;height:260px;}
+    .hint{font-size:12px;color:#94a3b8;font-weight:700;text-transform:uppercase;letter-spacing:.12em;text-align:center;}
+    @media print{html,body{height:100%;margin:0;}body{padding:24px;}}
+  </style>
+</head>
+<body>
+  ${academy.logo ? `<img class="logo" src="${academy.logo}" alt="${academy.name}" />` : ''}
+  <div class="academy">${academy.name}</div>
+  <div class="title">Registre sua<br>Presença</div>
+  <div class="qr-wrap">${svgStr}</div>
+  <div class="hint">Abra o app · Toque em "Registre sua Presença" · Escaneie</div>
+  <script>window.addEventListener('load',()=>{setTimeout(()=>{window.print();},300);});<\/script>
+</body>
+</html>`);
+    pw.document.close();
+  };
+
+  const handleSaveQrCode = async () => {
+    setIsSavingQrCode(true);
+    try {
+      const saved = await academyService.update(academy.id, { qrCodePresenca: editQrCode.trim() });
+      onUpdateAcademy({ ...academy, ...saved });
+      setIsEditingQrCode(false);
+      showNotification('Código QR de presença salvo com sucesso!');
+    } catch (e) {
+      console.error(e);
+      showNotification('Erro ao salvar código QR. Tente novamente.', 'error');
+    } finally {
+      setIsSavingQrCode(false);
     }
   };
 
@@ -573,6 +633,58 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
               )}
             </div>
+          </div>
+        </section>
+      )}
+
+      {(user.role === 'admin' || user.role === 'superuser') && (
+        <section className="space-y-4">
+          <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-4">Controle de Presença</h2>
+          <div className="bg-white dark:bg-slate-900 rounded-[32px] border border-slate-100 dark:border-slate-800 p-6 shadow-sm space-y-5">
+            <div className="flex items-start gap-4">
+              <div className="bg-emerald-100 dark:bg-emerald-900/30 p-3 rounded-2xl text-emerald-600 dark:text-emerald-400 shrink-0">
+                <QrCode size={24} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-bold text-slate-800 dark:text-white text-sm">QR Code de Presença</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-0.5">Imprima ou exiba este QR Code na academia. Os alunos leem com o app e a presença é registrada automaticamente.</p>
+              </div>
+            </div>
+
+            {academy.qrCodePresenca ? (
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                <div id="qr-presenca-print" className="bg-white p-3 rounded-2xl shadow-md border border-slate-100 shrink-0">
+                  <QRCodeSVG value={academy.qrCodePresenca} size={140} level="M" includeMargin={false} />
+                </div>
+                <div className="flex-1 space-y-3 w-full">
+                  <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl px-4 py-3 border border-slate-100 dark:border-slate-700 font-mono text-[11px] text-slate-600 dark:text-slate-300 break-all">
+                    {academy.qrCodePresenca}
+                  </div>
+                  <button
+                    onClick={printQrCode}
+                    className="w-full bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <Printer size={14} />
+                    Imprimir QR Code
+                  </button>
+                  <button
+                    onClick={() => { setEditQrCode(academy.qrCodePresenca || ''); setIsEditingQrCode(true); }}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2"
+                  >
+                    <QrCode size={14} />
+                    Alterar Código
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => { setEditQrCode(''); setIsEditingQrCode(true); }}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2"
+              >
+                <Plus size={14} />
+                Configurar QR Code de Presença
+              </button>
+            )}
           </div>
         </section>
       )}
@@ -1772,6 +1884,64 @@ const SettingsView: React.FC<SettingsViewProps> = ({
               <button 
                 onClick={() => setIsEditingProfile(false)}
                 className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-4 rounded-2xl active:scale-95 transition-all text-sm"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de QR Code de Presença */}
+      {isEditingQrCode && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[200] flex items-center justify-center p-4 sm:p-6">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[28px] md:rounded-[32px] p-5 md:p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-black text-slate-800 dark:text-white tracking-tight uppercase italic flex items-center gap-2">
+                <QrCode className="text-emerald-500" />
+                QR Code de Presença
+              </h2>
+              <button onClick={() => setIsEditingQrCode(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-xs text-slate-500 dark:text-slate-400">Digite o código que será usado para registrar presença. Pode ser qualquer texto — ex: <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">Presenca2026</code>.</p>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Código de Presença *</label>
+                <input
+                  type="text"
+                  value={editQrCode}
+                  onChange={(e) => setEditQrCode(e.target.value)}
+                  placeholder="Ex: Presenca20260619"
+                  className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-mono"
+                  autoFocus
+                />
+              </div>
+
+              {editQrCode.trim() && (
+                <div className="flex justify-center py-2">
+                  <div className="bg-white p-3 rounded-2xl shadow-md border border-slate-100">
+                    <QRCodeSVG value={editQrCode.trim()} size={160} level="M" includeMargin={false} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2 mt-6">
+              <button
+                onClick={handleSaveQrCode}
+                disabled={isSavingQrCode || !editQrCode.trim()}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black py-4 rounded-2xl shadow-lg shadow-emerald-600/20 active:scale-95 transition-all text-sm uppercase tracking-widest flex items-center justify-center gap-2"
+              >
+                {isSavingQrCode ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                {isSavingQrCode ? 'Salvando...' : 'Salvar QR Code'}
+              </button>
+              <button
+                onClick={() => setIsEditingQrCode(false)}
+                disabled={isSavingQrCode}
+                className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-4 rounded-2xl active:scale-95 transition-all text-sm disabled:opacity-50"
               >
                 Cancelar
               </button>

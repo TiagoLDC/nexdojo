@@ -53,6 +53,7 @@ const DDL_STATEMENTS = [
     plan_expiration_date DATE,
     payment_warning_days INT DEFAULT 5,
     graduation_rules JSON DEFAULT NULL,
+    qr_code_presenca VARCHAR(500) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`,
 

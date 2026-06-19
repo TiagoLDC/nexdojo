@@ -282,6 +282,7 @@ export interface Academy {
   planExpirationDate?: string;
   paymentWarningDays?: number;
   graduationRules?: GraduationRules;
+  qrCodePresenca?: string;
   plans?: AcademyPlan[];
 }
 

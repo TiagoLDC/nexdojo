@@ -386,6 +386,88 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   const [showPassVisibility, setShowPassVisibility] = useState(false);
   const [isSavingPass, setIsSavingPass] = useState(false);
 
+  // QR Check-in states
+  const [showQrScanner, setShowQrScanner] = useState(false);
+  const [qrScanStatus, setQrScanStatus] = useState<'idle' | 'scanning' | 'success' | 'error'>('idle');
+  const [qrScanMessage, setQrScanMessage] = useState('');
+  const [qrManualCode, setQrManualCode] = useState('');
+  const [isQrCheckinLoading, setIsQrCheckinLoading] = useState(false);
+  const videoRef = React.useRef<HTMLVideoElement>(null);
+  const streamRef = React.useRef<MediaStream | null>(null);
+  const scanIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopQrCamera = () => {
+    if (scanIntervalRef.current) { clearInterval(scanIntervalRef.current); scanIntervalRef.current = null; }
+    if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; }
+  };
+
+  const closeQrScanner = () => {
+    stopQrCamera();
+    setShowQrScanner(false);
+    setQrScanStatus('idle');
+    setQrScanMessage('');
+    setQrManualCode('');
+  };
+
+  const performQrCheckin = async (code: string) => {
+    if (!code.trim() || isQrCheckinLoading) return;
+    setIsQrCheckinLoading(true);
+    stopQrCamera();
+    try {
+      await attendanceService.qrCheckin(code.trim());
+      setQrScanStatus('success');
+      setQrScanMessage('Presença registrada com sucesso! OSS!');
+      // Recarrega presenças após check-in
+      if (academy) {
+        const attRes = await attendanceService.getRecords(academy.id, { limit: 1000 });
+        setAttendance(attRes.data);
+      }
+    } catch (err: any) {
+      setQrScanStatus('error');
+      setQrScanMessage(err?.response?.data?.error || 'Código inválido ou presença já registrada.');
+    } finally {
+      setIsQrCheckinLoading(false);
+    }
+  };
+
+  const startQrCamera = async () => {
+    setQrScanStatus('scanning');
+    setQrScanMessage('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+
+      const hasBarcodeDetector = 'BarcodeDetector' in window;
+      if (!hasBarcodeDetector) {
+        // Fallback: show manual input
+        setQrScanStatus('idle');
+        return;
+      }
+
+      // @ts-ignore
+      const detector = new BarcodeDetector({ formats: ['qr_code'] });
+      scanIntervalRef.current = setInterval(async () => {
+        if (!videoRef.current || videoRef.current.readyState < 2) return;
+        try {
+          const barcodes = await detector.detect(videoRef.current);
+          if (barcodes.length > 0) {
+            const code = barcodes[0].rawValue;
+            clearInterval(scanIntervalRef.current!);
+            scanIntervalRef.current = null;
+            await performQrCheckin(code);
+          }
+        } catch {}
+      }, 300);
+    } catch (err: any) {
+      setQrScanStatus('error');
+      setQrScanMessage('Não foi possível acessar a câmera. Use o campo de texto abaixo.');
+    }
+  };
+
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPass.length < 6) {
@@ -762,7 +844,16 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-bold mt-2 uppercase text-[10px] tracking-[0.2em]">{t.trainingJourney} {academy?.name}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            {academy?.qrCodePresenca && (
+              <button
+                onClick={() => { setShowQrScanner(true); setQrScanStatus('idle'); }}
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white transition-all shadow-lg shadow-emerald-600/20 cursor-pointer active:scale-95"
+              >
+                <UserCheck size={14} />
+                <span>Registre sua Presença</span>
+              </button>
+            )}
             <button
               onClick={handleShare}
               className="flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-2 rounded-2xl border border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:border-emerald-200 transition-all shadow-sm cursor-pointer"
@@ -1071,6 +1162,108 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
           </div>
         </div>
       </motion.div>
+
+      {/* Modal: QR Scanner de Presença */}
+      {showQrScanner && (
+        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-[9000] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl shadow-2xl p-6 flex flex-col gap-5 animate-in zoom-in duration-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+                  <UserCheck size={20} className="text-emerald-600" />
+                </div>
+                <h2 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Registrar Presença</h2>
+              </div>
+              <button onClick={closeQrScanner} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            {qrScanStatus === 'success' && (
+              <div className="flex flex-col items-center gap-4 py-4">
+                <div className="w-20 h-20 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+                  <CheckCircle2 size={44} className="text-emerald-600" />
+                </div>
+                <div className="text-center">
+                  <p className="font-black text-slate-800 dark:text-white text-lg uppercase">OSS!</p>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">{qrScanMessage}</p>
+                </div>
+                <button onClick={closeQrScanner} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-2xl uppercase tracking-widest text-sm transition-all active:scale-95">
+                  Fechar
+                </button>
+              </div>
+            )}
+
+            {qrScanStatus !== 'success' && (
+              <>
+                {qrScanStatus === 'idle' && (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 text-center">Aponte a câmera para o QR Code exibido na academia.</p>
+                    <button
+                      onClick={startQrCamera}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-2xl uppercase tracking-widest text-sm transition-all active:scale-95 flex items-center justify-center gap-2"
+                    >
+                      <UserCheck size={16} />
+                      Abrir Câmera
+                    </button>
+                  </div>
+                )}
+
+                {qrScanStatus === 'scanning' && (
+                  <div className="space-y-3">
+                    <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-slate-950">
+                      <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="w-48 h-48 border-2 border-emerald-400 rounded-2xl opacity-80">
+                          <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-emerald-400 rounded-tl-lg" />
+                          <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-emerald-400 rounded-tr-lg" />
+                          <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-emerald-400 rounded-bl-lg" />
+                          <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-emerald-400 rounded-br-lg" />
+                        </div>
+                      </div>
+                      {isQrCheckinLoading && (
+                        <div className="absolute inset-0 bg-slate-950/70 flex items-center justify-center">
+                          <Loader2 size={40} className="text-emerald-400 animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest">Aponte para o QR Code da academia</p>
+                  </div>
+                )}
+
+                {qrScanStatus === 'error' && (
+                  <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 p-4 rounded-2xl flex items-start gap-3">
+                    <AlertTriangle size={18} className="text-red-500 shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-700 dark:text-red-400 font-medium">{qrScanMessage}</p>
+                  </div>
+                )}
+
+                {/* Fallback manual */}
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ou digite o código manualmente</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={qrManualCode}
+                      onChange={e => setQrManualCode(e.target.value)}
+                      placeholder="Digite o código de presença"
+                      className="flex-1 pl-4 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-medium text-slate-900 dark:text-white placeholder:text-slate-400 text-sm"
+                      onKeyDown={e => { if (e.key === 'Enter') performQrCheckin(qrManualCode); }}
+                    />
+                    <button
+                      onClick={() => performQrCheckin(qrManualCode)}
+                      disabled={!qrManualCode.trim() || isQrCheckinLoading}
+                      className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-black px-4 rounded-xl transition-all active:scale-95 flex items-center"
+                    >
+                      {isQrCheckinLoading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Modal: Alterar Senha */}
       {showPasswordModal && (
