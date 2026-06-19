@@ -1024,40 +1024,36 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <Zap size={11} className="text-yellow-300 shrink-0" />
-                    <span className="text-[9px] font-black uppercase tracking-widest text-indigo-200">Graduação Próxima!</span>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-white/70">Graduação Próxima!</span>
                   </div>
                   <h3 className="font-black text-xl sm:text-2xl uppercase italic tracking-tight leading-none">
                     {graduationWarning.remaining === 1
                       ? `Falta só 1 ${graduationWarning.unit === 'treinos' ? 'treino' : graduationWarning.unit === 'horas' ? 'hora' : 'dia'}!`
                       : `Faltam ${graduationWarning.remaining} ${graduationWarning.unit}!`}
                   </h3>
-                  <p className="text-indigo-200 font-semibold text-sm mt-1 opacity-90">
+                  <p className="text-white/75 font-semibold text-sm mt-1">
                     Avise seu professor — você está quase lá!
                   </p>
                 </div>
-                <div className="shrink-0 text-right hidden sm:block">
-                  <p className="text-[8px] font-black text-indigo-300 uppercase tracking-widest">Faltam</p>
-                  <p className="text-4xl font-black text-yellow-300 leading-none">{graduationWarning.remaining}</p>
-                  <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">{graduationWarning.unit}</p>
+                <div className="shrink-0 text-right">
+                  <p className="text-[8px] font-black text-white/60 uppercase tracking-widest">Faltam</p>
+                  <p className="text-3xl sm:text-4xl font-black text-yellow-300 leading-none">{graduationWarning.remaining}</p>
+                  <p className="text-[9px] font-black text-white/60 uppercase tracking-widest">{graduationWarning.unit}</p>
                 </div>
               </div>
-              <div className="relative z-10 mt-5 flex items-center gap-4 bg-white/10 rounded-2xl p-4">
-                <div className="flex flex-col items-center gap-1.5">
-                  <span className="text-[8px] font-black text-indigo-300 uppercase tracking-widest">Sua faixa</span>
-                  <BeltBadge belt={profile.belt} stripes={profile.stripes} />
+              <div className="relative z-10 mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3 bg-white/10 rounded-2xl p-4">
+                <div className="flex flex-col items-center gap-2">
+                  <span className="text-[8px] font-black text-white/60 uppercase tracking-widest">Sua faixa</span>
+                  <BeltBadge belt={profile.belt} stripes={profile.stripes} showText={false} />
+                  <span className="text-[9px] font-bold text-white/80 uppercase">{profile.belt}</span>
                 </div>
-                <div className="flex-1 flex flex-col items-center gap-1">
-                  <ChevronRight size={24} className="text-yellow-300" />
-                  <span className="text-[8px] font-black text-indigo-300 uppercase tracking-widest text-center">próximo</span>
+                <div className="flex flex-col items-center gap-1">
+                  <ChevronRight size={22} className="text-yellow-300" />
                 </div>
-                <div className="flex flex-col items-center gap-1.5">
+                <div className="flex flex-col items-center gap-2">
                   <span className="text-[8px] font-black text-yellow-300 uppercase tracking-widest">Próximo rank</span>
-                  <BeltBadge belt={studentNextRank.nextBelt} stripes={studentNextRank.nextStripes} />
-                </div>
-                <div className="ml-auto flex flex-col items-center gap-1 sm:hidden">
-                  <p className="text-[8px] font-black text-indigo-300 uppercase tracking-widest">Faltam</p>
-                  <p className="text-3xl font-black text-yellow-300 leading-none">{graduationWarning.remaining}</p>
-                  <p className="text-[8px] font-black text-indigo-300 uppercase tracking-widest">{graduationWarning.unit}</p>
+                  <BeltBadge belt={studentNextRank.nextBelt} stripes={studentNextRank.nextStripes} showText={false} />
+                  <span className="text-[9px] font-bold text-white/80 uppercase">{studentNextRank.nextBelt}</span>
                 </div>
               </div>
               <Star size={180} className="absolute -right-14 -bottom-14 text-white/5 pointer-events-none" />
