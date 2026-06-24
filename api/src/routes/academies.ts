@@ -94,7 +94,7 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
     alias:                  { type: 'string', maxLength: 100 },
     absence_limit:          { type: 'number', min: 0 },
     payment_warning_days:   { type: 'number', min: 0 },
-    current_plan:           { enum: ['Free', 'Silver', 'Gold', 'Black Belt'] },
+    current_plan:           { enum: ['Free', 'Silver', 'Gold', 'Black Belt', 'VIP'] },
     plan_status:            { enum: ['Active', 'Expired', 'Trial', 'Suspended', 'Canceled'] },
     pix_type:               { enum: ['CPF', 'CNPJ', 'E-mail', 'Telefone', 'Aleatória'] },
   });

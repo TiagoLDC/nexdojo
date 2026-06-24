@@ -52,6 +52,7 @@ import {
   KeyRound
 } from 'lucide-react';
 import { authService } from '@/features/auth/services/authService';
+import { StorageService } from '../services/storage';
 import { advancePaymentDate } from '@/utils/paymentUtils';
 import { 
   PieChart, 
@@ -777,8 +778,16 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     try {
       await academyService.update(academyId, updates as any);
       setAllAcademies(prev => prev.map(a => a.id === academyId ? { ...a, ...updates } : a));
-    } catch (err) {
+      const stored = StorageService.getAcademies();
+      StorageService.saveAcademies(stored.map(a => a.id === academyId ? { ...a, ...updates } : a));
+      if (academy?.id === academyId) {
+        onSwitchAcademy?.({ ...academy, ...updates } as Academy);
+      }
+      showNotification('Academia atualizada com sucesso!');
+    } catch (err: any) {
       console.error('Erro ao atualizar academia:', err);
+      showNotification(err?.response?.data?.error || 'Erro ao salvar academia. Tente novamente.', 'error');
+      return;
     }
     setIsManageModalOpen(false);
     setSelectedAcademy(null);
@@ -1861,8 +1870,9 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                     
                     <div className="flex items-center justify-between text-[10px]">
                       <span className={`px-2 py-1 rounded-lg font-black uppercase tracking-tighter ${
-                        acc.currentPlan === 'Black Belt' ? 'bg-slate-900 text-white' : 
-                        acc.currentPlan === 'Gold' ? 'bg-yellow-100 text-yellow-700' : 
+                        acc.currentPlan === 'VIP' ? 'bg-purple-700 text-white' :
+                        acc.currentPlan === 'Black Belt' ? 'bg-slate-900 text-white' :
+                        acc.currentPlan === 'Gold' ? 'bg-yellow-100 text-yellow-700' :
                         'bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300'
                       }`}>
                         {acc.currentPlan || 'Free'}
@@ -1925,8 +1935,9 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                         </td>
                         <td className="px-6 py-4">
                           <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                            acc.currentPlan === 'Black Belt' ? 'bg-slate-900 text-white' : 
-                            acc.currentPlan === 'Gold' ? 'bg-yellow-100 text-yellow-700' : 
+                            acc.currentPlan === 'VIP' ? 'bg-purple-700 text-white' :
+                            acc.currentPlan === 'Black Belt' ? 'bg-slate-900 text-white' :
+                            acc.currentPlan === 'Gold' ? 'bg-yellow-100 text-yellow-700' :
                             'bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300'
                           }`}>
                             {acc.currentPlan || 'Free'}
@@ -2030,6 +2041,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                       <option value="Silver">Silver (R$ 99)</option>
                       <option value="Gold">Gold (R$ 199)</option>
                       <option value="Black Belt">Black Belt (R$ 399)</option>
+                      <option value="VIP">VIP</option>
                     </select>
                   </div>
                   <div className="space-y-2">

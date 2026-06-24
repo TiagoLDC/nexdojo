@@ -48,7 +48,7 @@ const DDL_STATEMENTS = [
     bank_name VARCHAR(100),
     bank_agency VARCHAR(20),
     bank_account VARCHAR(30),
-    current_plan ENUM('Free','Silver','Gold','Black Belt') DEFAULT 'Free',
+    current_plan ENUM('Free','Silver','Gold','Black Belt','VIP') DEFAULT 'Free',
     plan_status ENUM('Active','Expired','Trial','Suspended','Canceled') DEFAULT 'Trial',
     plan_expiration_date DATE,
     payment_warning_days INT DEFAULT 5,

@@ -62,11 +62,9 @@ export const StorageService = {
   },
   saveAcademy: (academy: Academy) => {
     localStorage.setItem(KEYS.ACADEMY, JSON.stringify(academy));
-    // Também salva na lista de todas as academias se não existir
     const all = StorageService.getAcademies();
-    if (!all.find(a => a.id === academy.id)) {
-      StorageService.saveAcademies([...all, academy]);
-    }
+    const exists = all.some(a => a.id === academy.id);
+    StorageService.saveAcademies(exists ? all.map(a => a.id === academy.id ? academy : a) : [...all, academy]);
   },
 
   getAcademies: (): Academy[] => {

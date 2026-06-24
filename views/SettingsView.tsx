@@ -726,7 +726,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
         </section>
       )}
 
-      {(user.role === 'admin' || user.role === 'superuser') && (
+      {(user.role === 'admin' || user.role === 'superuser') && academy.currentPlan !== 'VIP' && (
         <section className="space-y-4">
           <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-4">{t.mySubscription}</h2>
           <div className="bg-indigo-600 rounded-[32px] p-6 text-white shadow-xl shadow-indigo-600/20 relative overflow-hidden group">
