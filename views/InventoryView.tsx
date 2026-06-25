@@ -118,11 +118,8 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
     setIsModalOpen(true);
   };
 
-  const handlePurchase = (product: Product) => {
-    setSelectedProduct(product);
-    setIsPurchaseModalOpen(true);
-    setPaymentMethod(null);
-    setPixCopied(false);
+  const handlePurchase = (_product: Product) => {
+    showNotification("Para adquirir este produto, procure o administrador.", 'info');
   };
 
   const copyPixKey = () => {
