@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
-import { Lock, Mail, CheckCircle2, AlertCircle, Loader2, Eye, EyeOff, MapPin, User as UserIcon } from 'lucide-react';
+import { Lock, Mail, CheckCircle2, AlertCircle, Loader2, Eye, EyeOff, MapPin, User as UserIcon, Phone } from 'lucide-react';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../../services/cep';
 
 interface InviteInfo {
@@ -55,6 +55,7 @@ const StaffInvitePage: React.FC = () => {
 
   // Pessoal
   const [phone, setPhone] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [cpf, setCpf] = useState('');
   const [rg, setRg] = useState('');
@@ -78,6 +79,7 @@ const StaffInvitePage: React.FC = () => {
       .then(r => {
         setInfo(r.data);
         if (r.data.staffPhone) setPhone(maskPhone(r.data.staffPhone));
+        if (r.data.staffWhatsapp) setWhatsapp(maskPhone(r.data.staffWhatsapp));
         setLoading(false);
       })
       .catch(e => { setLoadError(e.response?.data?.error || 'Link inválido ou expirado.'); setLoading(false); });
@@ -112,6 +114,7 @@ const StaffInvitePage: React.FC = () => {
         email,
         password,
         phone: phone || undefined,
+        whatsapp: whatsapp || undefined,
         birthDate: birthDate || undefined,
         cpf: cpf || undefined,
         rg: rg || undefined,
@@ -171,8 +174,9 @@ const StaffInvitePage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-8 px-4">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-lg mx-auto shadow-xl border border-slate-100 dark:border-slate-800">
+    <div className="fixed inset-0 overflow-y-auto bg-slate-50 dark:bg-slate-950">
+      <div className="min-h-full py-8 px-4 flex flex-col items-center justify-start">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-xl border border-slate-100 dark:border-slate-800">
 
         {/* Header da academia */}
         <div className="text-center mb-6">
@@ -256,13 +260,29 @@ const StaffInvitePage: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <LabelInput label="Telefone">
-              <input
-                type="text"
-                value={phone}
-                onChange={e => setPhone(maskPhone(e.target.value))}
-                placeholder="(00) 00000-0000"
-                className={inputCls}
-              />
+              <div className="relative">
+                <Phone size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={phone}
+                  onChange={e => setPhone(maskPhone(e.target.value))}
+                  placeholder="(00) 00000-0000"
+                  className={`${inputCls} pl-10`}
+                />
+              </div>
+            </LabelInput>
+
+            <LabelInput label="WhatsApp">
+              <div className="relative">
+                <Phone size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-green-500" />
+                <input
+                  type="text"
+                  value={whatsapp}
+                  onChange={e => setWhatsapp(maskPhone(e.target.value))}
+                  placeholder="(00) 00000-0000"
+                  className={`${inputCls} pl-10`}
+                />
+              </div>
             </LabelInput>
 
             <LabelInput label="Data de Nascimento">
@@ -387,6 +407,7 @@ const StaffInvitePage: React.FC = () => {
             Finalizar Cadastro
           </button>
         </form>
+      </div>
       </div>
     </div>
   );

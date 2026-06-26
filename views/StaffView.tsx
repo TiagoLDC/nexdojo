@@ -130,7 +130,13 @@ const StaffView: React.FC<{ academy: Academy; user: User }> = ({ academy }) => {
     if (value.replace(/\D/g, '').length === 8) {
       setIsLoadingCep(true);
       const addressData = await fetchAddressByCep(value);
-      if (addressData) setEditingStaff(prev => prev ? { ...prev, address: addressData.fullAddress } : null);
+      if (addressData) setEditingStaff(prev => prev ? {
+        ...prev,
+        address: addressData.street,
+        addressNeighborhood: addressData.neighborhood,
+        addressCity: addressData.city,
+        addressState: addressData.state,
+      } : null);
       setIsLoadingCep(false);
     }
   };
@@ -148,12 +154,16 @@ const StaffView: React.FC<{ academy: Academy; user: User }> = ({ academy }) => {
         joinDate: editingStaff.joinDate,
         photo: editingStaff.photo,
         phone: editingStaff.phone,
-        whatsapp: (editingStaff as any).whatsapp,
+        whatsapp: editingStaff.whatsapp,
         email: editingStaff.email,
         cpf: editingStaff.cpf,
         rg: editingStaff.rg,
-        address: editingStaff.address,
         cep: editingStaff.cep,
+        address: editingStaff.address,
+        addressNumber: editingStaff.addressNumber,
+        addressNeighborhood: editingStaff.addressNeighborhood,
+        addressCity: editingStaff.addressCity,
+        addressState: editingStaff.addressState,
         medicalNotes: editingStaff.medicalNotes,
         position: editingStaff.position,
       } as any);
@@ -583,8 +593,35 @@ const StaffView: React.FC<{ academy: Academy; user: User }> = ({ academy }) => {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1 flex items-center justify-between">CEP {isLoadingCep && <Loader2 size={10} className="animate-spin text-indigo-500" />}</label>
-                  <input type="text" value={editingStaff.cep || ''} onChange={handleCepChange} className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none" maxLength={9} />
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1 flex items-center justify-between">
+                    CEP {isLoadingCep && <Loader2 size={10} className="animate-spin text-indigo-500" />}
+                  </label>
+                  <input type="text" value={editingStaff.cep || ''} onChange={handleCepChange} className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none" maxLength={9} placeholder="00000-000" />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Número</label>
+                  <input type="text" value={editingStaff.addressNumber || ''} onChange={e => setEditingStaff({ ...editingStaff, addressNumber: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none" placeholder="123" />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Rua / Logradouro</label>
+                  <input type="text" value={editingStaff.address || ''} onChange={e => setEditingStaff({ ...editingStaff, address: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none" placeholder="Rua Exemplo" />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Bairro</label>
+                  <input type="text" value={editingStaff.addressNeighborhood || ''} onChange={e => setEditingStaff({ ...editingStaff, addressNeighborhood: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none" placeholder="Centro" />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Cidade</label>
+                  <input type="text" value={editingStaff.addressCity || ''} onChange={e => setEditingStaff({ ...editingStaff, addressCity: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none" placeholder="São Paulo" />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Estado</label>
+                  <input type="text" value={editingStaff.addressState || ''} onChange={e => setEditingStaff({ ...editingStaff, addressState: e.target.value.toUpperCase().slice(0, 2) })} className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none" placeholder="SP" maxLength={2} />
                 </div>
 
                 <div>

@@ -333,6 +333,7 @@ router.post('/register/staff', async (req: Request, res: Response, next: NextFun
   const password = req.body.password;
   // Campos opcionais (interceptor converte camelCase → snake_case no cliente)
   const phone              = req.body.phone              || null;
+  const whatsapp           = req.body.whatsapp           || null;
   const birthDate          = req.body.birth_date         || null;
   const cpf                = req.body.cpf                || null;
   const rg                 = req.body.rg                 || null;
@@ -380,11 +381,11 @@ router.post('/register/staff', async (req: Request, res: Response, next: NextFun
     await pool.execute(
       `UPDATE staff SET
          email = ?, user_id = ?, status = 'Pending', join_date = NOW(),
-         phone = ?, birth_date = ?, cpf = ?, rg = ?,
+         phone = ?, whatsapp = ?, birth_date = ?, cpf = ?, rg = ?,
          cep = ?, address = ?, address_number = ?,
          address_neighborhood = ?, address_city = ?, address_state = ?
        WHERE id = ?`,
-      [emailNorm, userId, phone, birthDate, cpf, rg, cep, address, addressNumber,
+      [emailNorm, userId, phone, whatsapp, birthDate, cpf, rg, cep, address, addressNumber,
        addressNeighborhood, addressCity, addressState, staff.id]
     );
 

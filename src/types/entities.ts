@@ -165,6 +165,9 @@ export interface Staff {
   cep?: string;
   address?: string;
   addressNumber?: string;
+  addressNeighborhood?: string;
+  addressCity?: string;
+  addressState?: string;
   status: MemberStatus;
   joinDate?: string;
   position?: string;
