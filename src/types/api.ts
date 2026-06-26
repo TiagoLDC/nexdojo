@@ -137,12 +137,13 @@ export interface GetStaffParams extends SearchParams {
 
 export interface CreateStaffDTO {
   name: string;
-  birthDate: string;
-  status: MemberStatus;
-  joinDate: string;
+  birthDate?: string;
+  status?: MemberStatus;
+  joinDate?: string;
   position?: string;
   email?: string;
   phone?: string;
+  whatsapp?: string;
   cpf?: string;
   rg?: string;
   gender?: Gender;

@@ -154,9 +154,11 @@ export interface Staff {
   academyId: string;
   name: string;
   photo?: string;
-  birthDate: string;
+  birthDate?: string;
   gender?: Gender;
   phone?: string;
+  whatsapp?: string;
+  inviteToken?: string;
   email?: string;
   cpf?: string;
   rg?: string;
@@ -164,7 +166,7 @@ export interface Staff {
   address?: string;
   addressNumber?: string;
   status: MemberStatus;
-  joinDate: string;
+  joinDate?: string;
   position?: string;
   medicalNotes?: string;
   documents?: StudentDocument[];

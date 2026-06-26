@@ -27,7 +27,7 @@ export enum Belt {
 export type Gender = 'Masculino' | 'Feminino' | 'Outro';
 export type MaritalStatus = 'Solteiro' | 'Casado' | 'Divorciado' | 'Viúvo' | 'Outro';
 export type StudentStatus = 'Active' | 'Inactive' | 'Dropped' | 'Pending';
-export type MemberStatus = 'Active' | 'Inactive' | 'Pending';
+export type MemberStatus = 'Active' | 'Inactive' | 'Pending' | 'PreCadastro';
 export type UserAccountStatus = 'Active' | 'Pending' | 'Blocked';
 export type UserRole = 'superuser' | 'admin' | 'instructor' | 'staff' | 'student' | 'guest';
 export type SenderRole = 'superuser' | 'admin' | 'instructor' | 'staff';

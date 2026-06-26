@@ -36,6 +36,12 @@ async function applySchemaPatches() {
     `ALTER TABLE attendance_records ADD COLUMN age_warning TINYINT(1) DEFAULT 0 COMMENT 'Presença com divergência de idade confirmada manualmente'`,
     `ALTER TABLE finance_transactions ADD COLUMN due_date DATE NULL COMMENT 'Data de vencimento da mensalidade registrada'`,
     `ALTER TABLE academies MODIFY COLUMN current_plan ENUM('Free','Silver','Gold','Black Belt','VIP') DEFAULT 'Free'`,
+    `ALTER TABLE staff ADD COLUMN whatsapp VARCHAR(20) AFTER phone`,
+    `ALTER TABLE staff ADD COLUMN invite_token VARCHAR(100) UNIQUE AFTER whatsapp`,
+    `ALTER TABLE staff MODIFY COLUMN status ENUM('Active','Inactive','Dropped','Pending','PreCadastro') DEFAULT 'Active'`,
+    `ALTER TABLE staff ADD COLUMN address_neighborhood VARCHAR(100) AFTER address_number`,
+    `ALTER TABLE staff ADD COLUMN address_city VARCHAR(100) AFTER address_neighborhood`,
+    `ALTER TABLE staff ADD COLUMN address_state VARCHAR(2) AFTER address_city`,
   ];
   for (const sql of patches) {
     try {

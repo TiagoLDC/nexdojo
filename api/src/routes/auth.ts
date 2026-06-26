@@ -293,6 +293,105 @@ router.post('/register/instructor', async (req: Request, res: Response, next: Ne
   } catch (err) { next(err); }
 });
 
+// GET /api/auth/staff-invite/:token — público: valida token e retorna dados do pré-cadastro
+router.get('/staff-invite/:token', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { token } = req.params;
+  if (!token) { res.status(400).json({ error: 'Token inválido' }); return; }
+
+  try {
+    const [rows] = await pool.execute<any[]>(
+      `SELECT s.id, s.name, s.position, s.phone, s.whatsapp, s.status,
+              a.name AS academy_name, a.alias AS academy_alias, a.logo AS academy_logo
+       FROM staff s
+       JOIN academies a ON a.id = s.academy_id
+       WHERE s.invite_token = ? LIMIT 1`,
+      [token]
+    );
+    const staff = rows[0];
+    if (!staff) { res.status(404).json({ error: 'Convite inválido ou expirado.' }); return; }
+    if (staff.status !== 'PreCadastro') {
+      res.status(409).json({ error: 'Este convite já foi utilizado.' });
+      return;
+    }
+    res.json({
+      staffId: staff.id,
+      staffName: staff.name,
+      staffPosition: staff.position,
+      staffPhone: staff.phone,
+      staffWhatsapp: staff.whatsapp,
+      academyName: staff.academy_name,
+      academyAlias: staff.academy_alias,
+      academyLogo: staff.academy_logo,
+    });
+  } catch (err) { next(err); }
+});
+
+// POST /api/auth/register/staff — público: colaborador completa o cadastro via link de convite
+router.post('/register/staff', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const token = req.body.token;
+  const email = req.body.email;
+  const password = req.body.password;
+  // Campos opcionais (interceptor converte camelCase → snake_case no cliente)
+  const phone              = req.body.phone              || null;
+  const birthDate          = req.body.birth_date         || null;
+  const cpf                = req.body.cpf                || null;
+  const rg                 = req.body.rg                 || null;
+  const cep                = req.body.cep                || null;
+  const address            = req.body.address            || null;
+  const addressNumber      = req.body.address_number     || null;
+  const addressNeighborhood= req.body.address_neighborhood || null;
+  const addressCity        = req.body.address_city       || null;
+  const addressState       = req.body.address_state      || null;
+
+  if (!token || !email || !password) {
+    res.status(400).json({ error: 'Token, e-mail e senha são obrigatórios.' });
+    return;
+  }
+  if (String(password).length < 6) {
+    res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres.' });
+    return;
+  }
+
+  try {
+    const [staffRows] = await pool.execute<any[]>(
+      `SELECT s.id, s.name, s.academy_id, s.status
+       FROM staff s WHERE s.invite_token = ? LIMIT 1`,
+      [token]
+    );
+    const staff = staffRows[0];
+    if (!staff) { res.status(404).json({ error: 'Convite inválido ou expirado.' }); return; }
+    if (staff.status !== 'PreCadastro') {
+      res.status(409).json({ error: 'Este convite já foi utilizado.' });
+      return;
+    }
+
+    const [existing] = await pool.execute<any[]>('SELECT id FROM users WHERE email = ?', [String(email).toLowerCase().trim()]);
+    if ((existing as any[]).length) { res.status(409).json({ error: 'E-mail já cadastrado.' }); return; }
+
+    const userId = 'usr_' + Math.random().toString(36).substr(2, 9);
+    const passwordHash = await bcrypt.hash(String(password), 10);
+    const emailNorm = String(email).toLowerCase().trim();
+
+    await pool.execute(
+      `INSERT INTO users (id, academy_id, role, name, email, password_hash, status) VALUES (?, ?, 'staff', ?, ?, ?, 'Pending')`,
+      [userId, staff.academy_id, staff.name, emailNorm, passwordHash]
+    );
+
+    await pool.execute(
+      `UPDATE staff SET
+         email = ?, user_id = ?, status = 'Pending', join_date = NOW(),
+         phone = ?, birth_date = ?, cpf = ?, rg = ?,
+         cep = ?, address = ?, address_number = ?,
+         address_neighborhood = ?, address_city = ?, address_state = ?
+       WHERE id = ?`,
+      [emailNorm, userId, phone, birthDate, cpf, rg, cep, address, addressNumber,
+       addressNeighborhood, addressCity, addressState, staff.id]
+    );
+
+    res.status(201).json({ message: 'Cadastro realizado! Aguarde aprovação do administrador.' });
+  } catch (err) { next(err); }
+});
+
 // POST /api/auth/change-password — usuário autenticado redefine senha (limpa flag de senha temporária)
 router.post('/change-password', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   // Interceptor do frontend converte camelCase → snake_case antes de enviar

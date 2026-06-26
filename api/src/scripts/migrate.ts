@@ -229,6 +229,8 @@ const DDL_STATEMENTS = [
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255),
     phone VARCHAR(20),
+    whatsapp VARCHAR(20),
+    invite_token VARCHAR(100) UNIQUE,
     photo LONGTEXT,
     birth_date DATE,
     gender ENUM('Masculino','Feminino','Outro'),
@@ -239,7 +241,7 @@ const DDL_STATEMENTS = [
     address VARCHAR(255),
     address_number VARCHAR(20),
     medical_notes TEXT,
-    status ENUM('Active','Inactive','Dropped','Pending') DEFAULT 'Active',
+    status ENUM('Active','Inactive','Dropped','Pending','PreCadastro') DEFAULT 'Active',
     join_date DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE

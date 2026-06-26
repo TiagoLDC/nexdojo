@@ -28,6 +28,7 @@ const InstructorProfilePage = React.lazy(() => import('@/pages/InstructorProfile
 const PaymentPage          = React.lazy(() => import('@/pages/PaymentPage'));
 const SystemConfigPage     = React.lazy(() => import('@/pages/SystemConfigPage'));
 const ResetPasswordPage    = React.lazy(() => import('@/pages/ResetPasswordPage'));
+const StaffInvitePage      = React.lazy(() => import('@/pages/StaffInvitePage'));
 
 const PageLoader: React.FC = () => (
   <div className="flex items-center justify-center h-full min-h-[200px]">
@@ -52,6 +53,7 @@ const App: React.FC = () => (
       <Route path="/login/:alias/register" element={<LoginPage />} />
       <Route path="/login/:alias/register/student" element={<LoginPage />} />
       <Route path="/login/:alias/register/instructor" element={<LoginPage />} />
+      <Route path="/staff-invite/:alias/:token" element={<StaffInvitePage />} />
 
       {/* Protected — requires auth */}
       <Route element={<PrivateRoute />}>
