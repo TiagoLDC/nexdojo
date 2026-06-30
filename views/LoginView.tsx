@@ -33,7 +33,8 @@ import {
   AlertCircle,
   Loader2,
   ShieldCheck,
-  Upload
+  Upload,
+  CreditCard
 } from 'lucide-react';
 import { BELT_COLORS } from '../constants';
 
@@ -361,6 +362,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         lastGraduationDate: studentData.lastGraduationDate || undefined,
         photo: studentData.photo,
         planId: studentData.planId || undefined,
+        nextPaymentDate: studentData.nextPaymentDate || undefined,
       });
       showNotification("Matrícula realizada com sucesso! Aguarde aprovação. OSS!");
       setView('login');
@@ -1138,6 +1140,19 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                   </div>
                 </div>
               )}
+
+              <div className="space-y-6">
+                <SectionHeader icon={<CreditCard size={16} />} title="Mensalidade" />
+                <p className="text-xs text-slate-500 dark:text-slate-400 -mt-2">Informe a data de vencimento da sua mensalidade. Após o cadastro, apenas o administrador poderá alterar este campo.</p>
+                <DateSelectInput
+                  label="Data de Vencimento da Mensalidade"
+                  labelClassName="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 mb-1"
+                  value={studentData.nextPaymentDate || ''}
+                  onChange={v => setStudentData({...studentData, nextPaymentDate: v})}
+                  yearFrom={new Date().getFullYear()}
+                  yearTo={new Date().getFullYear() + 2}
+                />
+              </div>
 
               <div className="bg-slate-50 dark:bg-slate-800/50 p-4 md:p-6 rounded-3xl border border-slate-200 dark:border-slate-700 space-y-4">
                 <div className="flex items-start gap-3">
