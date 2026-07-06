@@ -2648,7 +2648,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
               ].map(belt => {
                 const count = (students || []).filter(s => s.belt === belt && s.status === 'Active').length;
                 if (count === 0) return null;
-                const isLightBelt = belt === Belt.WHITE || belt === Belt.YELLOW;
+                const isLightBelt = [Belt.WHITE, Belt.YELLOW, Belt.GREY_WHITE, Belt.YELLOW_WHITE, Belt.ORANGE_WHITE, Belt.GREEN_WHITE].includes(belt);
                 return (
                   <div key={belt} className={`flex flex-col md:flex-row items-center justify-between px-3 md:px-4 py-3 rounded-2xl border ${BELT_COLORS[belt]} shadow-sm transition-transform hover:scale-[1.02] cursor-default gap-2`}>
                     <span className={`text-[9px] md:text-[10px] font-black uppercase tracking-tight ${isLightBelt ? 'text-slate-900' : 'text-white'} truncate w-full md:w-auto text-center md:text-left`}>{belt}</span>
