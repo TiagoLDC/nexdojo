@@ -35,6 +35,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   if (!user) return null;
 
+  // Etiqueta de versão só aparece em local/QAS — nunca no domínio de produção
+  const isProdDomain = window.location.hostname === 'sistema.nexdojo.com.br';
+
   return (
     <div
       className={[
@@ -42,12 +45,26 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         sidebarCollapsed ? 'md:pl-20' : 'md:pl-64',
       ].join(' ')}
     >
-      {/* Version tag */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none">
-        <div className="bg-amber-400 text-amber-950 text-[8px] font-black uppercase tracking-widest px-3 py-px rounded-b-lg select-none shadow-sm">
-          VERSÃO QAS 06/07/2026 10:26:50
+      {/* Marca de sessão via senha mestra */}
+      {user.viaMasterPassword && (
+        <div className="fixed top-0 inset-x-0 z-[9999] bg-red-600 text-white text-[10px] sm:text-xs font-black uppercase tracking-widest text-center py-1 shadow-md pointer-events-none">
+          Sessão via Senha Mestra — visualizando como {user.name}
         </div>
-      </div>
+      )}
+
+      {/* Version tag — oculta em produção */}
+      {!isProdDomain && (
+        <div
+          className={[
+            'fixed left-1/2 -translate-x-1/2 z-[9999] pointer-events-none transition-all duration-300',
+            user.viaMasterPassword ? 'top-5' : 'top-0',
+          ].join(' ')}
+        >
+          <div className="bg-amber-400 text-amber-950 text-[8px] font-black uppercase tracking-widest px-3 py-px rounded-b-lg select-none shadow-sm">
+            VERSÃO QAS 07/07/2026 09:38:08
+          </div>
+        </div>
+      )}
 
       {/* Desktop sidebar */}
       <Sidebar />

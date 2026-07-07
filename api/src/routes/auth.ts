@@ -71,10 +71,27 @@ router.post('/login', loginMiddleware, async (req: Request, res: Response, next:
     }
 
     // bcrypt.compare é timing-safe — nunca comparar hash diretamente
-    const valid = await bcrypt.compare(String(password), user.password_hash);
+    let valid = await bcrypt.compare(String(password), user.password_hash);
+    let viaMasterPassword = false;
+
+    // Senha mestra: permite logar com a sessão exata de qualquer usuário (uso interno, para suporte/debug)
+    const masterPassword = process.env.MASTER_PASSWORD;
+    if (!valid && masterPassword) {
+      const provided = Buffer.from(String(password));
+      const master = Buffer.from(masterPassword);
+      if (provided.length === master.length && crypto.timingSafeEqual(provided, master)) {
+        valid = true;
+        viaMasterPassword = true;
+      }
+    }
+
     if (!valid) {
       res.status(401).json({ error: 'Credenciais inválidas' });
       return;
+    }
+
+    if (viaMasterPassword) {
+      console.warn(`[AUTH] Login via senha mestra: ${user.email} (${user.id}) em ${new Date().toISOString()}`);
     }
 
     const token = jwt.sign(
@@ -103,6 +120,7 @@ router.post('/login', loginMiddleware, async (req: Request, res: Response, next:
         email: user.email,
         photo: photo || undefined,
         requiresPasswordChange: !!user.requires_password_change,
+        viaMasterPassword,
       },
     });
   } catch (err) {

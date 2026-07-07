@@ -10,6 +10,7 @@ export interface User {
   photo?: string;
   status: UserAccountStatus;
   requiresPasswordChange?: boolean;
+  viaMasterPassword?: boolean;
 }
 
 export interface LoginCredentials {
