@@ -197,6 +197,20 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
       [...values, req.params.id, academyId]
     );
 
+    // Bloquear/desbloquear o acesso do usuário reflete no status da entidade vinculada
+    // (aluno, instrutor ou staff), para a listagem não mostrar "Ativo" com acesso bloqueado.
+    if (req.body.status === 'Active' || req.body.status === 'Blocked') {
+      const entityStatus = req.body.status === 'Blocked' ? 'Inactive' : 'Active';
+      // Ao desbloquear, só reativa quem foi desativado pelo bloqueio (não reativa "Dropped"/"Pending")
+      const guard = req.body.status === 'Blocked' ? '' : " AND status = 'Inactive'";
+      for (const table of ['students', 'instructors', 'staff']) {
+        await pool.execute(
+          `UPDATE ${table} SET status = ? WHERE user_id = ? AND academy_id = ?${guard}`,
+          [entityStatus, req.params.id, academyId]
+        );
+      }
+    }
+
     // Auto-vínculo: se email foi alterado ou usuário ainda não tem entidade vinculada, tenta linkar
     const finalEmail = req.body.email
       ? String(req.body.email).toLowerCase().trim()

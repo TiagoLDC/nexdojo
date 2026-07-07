@@ -206,11 +206,14 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
   const handleToggleInstructorAccess = async (instructor: Instructor) => {
     if (!instructor.userId) return;
     const newStatus = instructor.userStatus === 'Blocked' ? 'Active' : 'Blocked';
+    // Backend cascateia esse status para instructors.status (bloqueado -> Inactive, desbloqueado -> Active
+    // apenas se estava Inactive por causa do bloqueio; não mexe em Dropped/Pending).
+    const newInstructorStatus = newStatus === 'Blocked' ? 'Inactive' : (instructor.status === 'Inactive' ? 'Active' : instructor.status);
     setAccountActionLoading(instructor.userId);
     try {
       await usersService.update(instructor.userId, { status: newStatus });
-      setInstructors(prev => prev.map(i => i.id === instructor.id ? { ...i, userStatus: newStatus } : i));
-      setEditingInstructor(prev => prev?.id === instructor.id ? { ...prev, userStatus: newStatus } : prev);
+      setInstructors(prev => prev.map(i => i.id === instructor.id ? { ...i, userStatus: newStatus, status: newInstructorStatus } : i));
+      setEditingInstructor(prev => prev?.id === instructor.id ? { ...prev, userStatus: newStatus, status: newInstructorStatus } : prev);
       showNotification(newStatus === 'Blocked' ? 'Acesso bloqueado' : 'Acesso ativado', 'success');
     } catch {
       showNotification('Erro ao alterar acesso', 'error');
