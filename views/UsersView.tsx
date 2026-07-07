@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Academy, User } from '../types';
 import { usersService, UserRecord } from '@/features/users/services/usersService';
 import { useTranslation } from '../services/LanguageContext';
@@ -94,6 +95,17 @@ const UsersView: React.FC<{ academy: Academy; user: User }> = ({ user: currentUs
 
   // menu de ações rápidas
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuRect, setMenuRect] = useState<DOMRect | null>(null);
+
+  const toggleMenu = (e: React.MouseEvent<HTMLButtonElement>, id: string) => {
+    if (openMenuId === id) {
+      setOpenMenuId(null);
+      setMenuRect(null);
+      return;
+    }
+    setMenuRect(e.currentTarget.getBoundingClientRect());
+    setOpenMenuId(id);
+  };
 
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -141,6 +153,7 @@ const UsersView: React.FC<{ academy: Academy; user: User }> = ({ user: currentUs
     setShowPwd(false);
     setIsEditOpen(true);
     setOpenMenuId(null);
+    setMenuRect(null);
   };
 
   const handleSave = async () => {
@@ -205,6 +218,7 @@ const UsersView: React.FC<{ academy: Academy; user: User }> = ({ user: currentUs
       showNotification('Erro ao alterar status.', 'error');
     }
     setOpenMenuId(null);
+    setMenuRect(null);
   };
 
   const handleOpenReset = (u: UserRecord) => {
@@ -213,6 +227,7 @@ const UsersView: React.FC<{ academy: Academy; user: User }> = ({ user: currentUs
     setShowNewPwd(false);
     setIsResetOpen(true);
     setOpenMenuId(null);
+    setMenuRect(null);
   };
 
   const handleResetPassword = async () => {
@@ -350,42 +365,12 @@ const UsersView: React.FC<{ academy: Academy; user: User }> = ({ user: currentUs
                   )}
                 </div>
                 <button
-                  onClick={() => setOpenMenuId(openMenuId === u.id ? null : u.id)}
+                  onClick={(e) => toggleMenu(e, u.id)}
                   className="text-slate-400 hover:text-indigo-600 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex-shrink-0"
                 >
                   <MoreVertical size={18} />
                 </button>
               </div>
-              {openMenuId === u.id && (
-                <div className="absolute right-3 top-14 z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl py-2 min-w-[180px] text-left">
-                  <button
-                    onClick={() => handleOpenEdit(u)}
-                    className="w-full px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
-                  >
-                    <UserIcon size={14} /> Editar dados
-                  </button>
-                  <button
-                    onClick={() => handleOpenReset(u)}
-                    className="w-full px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
-                  >
-                    <KeyRound size={14} /> Redefinir senha
-                  </button>
-                  {!isSelf(u) && u.role !== 'superuser' && (
-                    <>
-                      <div className="border-t border-slate-100 dark:border-slate-700 my-1" />
-                      <button
-                        onClick={() => handleToggleStatus(u)}
-                        className={`w-full px-4 py-2.5 text-xs font-bold flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 ${u.status === 'Active' ? 'text-red-500' : 'text-green-600'}`}
-                      >
-                        {u.status === 'Active'
-                          ? <><ShieldOff size={14} /> Bloquear acesso</>
-                          : <><ShieldCheck size={14} /> Ativar acesso</>
-                        }
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
             </div>
           ))}
           {users.length === 0 && (
@@ -470,42 +455,11 @@ const UsersView: React.FC<{ academy: Academy; user: User }> = ({ user: currentUs
                   {/* Actions */}
                   <td className="px-6 py-4 text-right relative">
                     <button
-                      onClick={() => setOpenMenuId(openMenuId === u.id ? null : u.id)}
+                      onClick={(e) => toggleMenu(e, u.id)}
                       className="text-slate-400 hover:text-indigo-600 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                     >
                       <MoreVertical size={18} />
                     </button>
-
-                    {openMenuId === u.id && (
-                      <div className="absolute right-6 top-12 z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl py-2 min-w-[180px] text-left">
-                        <button
-                          onClick={() => handleOpenEdit(u)}
-                          className="w-full px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
-                        >
-                          <UserIcon size={14} /> Editar dados
-                        </button>
-                        <button
-                          onClick={() => handleOpenReset(u)}
-                          className="w-full px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
-                        >
-                          <KeyRound size={14} /> Redefinir senha
-                        </button>
-                        {!isSelf(u) && u.role !== 'superuser' && (
-                          <>
-                            <div className="border-t border-slate-100 dark:border-slate-700 my-1" />
-                            <button
-                              onClick={() => handleToggleStatus(u)}
-                              className={`w-full px-4 py-2.5 text-xs font-bold flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 ${u.status === 'Active' ? 'text-red-500' : 'text-green-600'}`}
-                            >
-                              {u.status === 'Active'
-                                ? <><ShieldOff size={14} /> Bloquear acesso</>
-                                : <><ShieldCheck size={14} /> Ativar acesso</>
-                              }
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    )}
                   </td>
                 </tr>
               ))}
@@ -523,8 +477,57 @@ const UsersView: React.FC<{ academy: Academy; user: User }> = ({ user: currentUs
 
       {/* Click fora fecha menu */}
       {openMenuId && (
-        <div className="fixed inset-0 z-40" onClick={() => setOpenMenuId(null)} />
+        <div className="fixed inset-0 z-40" onClick={() => { setOpenMenuId(null); setMenuRect(null); }} />
       )}
+
+      {/* Menu de ações — renderizado via portal para não ser cortado pelo scroll/overflow da tabela */}
+      {openMenuId && menuRect && (() => {
+        const u = users.find(x => x.id === openMenuId);
+        if (!u) return null;
+        const menuWidth = 190;
+        const estimatedHeight = 96 + (!isSelf(u) && u.role !== 'superuser' ? 48 : 0);
+        const openUp = menuRect.bottom + estimatedHeight > window.innerHeight;
+        const style: React.CSSProperties = {
+          position: 'fixed',
+          left: Math.max(8, Math.min(menuRect.right - menuWidth, window.innerWidth - menuWidth - 8)),
+          ...(openUp
+            ? { bottom: window.innerHeight - menuRect.top + 4 }
+            : { top: menuRect.bottom + 4 }),
+          width: menuWidth,
+          zIndex: 60,
+        };
+        return createPortal(
+          <div style={style} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl py-2 text-left">
+            <button
+              onClick={() => handleOpenEdit(u)}
+              className="w-full px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
+            >
+              <UserIcon size={14} /> Editar dados
+            </button>
+            <button
+              onClick={() => handleOpenReset(u)}
+              className="w-full px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
+            >
+              <KeyRound size={14} /> Redefinir senha
+            </button>
+            {!isSelf(u) && u.role !== 'superuser' && (
+              <>
+                <div className="border-t border-slate-100 dark:border-slate-700 my-1" />
+                <button
+                  onClick={() => handleToggleStatus(u)}
+                  className={`w-full px-4 py-2.5 text-xs font-bold flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 ${u.status === 'Active' ? 'text-red-500' : 'text-green-600'}`}
+                >
+                  {u.status === 'Active'
+                    ? <><ShieldOff size={14} /> Bloquear acesso</>
+                    : <><ShieldCheck size={14} /> Ativar acesso</>
+                  }
+                </button>
+              </>
+            )}
+          </div>,
+          document.body
+        );
+      })()}
 
       {/* ── Modal Edição / Novo Usuário ─────────────────────────────────── */}
       {isEditOpen && editingUser && (
