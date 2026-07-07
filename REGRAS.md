@@ -71,7 +71,7 @@ As mensagens de commit devem seguir rigorosamente o formato:
 
 ---
 
-## 4. Portas Reservadas no Servidor QAS (162.240.167.149)
+## 4. Portas Reservadas no Servidor (162.240.167.149)
 
 > **CRÍTICO:** Nunca usar essas portas ao criar novos serviços (ex: backend do nexdojo).
 
@@ -82,6 +82,8 @@ As mensagens de commit devem seguir rigorosamente o formato:
 | **3002** | louvorhub-prod (container Docker) |
 | **3003** | **nexdojo-frontend QAS (container Docker)** |
 | **3004** | wordtetris-prod (container Docker) |
+| **3005** | **nexdojo-frontend PRD (container Docker)** |
+| **3006** | tnaocr-app (container Docker) |
 | **21, 25, 26, 53, 143, 587, 993, 995** | Serviços de sistema (FTP, SMTP, DNS, IMAP, etc.) |
 | **2077–2096** | cPanel/WHM |
 | **22022** | SSH |
@@ -92,20 +94,65 @@ As mensagens de commit devem seguir rigorosamente o formato:
 
 ## 5. Servidor Remoto / Deploy
 
+### 5.1 Ambiente QAS
+
 | Campo | Valor |
 |---|---|
 | **Host / IP** | `162.240.167.149` |
 | **Usuário SSH** | `qasnexdojo` |
-| **Caminho da Chave SSH** | `(Acesso via senha: @Tmd4738@)` |
+| **Senha SSH** | `@Tmd4738@` |
 | **Porta SSH** | `22022` |
 | **Diretório do projeto no servidor** | `/home/qasnexdojo/nexdojo` |
+| **Domínio** | `qas.nexdojo.com.br` |
+| **Porta container frontend** | `3003` |
 
-### Comando de Conexão SSH
+### Comando de Conexão SSH (QAS)
 ```bash
 ssh -p 22022 qasnexdojo@162.240.167.149
 ```
 
-### Fluxo Completo de Deploy (quando o usuário pedir "commit, push e deploy")
+### 5.2 Ambiente PRD
+
+| Campo | Valor |
+|---|---|
+| **Host / IP** | `162.240.167.149` |
+| **Usuário SSH** | `sisnexdojo` |
+| **Senha SSH** | `@Tmd4738@` |
+| **Porta SSH** | `22022` |
+| **Diretório do projeto no servidor** | `/home/sisnexdojo/nexdojo` |
+| **Domínio** | `sistema.nexdojo.com.br` |
+| **Porta container frontend** | `3005` |
+| **Project name Docker** | `nexdojo-prd` |
+
+### Comando de Conexão SSH (PRD)
+```bash
+ssh -p 22022 sisnexdojo@162.240.167.149
+```
+
+### Arquitetura Docker PRD (diferente do QAS)
+
+O PRD usa uma configuração distinta porque o MySQL do cPanel só aceita conexões de `localhost` por padrão:
+
+- **`api`**: `network_mode: "host"` → roda na porta **3007** do host → MySQL vê conexão de `127.0.0.1` ✓
+- **`frontend`**: nginx na porta `3005:80` → proxeia para `host.docker.internal:3007`
+- **`DB_HOST`** no api/.env do PRD: `127.0.0.1` (não `host.docker.internal`)
+- **`PORT`** no api/.env do PRD: `3007`
+
+### Script de Deploy PRD
+Ao fazer deploy PRD, após `git reset --hard origin/main`, aplicar os patches abaixo antes do `docker compose up`:
+
+```python
+# Arquivos a ser enviados via SFTP (sobrescrevem o que veio do git):
+# 1. api/.env com PORT=3007, DB_HOST=127.0.0.1, DB_NAME=sisnexdojo_prd, etc.
+# 2. nginx.conf com proxy_pass http://host.docker.internal:3007
+# 3. docker-compose.yml com api: network_mode: "host" e frontend: ports 3005:80 + extra_hosts
+
+# Rodar com:
+# docker compose --project-name nexdojo-prd down
+# docker compose --project-name nexdojo-prd up -d --build
+```
+
+### 5.3 Fluxo Completo de Deploy QAS (quando o usuário pedir "commit, push e deploy")
 
 1. Atualizar a tag de versão em `src/components/layout/AppLayout.tsx`
 2. `git add` nos arquivos alterados → `git commit` (padrão da seção 3) → `git push origin main`
@@ -177,6 +224,7 @@ sys.exit(exit_code)
 
 ## 6. Banco de Dados
 
+### QAS
 | Campo | Valor |
 |---|---|
 | **Tipo** | `MySQL` |
@@ -185,6 +233,16 @@ sys.exit(exit_code)
 | **Nome do Banco** | `qasnexdojo_qas` |
 | **Usuário** | `qasnexdojo_qas` |
 | **Senha** | `yFkL8OvxPnr3` |
+
+### PRD
+| Campo | Valor |
+|---|---|
+| **Tipo** | `MySQL` |
+| **Host** | `162.240.167.149` |
+| **Porta** | `3306` |
+| **Nome do Banco** | `sisnexdojo_prd` |
+| **Usuário** | `sisnexdojo_prd` |
+| **Senha** | `vGAD360z5bq8` |
 
 ---
 
@@ -211,13 +269,13 @@ GEMINI_API_KEY=<!-- PREENCHER -->
 ## 9. Regras Obrigatórias para o Agente
 
 1. **Porta local**: NUNCA usar as portas `3000` ou `3001` neste projeto. Sempre `3002` (frontend) e `3005` (API).
-2. **Portas no servidor QAS**: Ver seção 4 para a lista completa de portas reservadas. Para novos serviços (ex: backend), usar portas a partir de **3006** em diante (verificar disponibilidade antes).
+2. **Portas no servidor**: Ver seção 4 para a lista completa de portas reservadas. Para novos serviços, verificar disponibilidade com `ss -tlnp` antes de escolher.
 3. **Diretório**: Todo código do projeto fica em `d:\DEV_WEB\nexdojo`.
 4. **Stack**: Não sugerir nem instalar outras bibliotecas de UI sem aprovação explícita do usuário.
-5. **Deploy**: Ver seção 5 (deploy via SSH + docker compose no servidor QAS).
+5. **Deploy**: Ver seções 5 e 9 (QAS vs PRD são diferentes — leia com atenção antes de agir).
 6. **Commits**: Seguir o padrão definido na seção 3.
 7. **Frequência de Commit**: SÓ realizar commits quando o usuário solicitar explicitamente.
-8. **Tag de Versão QAS**: **A CADA ALTERAÇÃO DE CÓDIGO** feita no projeto, você DEVE obrigatoriamente atualizar a etiqueta de versão localizada em `src/components/layout/AppLayout.tsx`, dentro da div com comentário `{/* Version tag */}`. Substitua o texto `VERSÃO QAS DD/MM/AAAA HH:MM:SS` com a data e hora reais do sistema (usar `Get-Date -Format "dd/MM/yyyy HH:mm:ss"` no PowerShell). Deve existir **apenas UMA** etiqueta de versão no sistema. Não concluir nenhuma tarefa sem atualizar a etiqueta.
+8. **Tag de Versão**: **A CADA ALTERAÇÃO DE CÓDIGO** feita no projeto, você DEVE obrigatoriamente atualizar a etiqueta de versão localizada em `src/components/layout/AppLayout.tsx`, dentro da div com comentário `{/* Version tag */}`. Substitua o texto `VERSÃO QAS DD/MM/AAAA HH:MM:SS` com a data e hora reais do sistema (usar `Get-Date -Format "dd/MM/yyyy HH:mm:ss"` no PowerShell). Deve existir **apenas UMA** etiqueta de versão no sistema. Não concluir nenhuma tarefa sem atualizar a etiqueta.
 9. **Testes no Navegador**: NÃO abrir o navegador para testes, a menos que solicitado explicitamente pelo usuário. O usuário realizará os testes manualmente para agilizar as entregas.
 10. **Subir servidores locais**: Quando o usuário pedir para rodar/iniciar/subir o projeto localmente, verificar primeiro se as portas 3002 e 3005 já estão em uso (`netstat -ano | findstr "3002 3005"`). Se não estiverem, executar `cd d:\DEV_WEB\nexdojo && npm run dev:all`. Nunca subir o servidor para testes sem o usuário pedir explicitamente.
 11. **Consistência de formulários (3 camadas)**: Sempre que editar um modal de formulário em `views/SettingsView.tsx` (ou qualquer view com formulário de entidade), verificar obrigatoriamente a consistência entre:
@@ -225,6 +283,106 @@ GEMINI_API_KEY=<!-- PREENCHER -->
     - **Payload de save** (função `handleSave*`) — campos enviados ao backend
     - **Formulário** (campos `<input>` no modal) — campos visíveis ao usuário
     Os três devem estar em sincronia. Campos presentes no tipo e no payload mas **ausentes no formulário** são o bug mais comum e silencioso. Cada modal crítico possui um comentário `CAMPOS OBRIGATÓRIOS` — conferir antes de qualquer edição.
+
+---
+
+## 9A. REGRA CRÍTICA — Commit, Push e Deploy só com solicitação explícita
+
+> **LEIA ANTES DE QUALQUER AÇÃO GIT OU DE DEPLOY.**
+
+### A regra
+
+**Nunca realizar commit, push ou deploy (em qualquer ambiente: QAS ou PRD) a menos que o usuário solicite explicitamente.**
+
+Fazer alterações de código, corrigir bugs, criar componentes, editar arquivos — tudo isso é permitido a qualquer momento. Mas as ações abaixo **EXIGEM pedido explícito do usuário:**
+
+| Ação | Exemplo de pedido explícito necessário |
+|---|---|
+| `git commit` | "faz o commit", "comita", "salva no git" |
+| `git push` | "faz o push", "sobe pro github" |
+| Deploy QAS | "faz o deploy no QAS", "sobe no QAS", "commit, push e deploy" |
+| Deploy PRD | "faz o deploy no PRD", "sobe em produção", "deploy PRD" |
+
+### O que fazer sem pedido explícito
+
+- Editar arquivos localmente ✓
+- Corrigir bugs no código local ✓
+- Criar componentes e funcionalidades ✓
+- Testar localmente (se solicitado) ✓
+
+### O que NÃO fazer sem pedido explícito
+
+- `git add` + `git commit` ✗
+- `git push` ✗
+- Deploy QAS ✗
+- Deploy PRD ✗ (especialmente — é produção com usuários reais)
+
+---
+
+## 9B. Diferenças entre Deploy QAS e Deploy PRD
+
+> **CRÍTICO:** QAS e PRD são ambientes completamente diferentes. Um deploy feito no ambiente errado pode afetar usuários reais (PRD) ou sobrescrever dados de teste (QAS). Leia com atenção para não confundir.
+
+### Como identificar qual ambiente foi solicitado
+
+| O usuário disse... | Ambiente correto |
+|---|---|
+| "deploy no QAS", "sobe no QAS", "commit push deploy" (sem especificar) | **QAS** |
+| "deploy no PRD", "sobe em produção", "sobe no sistema", "deploy de produção" | **PRD** |
+| "commit, push e deploy QAS" | **QAS** |
+| "commit, push e deploy PRD" | **PRD** |
+
+**Em caso de dúvida, perguntar ao usuário qual ambiente antes de agir.**
+
+### Tabela comparativa dos dois deploys
+
+| Critério | QAS | PRD |
+|---|---|---|
+| **SSH usuário** | `qasnexdojo` | `sisnexdojo` |
+| **Senha SSH** | `@Tmd4738@` | `@Tmd4738@` |
+| **Diretório servidor** | `/home/qasnexdojo/nexdojo` | `/home/sisnexdojo/nexdojo` |
+| **Domínio** | `qas.nexdojo.com.br` | `sistema.nexdojo.com.br` |
+| **Porta frontend** | `3003` | `3005` |
+| **Porta API** | interna (sem expor ao host) | `3007` (network_mode: host) |
+| **DB_HOST no .env** | `host.docker.internal` | `127.0.0.1` |
+| **Banco MySQL** | `qasnexdojo_qas` | `sisnexdojo_prd` |
+| **Docker project name** | (padrão — não precisa `--project-name`) | `nexdojo-prd` (OBRIGATÓRIO `--project-name nexdojo-prd`) |
+| **docker-compose.yml** | arquivo do git (porta 3003) | **sobrescrito via SFTP** antes do up |
+| **nginx.conf** | arquivo do git (`proxy_pass http://api:3005`) | **sobrescrito via SFTP** (`proxy_pass http://host.docker.internal:3007`) |
+| **FRONTEND_URL** | `https://qas.nexdojo.com.br` | `https://sistema.nexdojo.com.br` |
+| **Impacto de erro** | Afeta apenas ambiente de teste | **Afeta usuários reais — CUIDADO** |
+
+### Fluxo QAS (resumido)
+
+```
+1. git add + git commit (padrão #NNN-YYYY-MM-DD HH:MM-descrição)
+2. git push origin main
+3. deploy_run.py via paramiko:
+   - git fetch + reset --hard origin/main
+   - sed nos .env (DB_HOST, FRONTEND_URL)
+   - docker compose down && docker compose up -d --build
+```
+
+### Fluxo PRD (resumido)
+
+```
+1. git add + git commit + git push (mesmo do QAS — mesma branch main)
+2. deploy_prd.py via paramiko:
+   - git fetch + reset --hard origin/main
+   - SFTP: sobrescreve api/.env, nginx.conf, docker-compose.yml com versões PRD
+   - docker compose --project-name nexdojo-prd down
+   - docker compose --project-name nexdojo-prd up -d --build
+```
+
+> **Nota:** O PRD não usa `sed` para patch do `.env` — ele envia um arquivo `.env` completo via SFTP porque a estrutura do docker-compose.yml é diferente do QAS (network_mode: host). Os 3 arquivos devem ser enviados a cada deploy PRD porque o `git reset --hard` os sobrescreve com as versões do repositório.
+
+### Verificação pós-deploy
+
+**QAS:** `docker logs nexdojo-frontend-1` / `nexdojo-api-1`
+
+**PRD:** `docker logs nexdojo-prd-frontend-1` / `nexdojo-prd-api-1`
+
+Em ambos, confirmar no log da API: `✓ Conectado ao MySQL` e `✓ API rodando em http://localhost:<PORT>`.
 
 ---
 
@@ -274,4 +432,4 @@ Acompanhar em `PLANO_MOBILE.md` (raiz do projeto). Marcar checkboxes conforme co
 
 ---
 
-*Última atualização: 21/05/2026*
+*Última atualização: 26/06/2026*
