@@ -37,7 +37,7 @@ router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunct
 
   const { search, email, userId, belt, status, page = '1', limit = '20' } = req.query;
   const pageNum = Math.max(1, parseInt(String(page), 10));
-  const limitNum = Math.min(100, Math.max(1, parseInt(String(limit), 10)));
+  const limitNum = Math.min(1000, Math.max(1, parseInt(String(limit), 10)));
   const offset = (pageNum - 1) * limitNum;
 
   let where = 'WHERE s.academy_id = ?';
