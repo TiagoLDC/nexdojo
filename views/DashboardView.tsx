@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
+import jsQR from 'jsqr';
 import { Academy, Student, Belt, CalendarEvent, User, Instructor, Staff, ClassTemplate, SystemPlan, SystemConfig } from '../types';
 import { useTranslation } from '../services/LanguageContext';
 import { studentService } from '@/features/students/services/studentService';
@@ -394,6 +395,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   const [qrManualCode, setQrManualCode] = useState('');
   const [isQrCheckinLoading, setIsQrCheckinLoading] = useState(false);
   const videoRef = React.useRef<HTMLVideoElement>(null);
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const streamRef = React.useRef<MediaStream | null>(null);
   const scanIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -442,21 +444,33 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
         await videoRef.current.play();
       }
 
+      // BarcodeDetector não existe em nenhum navegador iOS (WebKit nunca implementou a API),
+      // então usamos jsQR (JS puro) como fallback universal de decodificação via canvas.
       const hasBarcodeDetector = 'BarcodeDetector' in window;
-      if (!hasBarcodeDetector) {
-        // Fallback: show manual input
-        setQrScanStatus('idle');
-        return;
-      }
-
       // @ts-ignore
-      const detector = new BarcodeDetector({ formats: ['qr_code'] });
+      const detector = hasBarcodeDetector ? new BarcodeDetector({ formats: ['qr_code'] }) : null;
+
       scanIntervalRef.current = setInterval(async () => {
-        if (!videoRef.current || videoRef.current.readyState < 2) return;
+        const video = videoRef.current;
+        if (!video || video.readyState < 2) return;
         try {
-          const barcodes = await detector.detect(videoRef.current);
-          if (barcodes.length > 0) {
-            const code = barcodes[0].rawValue;
+          let code: string | null = null;
+          if (detector) {
+            const barcodes = await detector.detect(video);
+            if (barcodes.length > 0) code = barcodes[0].rawValue;
+          } else {
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const result = jsQR(imageData.data, imageData.width, imageData.height);
+            if (result?.data) code = result.data;
+          }
+          if (code) {
             clearInterval(scanIntervalRef.current!);
             scanIntervalRef.current = null;
             await performQrCheckin(code);
@@ -1279,6 +1293,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                   <div className="space-y-3">
                     <div className="relative w-full aspect-square rounded-2xl overflow-hidden bg-slate-950">
                       <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+                      <canvas ref={canvasRef} className="hidden" />
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <div className="w-48 h-48 border-2 border-emerald-400 rounded-2xl opacity-80">
                           <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-emerald-400 rounded-tl-lg" />
