@@ -51,6 +51,8 @@ import {
   ChevronRight,
   Clipboard,
   LockKeyhole,
+  BookX,
+  CalendarOff,
   ShieldOff,
   ShieldCheck as ShieldCheckIcon,
   CreditCard,
@@ -754,29 +756,31 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
               <AlertTriangle size={14} />
               <span className="text-xs font-black uppercase tracking-tighter">Faltas</span>
             </button>
+
+            <button
+              onClick={() => setNoPlanFilter(!noPlanFilter)}
+              className={`flex items-center justify-center gap-2 border rounded-2xl px-4 py-3 shadow-sm transition-all flex-1 md:flex-none ${
+                noPlanFilter
+                  ? 'bg-indigo-600 border-indigo-600 text-white'
+                  : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-400'
+              }`}
+            >
+              <BookX size={14} />
+              <span className="text-xs font-black uppercase tracking-tighter">Sem Plano</span>
+            </button>
+
+            <button
+              onClick={() => setNoDueDateFilter(!noDueDateFilter)}
+              className={`flex items-center justify-center gap-2 border rounded-2xl px-4 py-3 shadow-sm transition-all flex-1 md:flex-none ${
+                noDueDateFilter
+                  ? 'bg-indigo-600 border-indigo-600 text-white'
+                  : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-400'
+              }`}
+            >
+              <CalendarOff size={14} />
+              <span className="text-xs font-black uppercase tracking-tighter">Sem Vencimento</span>
+            </button>
           </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-4 px-2">
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={noPlanFilter}
-              onChange={(e) => setNoPlanFilter(e.target.checked)}
-              className="w-4 h-4 rounded accent-indigo-600 cursor-pointer"
-            />
-            <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Somente alunos sem plano de aula</span>
-          </label>
-
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={noDueDateFilter}
-              onChange={(e) => setNoDueDateFilter(e.target.checked)}
-              className="w-4 h-4 rounded accent-indigo-600 cursor-pointer"
-            />
-            <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Somente alunos sem data de vencimento</span>
-          </label>
         </div>
 
         {(statusFilter !== 'All' || beltFilter !== 'All' || readinessFilter !== 'All' || search !== '' || absenceFilter || noPlanFilter || noDueDateFilter) && (
@@ -948,6 +952,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest hidden md:table-cell">Idade</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest hidden md:table-cell">Treinos</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest hidden md:table-cell">Faltas</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest hidden md:table-cell">Vencimento</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Ações</th>
               </tr>
@@ -955,7 +960,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
             <tbody className="divide-y divide-slate-100">
             {isLoading ? (
               <tr>
-                <td colSpan={6} className="px-6 py-10 text-center">
+                <td colSpan={7} className="px-6 py-10 text-center">
                   <Loader2 size={24} className="animate-spin text-indigo-500 mx-auto mb-2" />
                   <p className="text-slate-400 text-sm">Carregando alunos...</p>
                 </td>
@@ -1025,6 +1030,11 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         {student.absentCount}
                       </span>
                     </td>
+                    <td className="px-6 py-4 hidden md:table-cell">
+                      <span className="text-sm font-bold text-slate-500">
+                        {student.nextPaymentDate ? fmtDate(student.nextPaymentDate) : ''}
+                      </span>
+                    </td>
                     <td className="px-6 py-4">
                       <span className={`text-[10px] px-2 py-1 rounded-full font-black uppercase ${
                         student.status === 'Active' ? 'bg-green-100 text-green-700' :
@@ -1081,7 +1091,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
               })
             ) : (
               <tr>
-                <td colSpan={5} className="px-6 py-10 text-center text-slate-400">
+                <td colSpan={7} className="px-6 py-10 text-center text-slate-400">
                   Nenhum aluno encontrado para estes filtros.
                 </td>
               </tr>
