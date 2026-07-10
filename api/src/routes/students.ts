@@ -238,14 +238,6 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
-  const errors = validate(req.body, {
-    name:   { type: 'string', maxLength: 255 },
-    email:  { type: 'email' },
-    belt:   { enum: BELT_VALUES },
-    status: { enum: STATUS_VALUES },
-  });
-  if (errors.length) { res.status(400).json({ error: errors[0] }); return; }
-
   const newPassword = req.body.password ? String(req.body.password) : null;
   if (newPassword && newPassword.length < 6) {
     res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres' });
@@ -258,6 +250,17 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
       [req.params.id, academyId]
     );
     if (!existing[0]) { res.status(404).json({ error: 'Aluno não encontrado' }); return; }
+
+    // Só valida o formato do e-mail se ele estiver sendo alterado, para não travar
+    // edições em cadastros antigos que já tinham e-mail salvo em formato inválido.
+    const emailChanged = req.body.email !== undefined && req.body.email !== existing[0].email;
+    const errors = validate(req.body, {
+      name:   { type: 'string', maxLength: 255 },
+      ...(emailChanged ? { email: { type: 'email' as const } } : {}),
+      belt:   { enum: BELT_VALUES },
+      status: { enum: STATUS_VALUES },
+    });
+    if (errors.length) { res.status(400).json({ error: errors[0] }); return; }
 
     const isAdmin = ['admin', 'superuser'].includes(req.user!.role);
     const isInstructor = req.user!.role === 'instructor';
