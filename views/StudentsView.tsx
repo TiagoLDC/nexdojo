@@ -145,6 +145,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
   const [beltFilter, setBeltFilter] = useState<string>('All');
   const [readinessFilter, setReadinessFilter] = useState<string>('All');
   const [absenceFilter, setAbsenceFilter] = useState<boolean>(false);
+  const [noPlanFilter, setNoPlanFilter] = useState<boolean>(false);
+  const [noDueDateFilter, setNoDueDateFilter] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editPhotoInputRef = useRef<HTMLInputElement>(null);
@@ -618,8 +620,10 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     }
 
     const matchesAbsence = !absenceFilter || (s.absentCount >= getEffectiveAbsenceLimit(s));
+    const matchesNoPlan = !noPlanFilter || !s.planId;
+    const matchesNoDueDate = !noDueDateFilter || !s.nextPaymentDate;
 
-    return matchesSearch && matchesStatus && matchesBelt && matchesReadiness && matchesAbsence;
+    return matchesSearch && matchesStatus && matchesBelt && matchesReadiness && matchesAbsence && matchesNoPlan && matchesNoDueDate;
   }).sort((a, b) => a.name.localeCompare(b.name));
 
   const kidsBelts = [
@@ -753,9 +757,31 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
           </div>
         </div>
 
-        {(statusFilter !== 'All' || beltFilter !== 'All' || readinessFilter !== 'All' || search !== '' || absenceFilter) && (
+        <div className="flex flex-wrap items-center gap-4 px-2">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={noPlanFilter}
+              onChange={(e) => setNoPlanFilter(e.target.checked)}
+              className="w-4 h-4 rounded accent-indigo-600 cursor-pointer"
+            />
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Somente alunos sem plano de aula</span>
+          </label>
+
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={noDueDateFilter}
+              onChange={(e) => setNoDueDateFilter(e.target.checked)}
+              className="w-4 h-4 rounded accent-indigo-600 cursor-pointer"
+            />
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Somente alunos sem data de vencimento</span>
+          </label>
+        </div>
+
+        {(statusFilter !== 'All' || beltFilter !== 'All' || readinessFilter !== 'All' || search !== '' || absenceFilter || noPlanFilter || noDueDateFilter) && (
           <button
-            onClick={() => { setStatusFilter('All'); setBeltFilter('All'); setReadinessFilter('All'); setSearch(''); setAbsenceFilter(false); }}
+            onClick={() => { setStatusFilter('All'); setBeltFilter('All'); setReadinessFilter('All'); setSearch(''); setAbsenceFilter(false); setNoPlanFilter(false); setNoDueDateFilter(false); }}
             className="w-full py-2 text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 text-center tracking-widest"
           >
             Limpar Filtros
