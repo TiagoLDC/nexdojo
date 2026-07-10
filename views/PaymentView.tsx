@@ -24,7 +24,7 @@ const PaymentView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
 
   React.useEffect(() => {
     if (academy && user) {
-      studentService.getAll(academy.id).then((res) => {
+      studentService.getAll(academy.id, { email: user.email }).then((res) => {
         const students = Array.isArray(res.data) ? res.data : [];
         const profile = students.find(s => s.email?.toLowerCase() === user.email?.toLowerCase());
 
