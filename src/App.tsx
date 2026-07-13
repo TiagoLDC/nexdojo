@@ -75,8 +75,8 @@ const App: React.FC = () => (
             {/* <Route path="/templates"  element={<TemplatesPage />} /> */}
           </Route>
 
-          {/* Admin + Instructor + Staff */}
-          <Route element={<RoleGuard roles={['superuser', 'admin', 'instructor', 'staff']} />}>
+          {/* Admin + Staff */}
+          <Route element={<RoleGuard roles={['superuser', 'admin', 'staff']} />}>
             <Route path="/students" element={<StudentsPage />} />
           </Route>
 

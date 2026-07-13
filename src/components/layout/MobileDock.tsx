@@ -62,7 +62,11 @@ export const MobileDock: React.FC = () => {
             >
               <CheckCircle2 size={28} />
             </Link>
-            <DockLink to="/students" icon={<Users size={22} />} label="Alunos" />
+            {user.role === 'instructor' ? (
+              <DockLink to="/instructor-profile" icon={<UserCircle size={22} />} label="Meus Dados" />
+            ) : (
+              <DockLink to="/students" icon={<Users size={22} />} label="Alunos" />
+            )}
           </>
         )}
 

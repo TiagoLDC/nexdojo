@@ -15,7 +15,7 @@ export const MAIN_NAV: NavItem[] = [
 ];
 
 export const MANAGEMENT_NAV: NavItem[] = [
-  { to: '/students', labelKey: 'students', icon: 'Users', roles: ['superuser', 'admin', 'instructor', 'staff'] },
+  { to: '/students', labelKey: 'students', icon: 'Users', roles: ['superuser', 'admin', 'staff'] },
   { to: '/instructors', labelKey: 'instructors', icon: 'Award', roles: ['superuser', 'admin'] },
   { to: '/staff',  labelKey: 'staff',  icon: 'Briefcase', roles: ['superuser', 'admin'] },
   { to: '/users',  labelKey: 'users',  icon: 'KeyRound',  roles: ['superuser', 'admin'] },
