@@ -2162,7 +2162,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
       )}
 
       {/* Preferências do Sistema */}
-      {user.role !== 'student' && (
+      {!['student', 'instructor'].includes(user.role) && (
         <section className="space-y-4">
           <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-4">Preferências do Sistema</h2>
           <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm divide-y divide-slate-50 dark:divide-slate-800 transition-colors">
