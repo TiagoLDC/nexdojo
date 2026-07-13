@@ -662,7 +662,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
         </section>
       )}
 
-      {(user.role === 'admin' || user.role === 'superuser') && (
+      {(user.role === 'admin' || user.role === 'superuser' || user.role === 'instructor') && (
         <section className="space-y-4">
           <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-4">Controle de Presença</h2>
           <div className="bg-white dark:bg-slate-900 rounded-[32px] border border-slate-100 dark:border-slate-800 p-6 shadow-sm space-y-5">
@@ -704,16 +704,18 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                     <Printer size={14} />
                     Imprimir QR Code
                   </button>
-                  <button
-                    onClick={() => { setEditQrAutoMode(isQrAutoMode); setEditQrCode(isQrAutoMode ? '' : (academy.qrCodePresenca || '')); setIsEditingQrCode(true); }}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2"
-                  >
-                    <QrCode size={14} />
-                    Alterar Código
-                  </button>
+                  {(user.role === 'admin' || user.role === 'superuser') && (
+                    <button
+                      onClick={() => { setEditQrAutoMode(isQrAutoMode); setEditQrCode(isQrAutoMode ? '' : (academy.qrCodePresenca || '')); setIsEditingQrCode(true); }}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2"
+                    >
+                      <QrCode size={14} />
+                      Alterar Código
+                    </button>
+                  )}
                 </div>
               </div>
-            ) : (
+            ) : (user.role === 'admin' || user.role === 'superuser') ? (
               <button
                 onClick={() => { setEditQrAutoMode(false); setEditQrCode(''); setIsEditingQrCode(true); }}
                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-2xl text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2"
@@ -721,6 +723,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                 <Plus size={14} />
                 Configurar QR Code de Presença
               </button>
+            ) : (
+              <p className="text-xs text-slate-400 italic text-center py-2">O QR Code de presença ainda não foi configurado pelo administrador.</p>
             )}
           </div>
         </section>
