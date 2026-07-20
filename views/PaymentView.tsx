@@ -57,6 +57,11 @@ const PaymentView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions]);
 
+  const planInfo = useMemo(() => {
+    if (!student?.planId || !academy.plans) return null;
+    return (academy.plans as any[]).find(p => p.id === student.planId) ?? null;
+  }, [student?.planId, academy.plans]);
+
   // Status da mensalidade baseado em nextPaymentDate
   const paymentStatus = useMemo(() => {
     if (!student?.nextPaymentDate) return { state: 'unknown' as const, diffDays: 0 };
@@ -65,16 +70,13 @@ const PaymentView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
     const paymentDate = new Date(student.nextPaymentDate + 'T12:00:00');
     paymentDate.setHours(0, 0, 0, 0);
     const diffDays = Math.round((paymentDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    // Planos gratuitos (mensalidade R$ 0) nunca disparam aviso de vencimento
+    if ((planInfo?.price ?? 0) <= 0) return { state: 'ok' as const, diffDays };
     if (diffDays < 0)  return { state: 'overdue'  as const, diffDays };
     if (diffDays === 0) return { state: 'dueToday' as const, diffDays };
     if (diffDays <= 7)  return { state: 'upcoming' as const, diffDays };
     return { state: 'ok' as const, diffDays };
-  }, [student?.nextPaymentDate]);
-
-  const planInfo = useMemo(() => {
-    if (!student?.planId || !academy.plans) return null;
-    return (academy.plans as any[]).find(p => p.id === student.planId) ?? null;
-  }, [student?.planId, academy.plans]);
+  }, [student?.nextPaymentDate, planInfo]);
 
   if (isLoading) {
     return (

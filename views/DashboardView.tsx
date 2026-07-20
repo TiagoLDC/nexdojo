@@ -342,7 +342,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
         const plan = academy?.plans?.find(p => p.id === s.planId);
         return { student: s, diffDays, price: plan?.price as number | undefined, planName: plan?.name as string | undefined };
       })
-      .filter(({ diffDays }) => diffDays <= 30)
+      .filter(({ diffDays, price }) => diffDays <= 30 && (price ?? 0) > 0)
       .sort((a, b) => a.diffDays - b.diffDays);
   }, [students, user.role, academy?.plans]);
 
@@ -849,6 +849,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       paymentDate.setHours(0, 0, 0, 0);
       const diffDays = Math.round((paymentDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
       if (diffDays > 7) return null;
+      if (!((paymentPlan?.price ?? 0) > 0)) return null;
       return { diffDays, price: paymentPlan?.price as number | undefined, planName: paymentPlan?.name as string | undefined };
     })();
     const graduationWarning = getGraduationWarning(profile, academy?.graduationRules);

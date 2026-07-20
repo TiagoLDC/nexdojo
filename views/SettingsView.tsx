@@ -406,7 +406,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const savePlan = async () => {
-    if (!editingPlan?.name || !editingPlan?.price || !editingPlan?.durationMonths) return;
+    if (!editingPlan?.name || editingPlan?.price == null || editingPlan.price < 0 || !editingPlan?.durationMonths) return;
     setIsSavingPlan(true);
     try {
       let updatedPlans: AcademyPlan[];
@@ -1493,7 +1493,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="flex flex-col gap-2 mt-6">
               <button
                 onClick={savePlan}
-                disabled={isSavingPlan || !editingPlan.name || !editingPlan.price || !editingPlan.durationMonths}
+                disabled={isSavingPlan || !editingPlan.name || editingPlan.price == null || editingPlan.price < 0 || !editingPlan.durationMonths}
                 className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-600/20 transition-all active:scale-95 text-sm uppercase tracking-widest italic flex items-center justify-center gap-2"
               >
                 {isSavingPlan ? <><Loader2 size={16} className="animate-spin" /> Salvando...</> : 'Salvar Plano'}
