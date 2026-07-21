@@ -189,55 +189,57 @@ const PaymentView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
 
         {/* Informações e Status */}
         <div className="space-y-6">
-          {/* STATUS DA MENSALIDADE */}
-          <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm">
-            <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 uppercase italic flex items-center gap-2">
-              <DollarSign size={20} className="text-indigo-600" />
-              Status da Mensalidade
-            </h3>
+          {/* STATUS DA MENSALIDADE — oculto para planos gratuitos (valor R$ 0) */}
+          {(planInfo?.price ?? 1) > 0 && (
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm">
+              <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 uppercase italic flex items-center gap-2">
+                <DollarSign size={20} className="text-indigo-600" />
+                Status da Mensalidade
+              </h3>
 
-            <div className={`p-6 rounded-3xl border ${
-              paymentStatus.state === 'overdue'  ? 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/20' :
-              paymentStatus.state === 'dueToday' || paymentStatus.state === 'upcoming' ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/20' :
-              'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800'
-            }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-2xl ${statusConfig.bg}`}>
-                    {statusConfig.icon}
+              <div className={`p-6 rounded-3xl border ${
+                paymentStatus.state === 'overdue'  ? 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/20' :
+                paymentStatus.state === 'dueToday' || paymentStatus.state === 'upcoming' ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/20' :
+                'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-2xl ${statusConfig.bg}`}>
+                      {statusConfig.icon}
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Situação Atual</p>
+                      <p className={`text-xl font-black uppercase italic ${statusConfig.color}`}>
+                        {statusConfig.label}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Situação Atual</p>
-                    <p className={`text-xl font-black uppercase italic ${statusConfig.color}`}>
-                      {statusConfig.label}
+                  <div className="text-right">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
+                      {paymentStatus.state === 'unknown' ? 'Última Ref.' : 'Vencimento'}
+                    </p>
+                    <p className={`text-xs font-bold ${paymentStatus.state === 'overdue' ? 'text-red-600' : paymentStatus.state === 'dueToday' || paymentStatus.state === 'upcoming' ? 'text-amber-600' : 'text-slate-700 dark:text-slate-200'}`}>
+                      {statusSubtitle}
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
-                    {paymentStatus.state === 'unknown' ? 'Última Ref.' : 'Vencimento'}
-                  </p>
-                  <p className={`text-xs font-bold ${paymentStatus.state === 'overdue' ? 'text-red-600' : paymentStatus.state === 'dueToday' || paymentStatus.state === 'upcoming' ? 'text-amber-600' : 'text-slate-700 dark:text-slate-200'}`}>
-                    {statusSubtitle}
-                  </p>
-                </div>
-              </div>
 
-              {/* Plano + Valor */}
-              {planInfo && (
-                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CreditCard size={14} className="text-slate-400" />
-                    <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{planInfo.name}</span>
+                {/* Plano + Valor */}
+                {planInfo && (
+                  <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CreditCard size={14} className="text-slate-400" />
+                      <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{planInfo.name}</span>
+                    </div>
+                    <span className="text-sm font-black text-indigo-600">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(planInfo.price)}
+                      <span className="text-[9px] text-slate-400 font-bold">/mês</span>
+                    </span>
                   </div>
-                  <span className="text-sm font-black text-indigo-600">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(planInfo.price)}
-                    <span className="text-[9px] text-slate-400 font-bold">/mês</span>
-                  </span>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* DADOS BANCÁRIOS */}
           <div className="bg-white dark:bg-slate-900 p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm">
