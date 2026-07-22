@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { academyService } from '@/features/settings/services/academyService';
+import { ProfileSwitcher } from './ProfileSwitcher';
 import { MAIN_NAV, MANAGEMENT_NAV } from './navConfig';
 import { NavIcon } from './NavIcons';
 import type { Language } from '@/types';
@@ -15,15 +16,6 @@ const LANGUAGES: { code: Language; label: string; flag: string }[] = [
   { code: 'en', label: 'EN', flag: '🇺🇸' },
   { code: 'es', label: 'ES', flag: '🇪🇸' },
 ];
-
-const ROLE_META: Record<string, { label: string; className: string }> = {
-  superuser:  { label: 'Super Usuário',  className: 'bg-indigo-500/20 text-indigo-300' },
-  admin:      { label: 'Administrador',  className: 'bg-violet-500/20 text-violet-300' },
-  instructor: { label: 'Instrutor',      className: 'bg-sky-500/20 text-sky-300' },
-  staff:      { label: 'Staff',          className: 'bg-teal-500/20 text-teal-300' },
-  student:    { label: 'Aluno',          className: 'bg-emerald-500/20 text-emerald-300' },
-  guest:      { label: 'Convidado',      className: 'bg-slate-500/20 text-slate-400' },
-};
 
 export const Sidebar: React.FC = () => {
   const location = useLocation();
@@ -105,27 +97,8 @@ export const Sidebar: React.FC = () => {
                 )}
               </div>
             </div>
-            {/* User info row */}
-            {(() => {
-              const roleMeta = ROLE_META[user.role] ?? { label: user.role, className: 'bg-slate-500/20 text-slate-400' };
-              return (
-                <div className="flex items-start gap-2 bg-slate-800/40 rounded-xl px-2 py-2 border border-slate-700/30">
-                  <div className="w-8 h-8 rounded-full shrink-0 overflow-hidden border border-slate-600/50 bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center text-[12px] font-black text-white uppercase mt-0.5">
-                    {user.photo
-                      ? <img src={user.photo} alt={user.name} className="w-full h-full object-cover" />
-                      : user.name.charAt(0)
-                    }
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-bold text-slate-100 leading-tight truncate">{user.name}</p>
-                    <span className={`inline-block text-[8px] font-black uppercase tracking-wider px-1.5 py-px rounded-full mt-0.5 ${roleMeta.className}`}>
-                      {roleMeta.label}
-                    </span>
-                    <p className="text-[9px] text-slate-500 font-medium truncate mt-0.5">{user.email}</p>
-                  </div>
-                </div>
-              );
-            })()}
+            {/* User info row / seletor de perfil */}
+            <ProfileSwitcher />
           </div>
         )}
       </div>

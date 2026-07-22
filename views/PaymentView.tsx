@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { Academy, Student, User, FinanceTransaction } from '../types';
 import { studentService } from '@/features/students/services/studentService';
 import { financeService } from '@/features/finances/services/financeService';
+import { useProfileStore, getActiveProfile } from '@/stores/profileStore';
 import {
   CreditCard,
   QrCode,
@@ -22,27 +23,36 @@ const PaymentView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
   const [showPixSuccess, setShowPixSuccess] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
 
-  React.useEffect(() => {
-    if (academy && user) {
-      studentService.getAll(academy.id, { email: user.email }).then((res) => {
-        const students = Array.isArray(res.data) ? res.data : [];
-        const profile = students.find(s => s.email?.toLowerCase() === user.email?.toLowerCase());
+  const { profiles, activeProfileId } = useProfileStore();
+  const activeProfile = getActiveProfile(profiles, activeProfileId);
 
-        if (profile) {
-          setStudent(profile);
-          return financeService.getAll(academy.id, { limit: 1000 } as any).then((finRes) => {
-            const allFinances = Array.isArray(finRes.data) ? finRes.data : [];
-            const studentFinances = allFinances.filter(f => f.studentId === profile.id);
-            setTransactions(studentFinances);
+  React.useEffect(() => {
+    if (!academy || !user) return;
+
+    setIsLoading(true);
+
+    // Responsável gerenciando um dependente: busca direto pelo aluno selecionado.
+    // Sem perfil ativo (fluxo padrão do aluno logado): resolve pelo próprio e-mail, como antes.
+    const resolveProfile = activeProfile && activeProfile.entityType === 'student'
+      ? studentService.getById(activeProfile.entityId)
+      : studentService.getAll(academy.id, { email: user.email, limit: 1 })
+          .then((res) => {
+            const students = Array.isArray(res.data) ? res.data : [];
+            return students.find(s => s.email?.toLowerCase() === user.email?.toLowerCase()) ?? null;
           });
-        }
-      }).catch(() => {
-        // profile not found or error — leave student as null
-      }).finally(() => {
-        setIsLoading(false);
+
+    resolveProfile.then((profile) => {
+      if (!profile) { setStudent(null); setTransactions([]); return; }
+      setStudent(profile);
+      return financeService.getAll(academy.id, { studentId: profile.id, limit: 1000 }).then((finRes) => {
+        setTransactions(Array.isArray(finRes.data) ? finRes.data : []);
       });
-    }
-  }, [academy, user]);
+    }).catch(() => {
+      // profile not found or error — leave student as null
+    }).finally(() => {
+      setIsLoading(false);
+    });
+  }, [academy, user, activeProfile?.entityId, activeProfile?.entityType]);
 
   const handleCopyPix = () => {
     if (!academy.pixKey) return;

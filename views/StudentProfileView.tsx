@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User, Student, Academy, Belt, StudentDocument, AcademyPlan } from '../types';
 import { studentService } from '@/features/students/services/studentService';
 import { plansService } from '@/features/plans/services/plansService';
+import { useProfileStore, getActiveProfile } from '@/stores/profileStore';
 import { getGraduationThreshold } from '../services/graduation';
 import {
   User as UserIcon,
@@ -77,16 +78,26 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
   const photoInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
+  const { profiles, activeProfileId } = useProfileStore();
+  const activeProfile = getActiveProfile(profiles, activeProfileId);
+
   useEffect(() => {
     if (!academy?.id) return;
 
     setIsLoading(true);
-    studentService.getAll(academy.id, { userId: (user as any).id, email: user.email, limit: 1 })
-      .then(res => {
-        const found = res.data[0];
-        if (!found) return null;
-        return studentService.getById(found.id);
-      })
+
+    // Responsável gerenciando um dependente (ou aluno alternando para o próprio perfil
+    // explicitamente): busca direto pelo aluno selecionado. Sem perfil ativo (fluxo padrão
+    // do aluno logado): resolve pelo próprio email/userId, como antes.
+    const resolveStudent = activeProfile && activeProfile.entityType === 'student'
+      ? studentService.getById(activeProfile.entityId)
+      : studentService.getAll(academy.id, { userId: (user as any).id, email: user.email, limit: 1 })
+          .then(res => {
+            const found = res.data[0];
+            return found ? studentService.getById(found.id) : null;
+          });
+
+    resolveStudent
       .then(fullStudent => {
         if (fullStudent) {
           setProfile(fullStudent);
@@ -109,7 +120,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
         setEditData(null);
       })
       .finally(() => setIsLoading(false));
-  }, [academy.id, user.email]);
+  }, [academy.id, user.email, activeProfile?.entityId, activeProfile?.entityType]);
 
   const calculateAge = (birthDate: string) => {
     if (!birthDate) return 0;

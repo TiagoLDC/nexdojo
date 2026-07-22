@@ -553,16 +553,16 @@ router.post('/register/guardian', async (req: Request, res: Response, next: Next
 router.get('/profiles', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const [selfRows] = await pool.execute<any[]>(
-      `SELECT 'student' AS entity_type, id, name, photo FROM students WHERE user_id = ?
+      `SELECT 'student' AS entity_type, id, name, photo, belt, total_classes FROM students WHERE user_id = ?
        UNION ALL
-       SELECT 'instructor' AS entity_type, id, name, photo FROM instructors WHERE user_id = ?
+       SELECT 'instructor' AS entity_type, id, name, photo, NULL, NULL FROM instructors WHERE user_id = ?
        UNION ALL
-       SELECT 'staff' AS entity_type, id, name, photo FROM staff WHERE user_id = ?`,
+       SELECT 'staff' AS entity_type, id, name, photo, NULL, NULL FROM staff WHERE user_id = ?`,
       [req.user!.userId, req.user!.userId, req.user!.userId]
     );
 
     const [guardianRows] = await pool.execute<any[]>(
-      `SELECT s.id, s.name, s.photo, g.relation
+      `SELECT s.id, s.name, s.photo, s.belt, s.total_classes, g.relation
        FROM guardianships g
        JOIN students s ON s.id = g.student_id
        WHERE g.guardian_user_id = ?
@@ -577,6 +577,8 @@ router.get('/profiles', requireAuth, async (req: Request, res: Response, next: N
         entityId: r.id,
         name: r.name,
         photo: r.photo || undefined,
+        belt: r.belt || undefined,
+        totalClasses: r.total_classes ?? undefined,
       })),
       ...guardianRows.map((r: any) => ({
         kind: 'guardian',
@@ -584,6 +586,8 @@ router.get('/profiles', requireAuth, async (req: Request, res: Response, next: N
         entityId: r.id,
         name: r.name,
         photo: r.photo || undefined,
+        belt: r.belt || undefined,
+        totalClasses: r.total_classes ?? undefined,
         relation: r.relation || undefined,
       })),
     ];

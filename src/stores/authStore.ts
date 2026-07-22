@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { setApiToken, setUnauthorizedHandler } from '@/lib/api';
+import { useProfileStore } from '@/stores/profileStore';
 import type { User, Academy } from '@/types';
 
 interface AuthStore {
@@ -27,6 +28,7 @@ export const useAuthStore = create<AuthStore>()(
 
       login: (user, token, academy) => {
         setApiToken(token);
+        useProfileStore.getState().reset();
         set({
           user, token, academy, isAuthenticated: true, justLoggedOut: false,
           ...(academy?.alias ? { lastAcademyAlias: academy.alias } : {}),
@@ -35,6 +37,7 @@ export const useAuthStore = create<AuthStore>()(
 
       logout: () => {
         setApiToken(null);
+        useProfileStore.getState().reset();
         // justLoggedOut enables alias redirect only on explicit logout, not direct navigation
         set({ user: null, token: null, academy: null, isAuthenticated: false, justLoggedOut: true });
       },

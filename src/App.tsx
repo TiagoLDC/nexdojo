@@ -29,6 +29,7 @@ const PaymentPage          = React.lazy(() => import('@/pages/PaymentPage'));
 const SystemConfigPage     = React.lazy(() => import('@/pages/SystemConfigPage'));
 const ResetPasswordPage    = React.lazy(() => import('@/pages/ResetPasswordPage'));
 const StaffInvitePage      = React.lazy(() => import('@/pages/StaffInvitePage'));
+const GuardianInvitePage   = React.lazy(() => import('@/pages/GuardianInvitePage'));
 
 const PageLoader: React.FC = () => (
   <div className="flex items-center justify-center h-full min-h-[200px]">
@@ -54,6 +55,7 @@ const App: React.FC = () => (
       <Route path="/login/:alias/register/student" element={<LoginPage />} />
       <Route path="/login/:alias/register/instructor" element={<LoginPage />} />
       <Route path="/staff-invite/:alias/:token" element={<StaffInvitePage />} />
+      <Route path="/guardian-invite/:alias/:token" element={<GuardianInvitePage />} />
 
       {/* Protected — requires auth */}
       <Route element={<PrivateRoute />}>
@@ -95,8 +97,8 @@ const App: React.FC = () => (
             <Route path="/system-config" element={<SystemConfigPage />} />
           </Route>
 
-          {/* Student only */}
-          <Route element={<RoleGuard roles={['student']} />}>
+          {/* Student + Guardian (responsável gerenciando o perfil de um dependente) */}
+          <Route element={<RoleGuard roles={['student', 'guardian']} />}>
             <Route path="/profile" element={<StudentProfilePage />} />
             <Route path="/pay"     element={<PaymentPage />} />
           </Route>

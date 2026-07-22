@@ -1,5 +1,5 @@
 import { api } from '@/lib/api';
-import type { LoginCredentials, LoginResponse, User } from '@/types';
+import type { LoginCredentials, LoginResponse, User, Profile } from '@/types';
 
 export const authService = {
   login: (credentials: LoginCredentials) =>
@@ -10,6 +10,9 @@ export const authService = {
 
   me: () =>
     api.get<User>('/auth/me').then((r) => r.data),
+
+  getProfiles: () =>
+    api.get<{ profiles: Profile[] }>('/auth/profiles').then((r) => r.data.profiles),
 
   changePassword: (newPassword: string) =>
     api.post<{ message: string }>('/auth/change-password', { newPassword }).then((r) => r.data),

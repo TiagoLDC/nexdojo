@@ -29,3 +29,14 @@ export interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
 }
+
+export interface Profile {
+  kind: 'self' | 'guardian';
+  entityType: 'student' | 'instructor' | 'staff';
+  entityId: string;
+  name: string;
+  photo?: string;
+  belt?: string;
+  totalClasses?: number;
+  relation?: string;
+}

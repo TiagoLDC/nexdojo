@@ -187,6 +187,7 @@ export interface GetTransactionsParams extends SearchParams {
   status?: TransactionStatus;
   dateFrom?: string;
   dateTo?: string;
+  studentId?: string;
 }
 
 export interface CreateTransactionDTO {

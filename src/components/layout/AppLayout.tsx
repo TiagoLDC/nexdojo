@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
+import { useProfileStore } from '@/stores/profileStore';
+import { authService } from '@/features/auth/services/authService';
 import { useUIStore } from '@/stores/uiStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { Toast } from '@/components/ui/Toast';
@@ -18,6 +20,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { sidebarCollapsed } = useUIStore();
   const { t } = useTranslation();
   const [inputFocused, setInputFocused] = useState(false);
+  const setProfiles = useProfileStore((s) => s.setProfiles);
+
+  useEffect(() => {
+    if (!user) return;
+    authService.getProfiles().then(setProfiles).catch(() => {});
+  }, [user?.id, setProfiles]);
 
   useEffect(() => {
     const onFocusIn = (e: FocusEvent) => {
@@ -61,7 +69,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           ].join(' ')}
         >
           <div className="bg-amber-400 text-amber-950 text-[8px] font-black uppercase tracking-widest px-3 py-px rounded-b-lg select-none shadow-sm">
-            VERSÃO QAS 21/07/2026 18:09:34
+            VERSÃO QAS 22/07/2026 10:12:30
           </div>
         </div>
       )}

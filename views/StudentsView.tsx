@@ -5,6 +5,7 @@ import { Student, Belt, StudentDocument, ClassTemplate, Academy, User } from '..
 import { studentService } from '@/features/students/services/studentService';
 import { financeService } from '@/features/finances/services/financeService';
 import { usersService } from '@/features/users/services/usersService';
+import { GuardianAccessSection } from '@/components/students/GuardianAccessSection';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
 import { advancePaymentDate } from '@/utils/paymentUtils';
 import { calculateAge, isReadyForGraduation, getNextRank, monthsSince, getGraduationThreshold } from '../services/graduation';
@@ -1564,6 +1565,10 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   </div>
                 </div>
               </div>
+
+              {editingStudent.id && (
+                <GuardianAccessSection studentId={editingStudent.id} onNotify={showNotification} />
+              )}
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between">

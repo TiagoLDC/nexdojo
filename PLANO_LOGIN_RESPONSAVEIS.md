@@ -47,13 +47,20 @@ Hoje, um pai/mãe/tio/tia que também é aluno ou colaborador da academia precis
 
 ## Fase 3 — Frontend
 
-- [ ] Seletor de perfil (dropdown no sidebar), reaproveitando o padrão já usado hoje para troca de academia (superuser)
-- [ ] `RoleGuard`/`App.tsx` passam a decidir permissões pelo perfil ativo selecionado, não pelo `role` fixo da conta
-- [ ] Tela de aceite de convite (responsável define senha e assume a conta)
+- [x] `useProfileStore` (Zustand, persistido) com `profiles` + `activeProfileId`, e helper `getActiveProfile` (self por padrão; primeiro perfil disponível para responsável "puro" sem ficha própria)
+- [x] Perfis buscados (`GET /api/auth/profiles`) ao montar o `AppLayout`; resetados no login/logout
+- [x] Componente `ProfileSwitcher` (dropdown "Alternar Perfil", inspirado no mockup do usuário) integrado no `Sidebar` (desktop) e `MobileHeader` (mobile). Só aparece quando há de fato mais de um perfil para escolher — sem isso, mostra a identidade normalmente, sem abrir painel
+- [x] `RoleGuard` de `/profile` e `/pay` passa a aceitar também `guardian`; `/` redireciona `guardian` direto para `/profile` (responsável "puro" não tem dashboard geral)
+- [x] `StudentProfileView` e `PaymentView` resolvem o aluno pelo perfil ativo (`activeProfile.entityId`) quando selecionado; sem seleção, mantêm o fluxo antigo (resolve pelo próprio e-mail/userId) — cobre tanto o responsável "puro" quanto o aluno/colaborador alternando para o filho
+- [x] `PaymentView` agora filtra transações no servidor (`studentId`) em vez de buscar 1000 registros e filtrar no cliente (corrige ineficiência pré-existente, aproveitada nesta mudança)
+- [x] Tela de aceite de convite (`GuardianInvitePage`, rota `/guardian-invite/:alias/:token`) — se o e-mail já tem conta (aluno/colaborador que também é responsável), autentica e só cria o vínculo; senão, cria conta `guardian` pendente de aprovação
+- [x] **Decisão do usuário**: sem self-service de vínculo (o "Vincular Conta" que aparecia no mockup do admin) — permanece exclusivamente admin-mediado (Fase 2). O painel mostra apenas "Nenhum dependente vinculado" + instrução para pedir ao admin
+- [x] UI de admin na ficha do aluno (`StudentsView`, seção "Acesso de Responsável ao Sistema"): lista responsáveis vinculados, vincula por e-mail, gera link de convite, remove vínculo
 
 ## Fase 4 — Admin / Dados Existentes
 
-- [ ] Botão "Convidar responsável" na ficha do aluno, pré-preenchendo o convite com os dados de `guardian_name`/`guardian_email` já cadastrados como sugestão
+- [x] Botão "Gerar Link de Convite" na ficha do aluno (feito na Fase 3, dentro de `GuardianAccessSection`) — gera o link para o admin copiar e enviar por fora (WhatsApp/e-mail)
+- [ ] Pré-preencher o convite com `guardian_name`/`guardian_email` já cadastrados como sugestão (hoje o convite é genérico; quem aceita digita os próprios dados do zero)
 - [ ] (Opcional, sob demanda) Script de agrupamento por CPF/email para identificar responsáveis repetidos entre irmãos, antes de disparar convites em lote
 
 ---

@@ -2,6 +2,7 @@ import React from 'react';
 import { Sun, Moon, Award } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
+import { ProfileSwitcher } from './ProfileSwitcher';
 
 export const MobileHeader: React.FC = () => {
   const { academy } = useAuthStore();
@@ -27,31 +28,34 @@ export const MobileHeader: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-2xl p-1 gap-1 shrink-0">
-        <button
-          onClick={() => theme !== 'light' && toggleTheme()}
-          className={[
-            'flex items-center justify-center p-2 rounded-xl transition-all active:scale-90',
-            theme === 'light'
-              ? 'bg-amber-400 text-slate-900 shadow-sm'
-              : 'text-slate-400 dark:text-slate-500',
-          ].join(' ')}
-          aria-label="Modo claro"
-        >
-          <Sun size={16} />
-        </button>
-        <button
-          onClick={() => theme !== 'dark' && toggleTheme()}
-          className={[
-            'flex items-center justify-center p-2 rounded-xl transition-all active:scale-90',
-            theme === 'dark'
-              ? 'bg-indigo-600 text-white shadow-sm'
-              : 'text-slate-400 dark:text-slate-500',
-          ].join(' ')}
-          aria-label="Modo escuro"
-        >
-          <Moon size={16} />
-        </button>
+      <div className="flex items-center gap-2 shrink-0">
+        <ProfileSwitcher compact />
+        <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-2xl p-1 gap-1 shrink-0">
+          <button
+            onClick={() => theme !== 'light' && toggleTheme()}
+            className={[
+              'flex items-center justify-center p-2 rounded-xl transition-all active:scale-90',
+              theme === 'light'
+                ? 'bg-amber-400 text-slate-900 shadow-sm'
+                : 'text-slate-400 dark:text-slate-500',
+            ].join(' ')}
+            aria-label="Modo claro"
+          >
+            <Sun size={16} />
+          </button>
+          <button
+            onClick={() => theme !== 'dark' && toggleTheme()}
+            className={[
+              'flex items-center justify-center p-2 rounded-xl transition-all active:scale-90',
+              theme === 'dark'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-400 dark:text-slate-500',
+            ].join(' ')}
+            aria-label="Modo escuro"
+          >
+            <Moon size={16} />
+          </button>
+        </div>
       </div>
     </header>
   );
