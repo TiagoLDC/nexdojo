@@ -1,5 +1,6 @@
 ﻿import { Router, Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import pool from '../db';
 import { requireAuth } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
@@ -7,8 +8,14 @@ import { getAcademyId } from '../utils/academyScope';
 import { validate } from '../utils/validate';
 import { withTransaction } from '../utils/withTransaction';
 import { autoLinkEntityToUser } from '../utils/linkEntityUser';
+import { isGuardianOfStudent, getGuardianStudentIds } from '../utils/guardianAccess';
 
 const router = Router();
+
+const buildGuardianInviteLink = (alias: string, token: string): string => {
+  const base = (process.env.FRONTEND_URL || 'http://localhost:3002').replace(/\/$/, '');
+  return `${base}/guardian-invite/${alias}/${token}`;
+};
 
 const BELT_VALUES = [
   'Branca',
@@ -42,6 +49,17 @@ router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunct
 
   let where = 'WHERE s.academy_id = ?';
   const params: any[] = [academyId];
+
+  // Responsável (role='guardian') só vê os alunos vinculados via guardianships
+  if (req.user!.role === 'guardian') {
+    const allowedIds = await getGuardianStudentIds(req.user!.userId);
+    if (!allowedIds.length) {
+      res.json({ data: [], total: 0, page: 1, limit: Number(limit), totalPages: 0 });
+      return;
+    }
+    where += ` AND s.id IN (${allowedIds.map(() => '?').join(',')})`;
+    params.push(...allowedIds);
+  }
 
   if (userId) {
     where += ' AND s.user_id = ?';
@@ -93,6 +111,11 @@ router.get('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
     );
     if (!rows[0]) {
       res.status(404).json({ error: 'Aluno não encontrado' });
+      return;
+    }
+
+    if (req.user!.role === 'guardian' && !(await isGuardianOfStudent(req.user!.userId, String(req.params.id)))) {
+      res.status(403).json({ error: 'Sem permissão para esta ação' });
       return;
     }
 
@@ -265,8 +288,10 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
     const isAdmin = ['admin', 'superuser'].includes(req.user!.role);
     const isInstructor = req.user!.role === 'instructor';
     const isSelf = req.user!.role === 'student' && String(existing[0].user_id) === String(req.user!.userId);
+    const isGuardian = !isAdmin && !isInstructor && !isSelf
+      && await isGuardianOfStudent(req.user!.userId, String(req.params.id));
 
-    if (!isAdmin && !isInstructor && !isSelf) {
+    if (!isAdmin && !isInstructor && !isSelf && !isGuardian) {
       res.status(403).json({ error: 'Sem permissão para esta ação' });
       return;
     }
@@ -276,7 +301,7 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
       ['status', 'plan_id', 'join_date', 'next_payment_date', 'absence_limit',
        'last_graduation_date', 'user_id'].forEach(f => delete req.body[f]);
     } else if (!isAdmin) {
-      // Aluno editando o próprio cadastro: sem acesso a campos administrativos nem faixa
+      // Aluno (ou responsável) editando o cadastro: sem acesso a campos administrativos nem faixa
       ['status', 'belt', 'stripes', 'plan_id', 'join_date',
        'next_payment_date', 'absence_limit', 'last_graduation_date', 'user_id']
         .forEach(f => delete req.body[f]);
@@ -425,6 +450,114 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
   } catch (err) {
     next(err);
   }
+});
+
+// GET /api/students/:id/guardians — lista responsáveis vinculados ao aluno
+router.get('/:id/guardians', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const academyId = getAcademyId(req, res);
+  if (!academyId) return;
+
+  try {
+    const [student] = await pool.execute<any[]>(
+      'SELECT id FROM students WHERE id = ? AND academy_id = ?',
+      [req.params.id, academyId]
+    );
+    if (!student[0]) { res.status(404).json({ error: 'Aluno não encontrado' }); return; }
+
+    const [rows] = await pool.execute<any[]>(
+      `SELECT g.id, g.relation, g.created_at, u.id AS user_id, u.name, u.email, u.role
+       FROM guardianships g
+       JOIN users u ON u.id = g.guardian_user_id
+       WHERE g.student_id = ?
+       ORDER BY u.name ASC`,
+      [req.params.id]
+    );
+    res.json({ data: rows });
+  } catch (err) { next(err); }
+});
+
+// POST /api/students/:id/guardians — vincula diretamente uma conta existente (por e-mail) como responsável
+router.post('/:id/guardians', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const academyId = getAcademyId(req, res);
+  if (!academyId) return;
+
+  const errors = validate(req.body, { email: { required: true, type: 'email' } });
+  if (errors.length) { res.status(400).json({ error: errors[0] }); return; }
+
+  try {
+    const [student] = await pool.execute<any[]>(
+      'SELECT id FROM students WHERE id = ? AND academy_id = ?',
+      [req.params.id, academyId]
+    );
+    if (!student[0]) { res.status(404).json({ error: 'Aluno não encontrado' }); return; }
+
+    const emailNorm = String(req.body.email).toLowerCase().trim();
+    const [userRows] = await pool.execute<any[]>(
+      'SELECT id FROM users WHERE email = ? AND academy_id = ?',
+      [emailNorm, academyId]
+    );
+    if (!userRows[0]) {
+      res.status(404).json({ error: 'Nenhuma conta encontrada com este e-mail nesta academia.' });
+      return;
+    }
+
+    try {
+      await pool.execute(
+        `INSERT INTO guardianships (id, guardian_user_id, student_id, relation) VALUES (?, ?, ?, ?)`,
+        [crypto.randomUUID(), userRows[0].id, req.params.id, req.body.relation ?? null]
+      );
+    } catch (err: any) {
+      if (err.code !== 'ER_DUP_ENTRY') throw err;
+      res.status(409).json({ error: 'Esta conta já é responsável por este aluno.' });
+      return;
+    }
+
+    res.status(201).json({ message: 'Responsável vinculado com sucesso.' });
+  } catch (err) { next(err); }
+});
+
+// POST /api/students/:id/guardian-invite — gera link de convite para um responsável se cadastrar
+router.post('/:id/guardian-invite', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const academyId = getAcademyId(req, res);
+  if (!academyId) return;
+
+  try {
+    const [rows] = await pool.execute<any[]>(
+      `SELECT s.id, a.alias AS academy_alias FROM students s JOIN academies a ON a.id = s.academy_id WHERE s.id = ? AND s.academy_id = ?`,
+      [req.params.id, academyId]
+    );
+    if (!rows[0]) { res.status(404).json({ error: 'Aluno não encontrado' }); return; }
+
+    const inviteToken = crypto.randomBytes(32).toString('hex');
+    await pool.execute(
+      'UPDATE students SET guardian_invite_token = ? WHERE id = ?',
+      [inviteToken, req.params.id]
+    );
+
+    res.status(201).json({ inviteLink: buildGuardianInviteLink(rows[0].academy_alias, inviteToken) });
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/students/:id/guardians/:guardianUserId — remove vínculo de responsável
+router.delete('/:id/guardians/:guardianUserId', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const academyId = getAcademyId(req, res);
+  if (!academyId) return;
+
+  try {
+    const [student] = await pool.execute<any[]>(
+      'SELECT id FROM students WHERE id = ? AND academy_id = ?',
+      [req.params.id, academyId]
+    );
+    if (!student[0]) { res.status(404).json({ error: 'Aluno não encontrado' }); return; }
+
+    const [result] = await pool.execute<any>(
+      'DELETE FROM guardianships WHERE student_id = ? AND guardian_user_id = ?',
+      [req.params.id, req.params.guardianUserId]
+    );
+    if (!result.affectedRows) { res.status(404).json({ error: 'Vínculo não encontrado' }); return; }
+
+    res.json({ message: 'Vínculo removido com sucesso.' });
+  } catch (err) { next(err); }
 });
 
 // DELETE /api/students/:id — move para lixeira

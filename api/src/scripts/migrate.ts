@@ -6,6 +6,7 @@ dotenv.config({ path: `${__dirname}/../../.env` });
 const DDL_STATEMENTS = [
   // Limpar banco
   'SET FOREIGN_KEY_CHECKS = 0',
+  'DROP TABLE IF EXISTS guardianships',
   'DROP TABLE IF EXISTS password_reset_tokens',
   'DROP TABLE IF EXISTS system_config',
   'DROP TABLE IF EXISTS recycle_bin',
@@ -94,7 +95,7 @@ const DDL_STATEMENTS = [
   `CREATE TABLE users (
     id VARCHAR(36) PRIMARY KEY,
     academy_id VARCHAR(36),
-    role ENUM('superuser','admin','instructor','staff','student','guest') NOT NULL,
+    role ENUM('superuser','admin','instructor','staff','student','guest','guardian') NOT NULL,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     photo LONGTEXT,
@@ -136,6 +137,7 @@ const DDL_STATEMENTS = [
     guardian_rg VARCHAR(20),
     guardian_relation VARCHAR(100),
     guardian_profession VARCHAR(100),
+    guardian_invite_token VARCHAR(100) UNIQUE,
     medical_notes TEXT,
     total_classes INT DEFAULT 0,
     total_hours INT DEFAULT 0,
@@ -152,6 +154,18 @@ const DDL_STATEMENTS = [
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE,
     FOREIGN KEY (plan_id) REFERENCES academy_plans(id) ON DELETE SET NULL
+  )`,
+
+  // Vínculo familiar: uma conta (users) pode gerenciar um ou mais alunos (students) como responsável
+  `CREATE TABLE guardianships (
+    id VARCHAR(36) PRIMARY KEY,
+    guardian_user_id VARCHAR(36) NOT NULL,
+    student_id VARCHAR(36) NOT NULL,
+    relation VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (guardian_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+    UNIQUE KEY uniq_guardian_student (guardian_user_id, student_id)
   )`,
 
   // Documentos dos alunos

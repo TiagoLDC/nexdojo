@@ -4,6 +4,7 @@ import { requireAuth } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
 import { getAcademyId } from '../utils/academyScope';
 import { validate } from '../utils/validate';
+import { isGuardianOfStudent } from '../utils/guardianAccess';
 
 const router = Router();
 
@@ -13,6 +14,14 @@ router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunct
   if (!academyId) return;
 
   const { type, status, dateFrom, dateTo, studentId, page = '1', limit = '20' } = req.query;
+
+  // Responsável (role='guardian') só pode consultar transações de um aluno vinculado, nunca a lista geral
+  if (req.user!.role === 'guardian') {
+    if (!studentId || !(await isGuardianOfStudent(req.user!.userId, String(studentId)))) {
+      res.status(403).json({ error: 'Sem permissão para esta ação' });
+      return;
+    }
+  }
   const pageNum  = Math.max(1, parseInt(String(page), 10));
   const limitNum = Math.min(1000, Math.max(1, parseInt(String(limit), 10)));
   const offset   = (pageNum - 1) * limitNum;

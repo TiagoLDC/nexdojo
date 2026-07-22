@@ -412,6 +412,186 @@ router.post('/register/staff', async (req: Request, res: Response, next: NextFun
   } catch (err) { next(err); }
 });
 
+// GET /api/auth/guardian-invite/:token — público: valida token e retorna dados do aluno para o convite de responsável
+router.get('/guardian-invite/:token', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { token } = req.params;
+  if (!token) { res.status(400).json({ error: 'Token inválido' }); return; }
+
+  try {
+    const [rows] = await pool.execute<any[]>(
+      `SELECT s.id, s.name, s.guardian_invite_token,
+              a.name AS academy_name, a.alias AS academy_alias, a.logo AS academy_logo
+       FROM students s
+       JOIN academies a ON a.id = s.academy_id
+       WHERE s.guardian_invite_token = ? LIMIT 1`,
+      [token]
+    );
+    const student = rows[0];
+    if (!student) { res.status(404).json({ error: 'Convite inválido ou já utilizado.' }); return; }
+
+    res.json({
+      studentId: student.id,
+      studentName: student.name,
+      academyName: student.academy_name,
+      academyAlias: student.academy_alias,
+      academyLogo: student.academy_logo,
+    });
+  } catch (err) { next(err); }
+});
+
+// POST /api/auth/register/guardian — público: aceita convite de responsável
+// Se o e-mail já pertence a uma conta existente (aluno/instrutor/staff que também é responsável),
+// autentica com a senha informada e apenas cria o vínculo. Caso contrário, cria uma conta nova
+// com role='guardian' (status 'Pending', segue o mesmo padrão de aprovação do convite de staff).
+router.post('/register/guardian', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const token = req.body.token;
+  const email = req.body.email;
+  const password = req.body.password;
+  const relation = req.body.relation || null;
+  const name = req.body.name;
+
+  if (!token || !email || !password) {
+    res.status(400).json({ error: 'Token, e-mail e senha são obrigatórios.' });
+    return;
+  }
+
+  try {
+    const [studentRows] = await pool.execute<any[]>(
+      `SELECT id, academy_id, name FROM students WHERE guardian_invite_token = ? LIMIT 1`,
+      [token]
+    );
+    const student = studentRows[0];
+    if (!student) { res.status(404).json({ error: 'Convite inválido ou já utilizado.' }); return; }
+
+    const emailNorm = String(email).toLowerCase().trim();
+    const [existingRows] = await pool.execute<any[]>(
+      'SELECT id, academy_id, password_hash FROM users WHERE email = ?',
+      [emailNorm]
+    );
+    const existingUser = existingRows[0];
+
+    let guardianUserId: string;
+    let loginToken: string | null = null;
+    let responseUser: any = null;
+
+    if (existingUser) {
+      if (String(existingUser.academy_id) !== String(student.academy_id)) {
+        res.status(403).json({ error: 'Esta conta pertence a outra academia e não pode ser vinculada a este aluno.' });
+        return;
+      }
+
+      const valid = await bcrypt.compare(String(password), existingUser.password_hash);
+      if (!valid) {
+        res.status(401).json({ error: 'Senha incorreta para a conta existente com este e-mail.' });
+        return;
+      }
+
+      guardianUserId = existingUser.id;
+
+      const [freshUser] = await pool.execute<any[]>(
+        'SELECT id, academy_id, role, name, email, status FROM users WHERE id = ?',
+        [guardianUserId]
+      );
+      loginToken = jwt.sign(
+        { userId: freshUser[0].id, academyId: freshUser[0].academy_id, role: freshUser[0].role },
+        process.env.JWT_SECRET!,
+        { expiresIn: '7d' }
+      );
+      responseUser = {
+        id: freshUser[0].id,
+        academyId: freshUser[0].academy_id,
+        role: freshUser[0].role,
+        name: freshUser[0].name,
+        email: freshUser[0].email,
+      };
+    } else {
+      if (String(password).length < 6) {
+        res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres.' });
+        return;
+      }
+      if (!name) {
+        res.status(400).json({ error: 'Nome é obrigatório para criar a conta de responsável.' });
+        return;
+      }
+
+      guardianUserId = 'usr_' + Math.random().toString(36).substr(2, 9);
+      const passwordHash = await bcrypt.hash(String(password), 10);
+
+      await pool.execute(
+        `INSERT INTO users (id, academy_id, role, name, email, password_hash, status) VALUES (?, ?, 'guardian', ?, ?, ?, 'Pending')`,
+        [guardianUserId, student.academy_id, name, emailNorm, passwordHash]
+      );
+    }
+
+    try {
+      await pool.execute(
+        `INSERT INTO guardianships (id, guardian_user_id, student_id, relation) VALUES (?, ?, ?, ?)`,
+        ['grd_' + Math.random().toString(36).substr(2, 9), guardianUserId, student.id, relation]
+      );
+    } catch (err: any) {
+      if (err.code !== 'ER_DUP_ENTRY') throw err;
+      // Vínculo já existia — segue em frente (convite usado novamente pelo mesmo responsável)
+    }
+
+    // Invalida o convite após o uso
+    await pool.execute(`UPDATE students SET guardian_invite_token = NULL WHERE id = ?`, [student.id]);
+
+    if (existingUser) {
+      res.status(201).json({
+        message: `Vínculo com ${student.name} criado com sucesso.`,
+        token: loginToken,
+        user: responseUser,
+      });
+    } else {
+      res.status(201).json({ message: 'Cadastro realizado! Aguarde aprovação do administrador.' });
+    }
+  } catch (err) { next(err); }
+});
+
+// GET /api/auth/profiles — lista todos os perfis acessíveis pela conta logada:
+// o perfil próprio (se houver ficha vinculada) + todos os alunos vinculados via guardianships
+router.get('/profiles', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const [selfRows] = await pool.execute<any[]>(
+      `SELECT 'student' AS entity_type, id, name, photo FROM students WHERE user_id = ?
+       UNION ALL
+       SELECT 'instructor' AS entity_type, id, name, photo FROM instructors WHERE user_id = ?
+       UNION ALL
+       SELECT 'staff' AS entity_type, id, name, photo FROM staff WHERE user_id = ?`,
+      [req.user!.userId, req.user!.userId, req.user!.userId]
+    );
+
+    const [guardianRows] = await pool.execute<any[]>(
+      `SELECT s.id, s.name, s.photo, g.relation
+       FROM guardianships g
+       JOIN students s ON s.id = g.student_id
+       WHERE g.guardian_user_id = ?
+       ORDER BY s.name ASC`,
+      [req.user!.userId]
+    );
+
+    const profiles = [
+      ...selfRows.map((r: any) => ({
+        kind: 'self',
+        entityType: r.entity_type,
+        entityId: r.id,
+        name: r.name,
+        photo: r.photo || undefined,
+      })),
+      ...guardianRows.map((r: any) => ({
+        kind: 'guardian',
+        entityType: 'student',
+        entityId: r.id,
+        name: r.name,
+        photo: r.photo || undefined,
+        relation: r.relation || undefined,
+      })),
+    ];
+
+    res.json({ profiles });
+  } catch (err) { next(err); }
+});
+
 // POST /api/auth/change-password — usuário autenticado redefine senha (limpa flag de senha temporária)
 router.post('/change-password', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   // Interceptor do frontend converte camelCase → snake_case antes de enviar

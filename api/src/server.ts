@@ -42,6 +42,8 @@ async function applySchemaPatches() {
     `ALTER TABLE staff ADD COLUMN address_neighborhood VARCHAR(100) AFTER address_number`,
     `ALTER TABLE staff ADD COLUMN address_city VARCHAR(100) AFTER address_neighborhood`,
     `ALTER TABLE staff ADD COLUMN address_state VARCHAR(2) AFTER address_city`,
+    `ALTER TABLE users MODIFY COLUMN role ENUM('superuser','admin','instructor','staff','student','guest','guardian') NOT NULL`,
+    `ALTER TABLE students ADD COLUMN guardian_invite_token VARCHAR(100) UNIQUE AFTER guardian_profession`,
   ];
   for (const sql of patches) {
     try {
@@ -50,6 +52,20 @@ async function applySchemaPatches() {
       if (err.code !== 'ER_DUP_FIELDNAME') throw err;
     }
   }
+
+  // Tabela nova: CREATE TABLE IF NOT EXISTS já é idempotente por si só (sem necessidade de try/catch)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS guardianships (
+      id VARCHAR(36) PRIMARY KEY,
+      guardian_user_id VARCHAR(36) NOT NULL,
+      student_id VARCHAR(36) NOT NULL,
+      relation VARCHAR(50),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (guardian_user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+      UNIQUE KEY uniq_guardian_student (guardian_user_id, student_id)
+    )
+  `);
 }
 
 async function start() {
