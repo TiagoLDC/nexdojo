@@ -11,6 +11,9 @@ interface InviteInfo {
   academyName: string;
   academyAlias: string;
   academyLogo?: string;
+  suggestedName?: string;
+  suggestedEmail?: string;
+  suggestedRelation?: string;
 }
 
 const RELATIONS = ['Pai', 'Mãe', 'Tio', 'Tia', 'Responsável', 'Outro'];
@@ -49,7 +52,17 @@ const GuardianInvitePage: React.FC = () => {
   useEffect(() => {
     if (!token) { setLoadError('Link inválido.'); setLoading(false); return; }
     api.get<InviteInfo>(`/auth/guardian-invite/${token}`)
-      .then(r => { setInfo(r.data); setLoading(false); })
+      .then(r => {
+        setInfo(r.data);
+        if (r.data.suggestedName) setName(r.data.suggestedName);
+        if (r.data.suggestedEmail) setEmail(r.data.suggestedEmail);
+        if (r.data.suggestedRelation) {
+          // Só pré-seleciona se bater exatamente com uma opção do select (o cadastro original é texto livre)
+          const match = RELATIONS.find(r2 => r2.toLowerCase() === r.data.suggestedRelation!.toLowerCase());
+          if (match) setRelation(match);
+        }
+        setLoading(false);
+      })
       .catch(e => { setLoadError(e.response?.data?.error || 'Link inválido ou já utilizado.'); setLoading(false); });
   }, [token]);
 
@@ -144,6 +157,11 @@ const GuardianInvitePage: React.FC = () => {
               Vincule sua conta ao aluno <strong>{info?.studentName}</strong> em <strong>{info?.academyName}</strong>.
               Se você já tem cadastro (como aluno ou colaborador), use o mesmo e-mail e senha — o vínculo é adicionado à sua conta existente.
             </p>
+            {info?.suggestedEmail && (
+              <p className="text-[10px] text-indigo-500 dark:text-indigo-400 mt-2 italic">
+                Pré-preenchemos com os dados do responsável já cadastrados na ficha — confira e ajuste se precisar.
+              </p>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">

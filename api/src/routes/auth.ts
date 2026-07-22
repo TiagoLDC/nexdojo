@@ -420,6 +420,7 @@ router.get('/guardian-invite/:token', async (req: Request, res: Response, next: 
   try {
     const [rows] = await pool.execute<any[]>(
       `SELECT s.id, s.name, s.guardian_invite_token,
+              s.guardian_name, s.guardian_email, s.guardian_relation,
               a.name AS academy_name, a.alias AS academy_alias, a.logo AS academy_logo
        FROM students s
        JOIN academies a ON a.id = s.academy_id
@@ -435,6 +436,11 @@ router.get('/guardian-invite/:token', async (req: Request, res: Response, next: 
       academyName: student.academy_name,
       academyAlias: student.academy_alias,
       academyLogo: student.academy_logo,
+      // Sugestão pré-preenchida a partir do cadastro do responsável já feito na ficha do aluno
+      // (texto livre, sem vínculo — o usuário pode editar livremente antes de confirmar)
+      suggestedName: student.guardian_name || undefined,
+      suggestedEmail: student.guardian_email || undefined,
+      suggestedRelation: student.guardian_relation || undefined,
     });
   } catch (err) { next(err); }
 });

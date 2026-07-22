@@ -60,8 +60,8 @@ Hoje, um pai/mãe/tio/tia que também é aluno ou colaborador da academia precis
 ## Fase 4 — Admin / Dados Existentes
 
 - [x] Botão "Gerar Link de Convite" na ficha do aluno (feito na Fase 3, dentro de `GuardianAccessSection`) — gera o link para o admin copiar e enviar por fora (WhatsApp/e-mail)
-- [ ] Pré-preencher o convite com `guardian_name`/`guardian_email` já cadastrados como sugestão (hoje o convite é genérico; quem aceita digita os próprios dados do zero)
-- [ ] (Opcional, sob demanda) Script de agrupamento por CPF/email para identificar responsáveis repetidos entre irmãos, antes de disparar convites em lote
+- [x] Convite pré-preenchido com `guardian_name`/`guardian_email`/`guardian_relation` já cadastrados na ficha (quem aceita só confirma/edita, não digita do zero — `suggestedRelation` só pré-seleciona se bater exatamente com uma das opções do select, já que o cadastro original é texto livre)
+- [ ] (Opcional, sob demanda) Script de agrupamento por CPF/email para identificar responsáveis repetidos entre irmãos, antes de disparar convites em lote — não implementado; avaliar só se o volume de convites em massa justificar
 
 ---
 
