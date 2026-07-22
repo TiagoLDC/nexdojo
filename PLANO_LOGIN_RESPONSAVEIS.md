@@ -65,6 +65,11 @@ Hoje, um pai/mãe/tio/tia que também é aluno ou colaborador da academia precis
 
 ---
 
+## Bugs encontrados em teste (QAS) e corrigidos
+
+- **Dashboard (`/`) não respeitava o perfil ativo** — só `/profile` e `/pay` tinham sido conectados ao seletor na Fase 3; a tela inicial do aluno continuava sempre resolvendo "quem sou eu" pelo e-mail da conta logada, ignorando a troca de perfil. Corrigido em `views/DashboardView.tsx`: a saudação, ID digital, mensalidade e faixa agora seguem o dependente selecionado no "Alternar Perfil" quando houver um.
+- **Auto-vínculo de responsável consigo mesmo** — nada impedia vincular a própria conta como responsável do próprio cadastro (aconteceu em teste: Theo→Theo e a conta da Maria→Maria). Isso fazia a pessoa aparecer duplicada no painel (como "Sua Conta" e como "Dependente" ao mesmo tempo). Adicionada validação em `POST /api/students/:id/guardians` e `POST /api/auth/register/guardian` rejeitando esse caso; os 2 vínculos incorretos já existentes no banco do QAS foram removidos.
+
 ## Riscos / Pontos de Atenção
 
 | Risco | Mitigação |

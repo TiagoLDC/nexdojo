@@ -71,6 +71,7 @@ import { BeltBadge } from '../components/BeltBadge';
 import { BELT_COLORS } from '../constants';
 import { DateSelectInput, ConfirmDialog } from '@/components/ui';
 import { QRCodeSVG } from 'qrcode.react';
+import { useProfileStore, getActiveProfile } from '@/stores/profileStore';
 
 
 const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAcademy?: (a: Academy) => void }> = ({ academy, user, onSwitchAcademy }) => {
@@ -89,6 +90,8 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   const [_isLoading, setIsLoading] = React.useState(true);
   const [selectedPending, setSelectedPending] = React.useState<{ user: User; details: any } | null>(null);
   const [lastReadChat, setLastReadChat] = React.useState<string>(academy ? localStorage.getItem(`oss_chat_last_read_${academy.id}`) || '' : '');
+  const { profiles: switcherProfiles, activeProfileId } = useProfileStore();
+  const activeProfile = getActiveProfile(switcherProfiles, activeProfileId);
 
   React.useEffect(() => {
     const loadData = async () => {
@@ -824,9 +827,12 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
 
 
   if (user.role === 'student') {
-    // Busca o perfil do aluno logado
-    const profileFound = students.find(s => s.email === user.email);
-    
+    // Busca o perfil do aluno logado, ou do dependente selecionado no seletor "Alternar Perfil"
+    const isViewingDependent = activeProfile?.kind === 'guardian' && activeProfile.entityType === 'student';
+    const profileFound = isViewingDependent
+      ? students.find(s => s.id === activeProfile!.entityId)
+      : students.find(s => s.email === user.email);
+
     // Perfil padrão caso não encontre nada (evita mostrar dados de outro aluno)
     const profile: any = profileFound || {
       name: user.name,
@@ -866,7 +872,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
         <motion.header variants={itemVariants} className="px-2 flex items-center justify-between">
           <div>
             <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-white tracking-tighter uppercase italic leading-none">
-              {getGreeting()}, {user.name.split(' ')[0]}!
+              {getGreeting()}, {(isViewingDependent ? profile.name : user.name).split(' ')[0]}!
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-bold mt-2 uppercase text-[10px] tracking-[0.2em]">{t.trainingJourney} {academy?.name}</p>
           </div>

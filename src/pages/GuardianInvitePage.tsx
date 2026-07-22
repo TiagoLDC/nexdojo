@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { api } from '@/lib/api';
+import { api, setApiToken } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 import { academyService } from '@/features/settings/services/academyService';
 import { Lock, Mail, User as UserIcon, CheckCircle2, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
@@ -82,8 +82,14 @@ const GuardianInvitePage: React.FC = () => {
       });
 
       if (data.token && data.user) {
-        // Conta já existia (aluno/colaborador que também é responsável): autentica na hora
-        const academy = data.user.academyId ? await academyService.get(data.user.academyId) : null;
+        // Conta já existia (aluno/colaborador que também é responsável): autentica na hora.
+        // Precisa configurar o token ANTES de buscar a academia, senão a chamada sai sem
+        // autenticação e a API responde 401 (mesma ordem usada no LoginView).
+        setApiToken(data.token);
+        let academy = null;
+        if (data.user.academyId) {
+          try { academy = await academyService.get(data.user.academyId); } catch { /* segue sem branding */ }
+        }
         login(data.user, data.token, academy);
         navigate('/', { replace: true });
         return;

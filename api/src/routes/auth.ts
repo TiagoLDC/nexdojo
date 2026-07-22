@@ -463,7 +463,7 @@ router.post('/register/guardian', async (req: Request, res: Response, next: Next
 
   try {
     const [studentRows] = await pool.execute<any[]>(
-      `SELECT id, academy_id, name FROM students WHERE guardian_invite_token = ? LIMIT 1`,
+      `SELECT id, academy_id, name, user_id FROM students WHERE guardian_invite_token = ? LIMIT 1`,
       [token]
     );
     const student = studentRows[0];
@@ -475,6 +475,11 @@ router.post('/register/guardian', async (req: Request, res: Response, next: Next
       [emailNorm]
     );
     const existingUser = existingRows[0];
+
+    if (existingUser && student.user_id && String(student.user_id) === String(existingUser.id)) {
+      res.status(400).json({ error: 'Não é possível vincular o aluno como responsável de si mesmo.' });
+      return;
+    }
 
     let guardianUserId: string;
     let loginToken: string | null = null;

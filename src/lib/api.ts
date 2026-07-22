@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useAuthStore } from '@/stores/authStore';
 
 let _token: string | null = null;
 let _onUnauthorized: (() => void) | null = null;
@@ -44,6 +45,21 @@ api.interceptors.request.use((config) => {
   if (_token) {
     config.headers.Authorization = `Bearer ${_token}`;
   }
+
+  // Superuser não tem academia fixa no token — rotas exigem academyId explícito na query/body.
+  // Se a própria chamada não informou nenhum (ex: update/delete que só recebem o id), injeta
+  // automaticamente a academia atualmente selecionada, evitando 400 "academyId é obrigatório".
+  const { user, academy } = useAuthStore.getState();
+  if (user?.role === 'superuser' && academy?.id) {
+    const hasAcademyIdInParams = !!config.params && (config.params.academyId !== undefined || config.params.academy_id !== undefined);
+    const hasAcademyIdInData =
+      !!config.data && typeof config.data === 'object' &&
+      ((config.data as Record<string, unknown>).academyId !== undefined || (config.data as Record<string, unknown>).academy_id !== undefined);
+    if (!hasAcademyIdInParams && !hasAcademyIdInData) {
+      config.params = { ...config.params, academyId: academy.id };
+    }
+  }
+
   if (
     config.data &&
     typeof config.data === 'object' &&

@@ -486,7 +486,7 @@ router.post('/:id/guardians', requireAuth, requireRole('admin', 'superuser'), as
 
   try {
     const [student] = await pool.execute<any[]>(
-      'SELECT id FROM students WHERE id = ? AND academy_id = ?',
+      'SELECT id, user_id FROM students WHERE id = ? AND academy_id = ?',
       [req.params.id, academyId]
     );
     if (!student[0]) { res.status(404).json({ error: 'Aluno não encontrado' }); return; }
@@ -498,6 +498,11 @@ router.post('/:id/guardians', requireAuth, requireRole('admin', 'superuser'), as
     );
     if (!userRows[0]) {
       res.status(404).json({ error: 'Nenhuma conta encontrada com este e-mail nesta academia.' });
+      return;
+    }
+
+    if (student[0].user_id && String(student[0].user_id) === String(userRows[0].id)) {
+      res.status(400).json({ error: 'Não é possível vincular o aluno como responsável de si mesmo.' });
       return;
     }
 
