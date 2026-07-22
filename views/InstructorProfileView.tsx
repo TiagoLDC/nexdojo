@@ -55,9 +55,13 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
     const loadProfile = async () => {
       setIsLoading(true);
       try {
+        // Match por userId (não por e-mail) — evita pegar a ficha errada quando duas fichas
+        // compartilham o mesmo e-mail cadastrado.
         if (user.role === 'instructor') {
           const res = await instructorService.getAll(academy.id, { limit: 1000 });
-          const found = res.data.find(i => i.email?.toLowerCase() === user.email?.toLowerCase()) || null;
+          const found = res.data.find((i: any) => i.userId === (user as any).id)
+            ?? res.data.find(i => i.email?.toLowerCase() === user.email?.toLowerCase())
+            ?? null;
           if (found) {
             const full = await instructorService.getById(found.id);
             setProfile(full);
@@ -68,7 +72,9 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
           }
         } else if (user.role === 'staff') {
           const res = await staffService.getAll(academy.id, { limit: 1000 });
-          const found = res.data.find(s => s.email?.toLowerCase() === user.email?.toLowerCase()) || null;
+          const found = res.data.find((s: any) => s.userId === (user as any).id)
+            ?? res.data.find(s => s.email?.toLowerCase() === user.email?.toLowerCase())
+            ?? null;
           setProfile(found);
           setEditData(found ? JSON.parse(JSON.stringify(found)) : null);
         } else {

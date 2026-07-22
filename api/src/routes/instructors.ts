@@ -116,6 +116,17 @@ router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Req
   });
   if (errors.length) { res.status(400).json({ error: errors[0] }); return; }
 
+  if (req.body.email) {
+    const [dupCheck] = await pool.execute<any[]>(
+      'SELECT id FROM instructors WHERE academy_id = ? AND LOWER(email) = LOWER(?)',
+      [academyId, String(req.body.email).trim()]
+    );
+    if (dupCheck[0]) {
+      res.status(409).json({ error: 'Este e-mail já está cadastrado para outro instrutor nesta academia.' });
+      return;
+    }
+  }
+
   const id = crypto.randomUUID();
   const b = req.body;
 
@@ -173,6 +184,17 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
       [req.params.id, academyId]
     );
     if (!existing[0]) { res.status(404).json({ error: 'Instrutor não encontrado' }); return; }
+
+    if (req.body.email && req.body.email !== existing[0].email) {
+      const [dupCheck] = await pool.execute<any[]>(
+        'SELECT id FROM instructors WHERE academy_id = ? AND LOWER(email) = LOWER(?) AND id != ?',
+        [academyId, String(req.body.email).trim(), req.params.id]
+      );
+      if (dupCheck[0]) {
+        res.status(409).json({ error: 'Este e-mail já está cadastrado para outro instrutor nesta academia.' });
+        return;
+      }
+    }
 
     const isAdmin = ['admin', 'superuser'].includes(req.user!.role);
     let isSelf = req.user!.role === 'instructor' && String(existing[0].user_id) === String(req.user!.userId);

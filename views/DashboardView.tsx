@@ -648,11 +648,13 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   }, [attendance, students]);
 
   const studentProfile = useMemo(() => {
-    if (user.role === 'student') {
-      return students.find(s => s.email === user.email);
-    }
-    return null;
-  }, [user, students]);
+    if (user.role !== 'student') return null;
+    // Segue o dependente selecionado no "Alternar Perfil"; sem seleção, resolve por userId
+    // (não por e-mail — evita pegar o aluno errado quando duas fichas compartilham o mesmo e-mail).
+    const viewingDependent = activeProfile?.kind === 'guardian' && activeProfile.entityType === 'student';
+    if (viewingDependent) return students.find(s => s.id === activeProfile!.entityId) ?? null;
+    return students.find((s: any) => s.userId === (user as any).id) ?? students.find(s => s.email === user.email) ?? null;
+  }, [user, students, activeProfile]);
 
   const monthlyClasses = useMemo(() => {
     if (!studentProfile) return 0;
@@ -667,14 +669,14 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
 
   const instructorProfile = useMemo(() => {
     if (user.role === 'instructor') {
-      return instructors.find(i => i.email === user.email);
+      return instructors.find((i: any) => i.userId === (user as any).id) ?? instructors.find(i => i.email === user.email) ?? null;
     }
     return null;
   }, [user, instructors]);
 
   const staffProfile = useMemo(() => {
     if (user.role === 'staff') {
-      return staff.find(s => s.email === user.email);
+      return staff.find((s: any) => s.userId === (user as any).id) ?? staff.find(s => s.email === user.email) ?? null;
     }
     return null;
   }, [user, staff]);
@@ -827,11 +829,10 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
 
 
   if (user.role === 'student') {
-    // Busca o perfil do aluno logado, ou do dependente selecionado no seletor "Alternar Perfil"
+    // Reaproveita o mesmo cálculo do memo `studentProfile` acima (já considera o dependente
+    // selecionado no "Alternar Perfil" e resolve por userId, não por e-mail)
     const isViewingDependent = activeProfile?.kind === 'guardian' && activeProfile.entityType === 'student';
-    const profileFound = isViewingDependent
-      ? students.find(s => s.id === activeProfile!.entityId)
-      : students.find(s => s.email === user.email);
+    const profileFound = studentProfile;
 
     // Perfil padrão caso não encontre nada (evita mostrar dados de outro aluno)
     const profile: any = profileFound || {

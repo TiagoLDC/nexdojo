@@ -174,6 +174,17 @@ router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Req
     return;
   }
 
+  if (b.email) {
+    const [dupCheck] = await pool.execute<any[]>(
+      'SELECT id FROM students WHERE academy_id = ? AND LOWER(email) = LOWER(?)',
+      [academyId, String(b.email).trim()]
+    );
+    if (dupCheck[0]) {
+      res.status(409).json({ error: 'Este e-mail já está cadastrado para outro aluno nesta academia.' });
+      return;
+    }
+  }
+
   try {
     const studentId = crypto.randomUUID();
 
@@ -284,6 +295,17 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
       status: { enum: STATUS_VALUES },
     });
     if (errors.length) { res.status(400).json({ error: errors[0] }); return; }
+
+    if (emailChanged && req.body.email) {
+      const [dupCheck] = await pool.execute<any[]>(
+        'SELECT id FROM students WHERE academy_id = ? AND LOWER(email) = LOWER(?) AND id != ?',
+        [academyId, String(req.body.email).trim(), req.params.id]
+      );
+      if (dupCheck[0]) {
+        res.status(409).json({ error: 'Este e-mail já está cadastrado para outro aluno nesta academia.' });
+        return;
+      }
+    }
 
     const isAdmin = ['admin', 'superuser'].includes(req.user!.role);
     const isInstructor = req.user!.role === 'instructor';

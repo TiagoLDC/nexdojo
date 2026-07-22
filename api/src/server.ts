@@ -44,12 +44,18 @@ async function applySchemaPatches() {
     `ALTER TABLE staff ADD COLUMN address_state VARCHAR(2) AFTER address_city`,
     `ALTER TABLE users MODIFY COLUMN role ENUM('superuser','admin','instructor','staff','student','guest','guardian') NOT NULL`,
     `ALTER TABLE students ADD COLUMN guardian_invite_token VARCHAR(100) UNIQUE AFTER guardian_profession`,
+    // Impede duas fichas com o mesmo e-mail na mesma academia (a API já valida antes de salvar;
+    // isso é a trava de segurança no banco). Bancos existentes precisam estar sem duplicados antes
+    // desta patch rodar com sucesso — se falhar com ER_DUP_ENTRY, há dados sujos a limpar manualmente.
+    `ALTER TABLE students ADD UNIQUE KEY uniq_academy_email (academy_id, email)`,
+    `ALTER TABLE instructors ADD UNIQUE KEY uniq_academy_email (academy_id, email)`,
+    `ALTER TABLE staff ADD UNIQUE KEY uniq_academy_email (academy_id, email)`,
   ];
   for (const sql of patches) {
     try {
       await pool.query(sql);
     } catch (err: any) {
-      if (err.code !== 'ER_DUP_FIELDNAME') throw err;
+      if (err.code !== 'ER_DUP_FIELDNAME' && err.code !== 'ER_DUP_KEYNAME') throw err;
     }
   }
 

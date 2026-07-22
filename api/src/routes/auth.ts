@@ -227,6 +227,12 @@ router.post('/register/student', async (req: Request, res: Response, next: NextF
     const [existing] = await pool.execute<any[]>('SELECT id FROM users WHERE email = ?', [String(email).toLowerCase().trim()]);
     if ((existing as any[]).length) { res.status(409).json({ error: 'E-mail já cadastrado.' }); return; }
 
+    const [dupStudent] = await pool.execute<any[]>(
+      'SELECT id FROM students WHERE academy_id = ? AND LOWER(email) = LOWER(?)',
+      [academyId, String(email).toLowerCase().trim()]
+    );
+    if (dupStudent[0]) { res.status(409).json({ error: 'E-mail já cadastrado.' }); return; }
+
     const studentId = 'stu_' + Math.random().toString(36).substr(2, 9);
     const userId = 'usr_' + Math.random().toString(36).substr(2, 9);
     const passwordHash = await bcrypt.hash(String(password), 10);
@@ -286,6 +292,12 @@ router.post('/register/instructor', async (req: Request, res: Response, next: Ne
 
     const [existing] = await pool.execute<any[]>('SELECT id FROM users WHERE email = ?', [String(email).toLowerCase().trim()]);
     if ((existing as any[]).length) { res.status(409).json({ error: 'E-mail já cadastrado.' }); return; }
+
+    const [dupInstructor] = await pool.execute<any[]>(
+      'SELECT id FROM instructors WHERE academy_id = ? AND LOWER(email) = LOWER(?)',
+      [academyId, String(email).toLowerCase().trim()]
+    );
+    if (dupInstructor[0]) { res.status(409).json({ error: 'E-mail já cadastrado.' }); return; }
 
     const instructorId = 'instr_' + Math.random().toString(36).substr(2, 9);
     const userId = 'usr_' + Math.random().toString(36).substr(2, 9);
@@ -388,9 +400,15 @@ router.post('/register/staff', async (req: Request, res: Response, next: NextFun
     const [existing] = await pool.execute<any[]>('SELECT id FROM users WHERE email = ?', [String(email).toLowerCase().trim()]);
     if ((existing as any[]).length) { res.status(409).json({ error: 'E-mail já cadastrado.' }); return; }
 
+    const emailNorm = String(email).toLowerCase().trim();
+    const [dupStaff] = await pool.execute<any[]>(
+      'SELECT id FROM staff WHERE academy_id = ? AND LOWER(email) = LOWER(?) AND id != ?',
+      [staff.academy_id, emailNorm, staff.id]
+    );
+    if (dupStaff[0]) { res.status(409).json({ error: 'Este e-mail já está cadastrado para outro colaborador nesta academia.' }); return; }
+
     const userId = 'usr_' + Math.random().toString(36).substr(2, 9);
     const passwordHash = await bcrypt.hash(String(password), 10);
-    const emailNorm = String(email).toLowerCase().trim();
 
     await pool.execute(
       `INSERT INTO users (id, academy_id, role, name, email, password_hash, status) VALUES (?, ?, 'staff', ?, ?, ?, 'Pending')`,

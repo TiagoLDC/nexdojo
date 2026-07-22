@@ -153,7 +153,8 @@ const DDL_STATEMENTS = [
     absence_limit INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE,
-    FOREIGN KEY (plan_id) REFERENCES academy_plans(id) ON DELETE SET NULL
+    FOREIGN KEY (plan_id) REFERENCES academy_plans(id) ON DELETE SET NULL,
+    UNIQUE KEY uniq_academy_email (academy_id, email)
   )`,
 
   // Vínculo familiar: uma conta (users) pode gerenciar um ou mais alunos (students) como responsável
@@ -222,7 +223,8 @@ const DDL_STATEMENTS = [
     join_date DATE,
     last_graduation_date DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE
+    FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE,
+    UNIQUE KEY uniq_academy_email (academy_id, email)
   )`,
 
   // Documentos dos instrutores
@@ -258,7 +260,8 @@ const DDL_STATEMENTS = [
     status ENUM('Active','Inactive','Dropped','Pending','PreCadastro') DEFAULT 'Active',
     join_date DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE
+    FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE,
+    UNIQUE KEY uniq_academy_email (academy_id, email)
   )`,
 
   // Templates de aula

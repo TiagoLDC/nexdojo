@@ -31,14 +31,16 @@ const PaymentView: React.FC<{ academy: Academy; user: User }> = ({ academy, user
 
     setIsLoading(true);
 
-    // Responsável gerenciando um dependente: busca direto pelo aluno selecionado.
-    // Sem perfil ativo (fluxo padrão do aluno logado): resolve pelo próprio e-mail, como antes.
+    // Responsável gerenciando um dependente (ou perfil próprio já resolvido via /api/auth/profiles):
+    // busca direto pelo aluno selecionado, por ID (sem ambiguidade). Enquanto os perfis ainda não
+    // carregaram, cai no fallback por userId/e-mail — o backend prioriza userId sobre e-mail,
+    // evitando pegar o aluno errado quando duas fichas compartilham o mesmo e-mail cadastrado.
     const resolveProfile = activeProfile && activeProfile.entityType === 'student'
       ? studentService.getById(activeProfile.entityId)
-      : studentService.getAll(academy.id, { email: user.email, limit: 1 })
+      : studentService.getAll(academy.id, { userId: (user as any).id, email: user.email, limit: 1 })
           .then((res) => {
-            const students = Array.isArray(res.data) ? res.data : [];
-            return students.find(s => s.email?.toLowerCase() === user.email?.toLowerCase()) ?? null;
+            const list = Array.isArray(res.data) ? res.data : [];
+            return list[0] ?? null;
           });
 
     resolveProfile.then((profile) => {

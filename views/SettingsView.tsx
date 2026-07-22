@@ -179,19 +179,27 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   useEffect(() => {
     const loadUserProfile = async () => {
       try {
+        // Match por userId (não por e-mail) — evita pegar a ficha errada quando duas fichas
+        // compartilham o mesmo e-mail cadastrado (ex: contato de responsável repetido entre irmãos).
         if (user.role === 'student') {
           const res = await studentService.getAll(academy.id, { limit: 1000 });
-          const found = res.data.find((s: Student) => s.email === user.email) || null;
+          const found = res.data.find((s: any) => s.userId === (user as any).id)
+            ?? res.data.find((s: Student) => s.email === user.email)
+            ?? null;
           setUserProfile(found);
           setEditProfile(found);
         } else if (user.role === 'instructor') {
           const res = await instructorService.getAll(academy.id, { limit: 1000 });
-          const found = res.data.find((i: Instructor) => i.email === user.email) || null;
+          const found = res.data.find((i: any) => i.userId === (user as any).id)
+            ?? res.data.find((i: Instructor) => i.email === user.email)
+            ?? null;
           setUserProfile(found);
           setEditProfile(found);
         } else if (user.role === 'staff') {
           const res = await staffService.getAll(academy.id, { limit: 1000 });
-          const found = res.data.find((s: Staff) => s.email === user.email) || null;
+          const found = res.data.find((s: any) => s.userId === (user as any).id)
+            ?? res.data.find((s: Staff) => s.email === user.email)
+            ?? null;
           setUserProfile(found);
           setEditProfile(found);
         }
