@@ -69,7 +69,7 @@ import {
 } from 'recharts';
 import { BeltBadge } from '../components/BeltBadge';
 import { BELT_COLORS } from '../constants';
-import { DateSelectInput, ConfirmDialog } from '@/components/ui';
+import { DateSelectInput, ConfirmDialog, Spinner } from '@/components/ui';
 import { QRCodeSVG } from 'qrcode.react';
 import { useProfileStore, getActiveProfile } from '@/stores/profileStore';
 
@@ -835,6 +835,17 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     // selecionado no "Alternar Perfil" e resolve por userId, não por e-mail)
     const isViewingDependent = isViewingDependentProfile;
     const profileFound = studentProfile;
+
+    // Enquanto os alunos da academia ainda estão carregando, não é possível saber se o dependente
+    // será encontrado — mostrar o fallback (dados da própria conta logada) nesse meio-tempo faria
+    // um responsável ver o próprio nome/e-mail piscando no lugar do filho. Aguarda carregar.
+    if (isViewingDependent && !profileFound && _isLoading) {
+      return (
+        <div className="flex items-center justify-center h-full min-h-[300px]">
+          <Spinner size="lg" className="text-indigo-500" />
+        </div>
+      );
+    }
 
     // Perfil padrão caso não encontre nada (evita mostrar dados de outro aluno)
     const profile: any = profileFound || {

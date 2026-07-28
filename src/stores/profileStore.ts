@@ -5,6 +5,11 @@ import type { Profile } from '@/types';
 interface ProfileStore {
   profiles: Profile[];
   activeProfileId: string | null;
+  // Fica false entre o login e a resposta de GET /auth/profiles. Necessário para telas como
+  // DashboardPage não decidirem um redirect (ex.: responsável puro -> /profile) usando uma
+  // lista de perfis ainda vazia por não ter carregado — isso mandava a conta pro lugar errado
+  // antes mesmo do perfil do dependente chegar da API.
+  profilesLoaded: boolean;
   setProfiles: (profiles: Profile[]) => void;
   setActiveProfileId: (id: string | null) => void;
   reset: () => void;
@@ -15,9 +20,10 @@ export const useProfileStore = create<ProfileStore>()(
     (set) => ({
       profiles: [],
       activeProfileId: null,
-      setProfiles: (profiles) => set({ profiles }),
+      profilesLoaded: false,
+      setProfiles: (profiles) => set({ profiles, profilesLoaded: true }),
       setActiveProfileId: (id) => set({ activeProfileId: id }),
-      reset: () => set({ profiles: [], activeProfileId: null }),
+      reset: () => set({ profiles: [], activeProfileId: null, profilesLoaded: false }),
     }),
     { name: 'nexdojo-profile' },
   ),
