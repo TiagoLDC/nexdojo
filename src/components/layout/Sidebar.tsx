@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Settings, ShieldCheck, Sun, Moon, ChevronLeft, ChevronRight, ChevronDown, Award } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
+import { useProfileStore, getActiveProfile, getEffectiveRoles } from '@/stores/profileStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { academyService } from '@/features/settings/services/academyService';
@@ -20,6 +21,7 @@ const LANGUAGES: { code: Language; label: string; flag: string }[] = [
 export const Sidebar: React.FC = () => {
   const location = useLocation();
   const { user, academy, logout, setAcademy } = useAuthStore();
+  const { profiles: switcherProfiles, activeProfileId } = useProfileStore();
   const { sidebarCollapsed, toggleSidebar, theme, toggleTheme } = useUIStore();
   const { t, language, setLanguage } = useTranslation();
   const queryClient = useQueryClient();
@@ -35,8 +37,10 @@ export const Sidebar: React.FC = () => {
     staleTime: 60_000,
   });
 
-  const mainItems = MAIN_NAV.filter((item) => item.roles.includes(user.role));
-  const mgmtItems = MANAGEMENT_NAV.filter((item) => item.roles.includes(user.role));
+  const activeProfile = getActiveProfile(switcherProfiles, activeProfileId);
+  const effectiveRoles = getEffectiveRoles(user.role, activeProfile);
+  const mainItems = MAIN_NAV.filter((item) => item.roles.some((r) => effectiveRoles.includes(r)));
+  const mgmtItems = MANAGEMENT_NAV.filter((item) => item.roles.some((r) => effectiveRoles.includes(r)));
 
   const isActive = (to: string) =>
     to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);

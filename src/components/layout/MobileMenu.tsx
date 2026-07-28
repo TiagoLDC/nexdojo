@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Settings, LogOut, Share2, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
+import { useProfileStore, getActiveProfile, getEffectiveRoles } from '@/stores/profileStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { MAIN_NAV, MANAGEMENT_NAV } from './navConfig';
@@ -9,13 +10,15 @@ import { NavIcon } from './NavIcons';
 
 export const MobileMenu: React.FC = () => {
   const { user, academy, logout } = useAuthStore();
+  const { profiles: switcherProfiles, activeProfileId } = useProfileStore();
   const { mobileMenuOpen, setMobileMenuOpen } = useUIStore();
   const { t } = useTranslation();
 
   if (!mobileMenuOpen || !user) return null;
 
+  const effectiveRoles = getEffectiveRoles(user.role, getActiveProfile(switcherProfiles, activeProfileId));
   const allItems = [...MAIN_NAV, ...MANAGEMENT_NAV].filter((item) =>
-    item.roles.includes(user.role),
+    item.roles.some((r) => effectiveRoles.includes(r)),
   );
 
   const close = () => setMobileMenuOpen(false);
