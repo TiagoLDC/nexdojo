@@ -101,6 +101,12 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       setIsLoading(true);
       try {
         if (academy) {
+          // GET /transactions responde 403 para role='guardian' sem studentId (a API bloqueia
+          // responsável de ver o financeiro geral da academia — só o de um aluno vinculado
+          // específico). Como estava dentro do mesmo Promise.all, essa única rejeição derrubava
+          // TODAS as outras buscas (inclusive a lista de alunos), fazendo a dashboard do
+          // dependente cair no perfil padrão (dados da própria conta do responsável).
+          const isGuardian = (user.role as string) === 'guardian';
           const [
             studentsRes,
             instructorsRes,
@@ -117,7 +123,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
             staffService.getAll(academy.id, { limit: 1000 }),
             templateService.getAll(academy.id, { limit: 1000 }),
             attendanceService.getRecords(academy.id, { limit: 1000 }),
-            financeService.getAll(academy.id, { limit: 1000 }),
+            isGuardian ? Promise.resolve({ data: [] }) : financeService.getAll(academy.id, { limit: 1000 }),
             calendarService.getEvents(academy.id, { limit: 1000 }),
             chatService.getMessages(academy.id, { limit: 100 }),
             attendanceService.getSessions(academy.id, { limit: 100 }),
