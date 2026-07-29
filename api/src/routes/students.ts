@@ -340,8 +340,8 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
         [...values, req.params.id, academyId]
       );
 
-      // Registra no histórico de graduações se admin alterou faixa ou grau
-      if (isAdmin) {
+      // Registra no histórico de graduações se admin/instrutor alterou faixa ou grau
+      if (isAdmin || isInstructor) {
         const beltChanged    = req.body.belt    !== undefined && req.body.belt    !== existing[0].belt;
         const stripesChanged = req.body.stripes !== undefined && Number(req.body.stripes) !== Number(existing[0].stripes);
         if (beltChanged || stripesChanged) {
