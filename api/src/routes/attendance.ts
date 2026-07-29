@@ -197,7 +197,7 @@ router.post('/qr-checkin', requireAuth, async (req: Request, res: Response, next
 // POST /api/attendance
 // Fluxo novo (Fase 4): valida plano do aluno, horário, idade e idempotência antes de inserir.
 // Legado: se vier class_id no body (fluxo antigo de sessões), aceita sem validar horário.
-router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor', 'staff'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -469,7 +469,7 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor'), a
 });
 
 // DELETE /api/attendance/:id — remove presença e reverte contadores do aluno
-router.delete('/:id', requireAuth, requireRole('admin', 'superuser', 'instructor'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.delete('/:id', requireAuth, requireRole('admin', 'superuser', 'instructor', 'staff'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 

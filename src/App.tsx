@@ -70,8 +70,8 @@ const App: React.FC = () => (
           <Route path="/inventory"  element={<InventoryPage />} />
           <Route path="/settings"   element={<SettingsPage />} />
 
-          {/* Admin + Instructor */}
-          <Route element={<RoleGuard roles={['superuser', 'admin', 'instructor']} />}>
+          {/* Admin + Instructor + Staff */}
+          <Route element={<RoleGuard roles={['superuser', 'admin', 'instructor', 'staff']} />}>
             <Route path="/attendance" element={<AttendancePage />} />
             {/* DESATIVADO em #090 — Turmas substituídas por Planos de Aula */}
             {/* <Route path="/templates"  element={<TemplatesPage />} /> */}

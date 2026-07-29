@@ -144,7 +144,7 @@ router.get('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
 });
 
 // POST /api/students
-router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.post('/', requireAuth, requireRole('admin', 'superuser', 'staff'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -309,11 +309,12 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
 
     const isAdmin = ['admin', 'superuser'].includes(req.user!.role);
     const isInstructor = req.user!.role === 'instructor';
+    const isStaff = req.user!.role === 'staff';
     const isSelf = req.user!.role === 'student' && String(existing[0].user_id) === String(req.user!.userId);
-    const isGuardian = !isAdmin && !isInstructor && !isSelf
+    const isGuardian = !isAdmin && !isInstructor && !isStaff && !isSelf
       && await isGuardianOfStudent(req.user!.userId, String(req.params.id));
 
-    if (!isAdmin && !isInstructor && !isSelf && !isGuardian) {
+    if (!isAdmin && !isInstructor && !isStaff && !isSelf && !isGuardian) {
       res.status(403).json({ error: 'Sem permissão para esta ação' });
       return;
     }
@@ -322,6 +323,10 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
       // Instrutor pode editar dados do aluno, mas não campos financeiros/administrativos
       ['status', 'plan_id', 'join_date', 'next_payment_date', 'absence_limit',
        'last_graduation_date', 'user_id'].forEach(f => delete req.body[f]);
+    } else if (isStaff) {
+      // Colaborador pode cadastrar/aprovar (inclusive status), mas não mexe em graduação nem em campos financeiros/plano
+      ['belt', 'stripes', 'plan_id', 'join_date', 'next_payment_date',
+       'absence_limit', 'last_graduation_date', 'user_id'].forEach(f => delete req.body[f]);
     } else if (!isAdmin) {
       // Aluno (ou responsável) editando o cadastro: sem acesso a campos administrativos nem faixa
       ['status', 'belt', 'stripes', 'plan_id', 'join_date',
@@ -475,7 +480,7 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
 });
 
 // GET /api/students/:id/guardians — lista responsáveis vinculados ao aluno
-router.get('/:id/guardians', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.get('/:id/guardians', requireAuth, requireRole('admin', 'superuser', 'staff'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -499,7 +504,7 @@ router.get('/:id/guardians', requireAuth, requireRole('admin', 'superuser'), asy
 });
 
 // POST /api/students/:id/guardians — vincula diretamente uma conta existente (por e-mail) como responsável
-router.post('/:id/guardians', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.post('/:id/guardians', requireAuth, requireRole('admin', 'superuser', 'staff'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -544,7 +549,7 @@ router.post('/:id/guardians', requireAuth, requireRole('admin', 'superuser'), as
 });
 
 // POST /api/students/:id/guardian-invite — gera link de convite para um responsável se cadastrar
-router.post('/:id/guardian-invite', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.post('/:id/guardian-invite', requireAuth, requireRole('admin', 'superuser', 'staff'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
@@ -566,7 +571,7 @@ router.post('/:id/guardian-invite', requireAuth, requireRole('admin', 'superuser
 });
 
 // DELETE /api/students/:id/guardians/:guardianUserId — remove vínculo de responsável
-router.delete('/:id/guardians/:guardianUserId', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.delete('/:id/guardians/:guardianUserId', requireAuth, requireRole('admin', 'superuser', 'staff'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
