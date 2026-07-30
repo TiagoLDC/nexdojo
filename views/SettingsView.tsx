@@ -670,7 +670,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
         </section>
       )}
 
-      {(user.role === 'admin' || user.role === 'superuser' || user.role === 'instructor') && (
+      {(user.role === 'admin' || user.role === 'superuser' || user.role === 'instructor' || user.role === 'staff') && (
         <section className="space-y-4">
           <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-4">Controle de Presença</h2>
           <div className="bg-white dark:bg-slate-900 rounded-[32px] border border-slate-100 dark:border-slate-800 p-6 shadow-sm space-y-5">

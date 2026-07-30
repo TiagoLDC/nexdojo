@@ -1779,7 +1779,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       <option value="Dropped">Desistente</option>
                     </select>
                   </div>
-                  {['admin', 'superuser'].includes(user.role) ? (
+                  {['admin', 'superuser', 'staff'].includes(user.role) ? (
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Plano de Matrícula</label>
                     <select

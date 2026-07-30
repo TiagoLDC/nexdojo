@@ -324,8 +324,8 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
       ['status', 'plan_id', 'join_date', 'next_payment_date', 'absence_limit',
        'last_graduation_date', 'user_id'].forEach(f => delete req.body[f]);
     } else if (isStaff) {
-      // Colaborador pode cadastrar/aprovar (inclusive status), mas não mexe em graduação nem em campos financeiros/plano
-      ['belt', 'stripes', 'plan_id', 'join_date', 'next_payment_date',
+      // Colaborador pode cadastrar/aprovar (inclusive status) e definir o plano de aula, mas não mexe em graduação nem em campos financeiros
+      ['belt', 'stripes', 'join_date', 'next_payment_date',
        'absence_limit', 'last_graduation_date', 'user_id'].forEach(f => delete req.body[f]);
     } else if (!isAdmin) {
       // Aluno (ou responsável) editando o cadastro: sem acesso a campos administrativos nem faixa
