@@ -3,8 +3,8 @@ import { api } from '@/lib/api';
 export interface StudentGuardian {
   id: string;
   relation?: string;
-  created_at: string;
-  user_id: string;
+  createdAt: string;
+  userId: string;
   name: string;
   email: string;
   role: string;

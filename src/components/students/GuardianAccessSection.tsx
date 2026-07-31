@@ -94,12 +94,12 @@ export const GuardianAccessSection: React.FC<GuardianAccessSectionProps> = ({ st
                 <p className="text-[10px] text-slate-400 truncate">{g.email}</p>
               </div>
               <button
-                onClick={() => handleUnlink(g.user_id)}
-                disabled={removingId === g.user_id}
+                onClick={() => handleUnlink(g.userId)}
+                disabled={removingId === g.userId}
                 className="shrink-0 text-slate-400 hover:text-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors p-1.5"
                 title="Remover vínculo"
               >
-                {removingId === g.user_id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                {removingId === g.userId ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
               </button>
             </div>
           ))}
