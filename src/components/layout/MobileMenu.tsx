@@ -17,9 +17,9 @@ export const MobileMenu: React.FC = () => {
   if (!mobileMenuOpen || !user) return null;
 
   const effectiveRoles = getEffectiveRoles(user.role, getActiveProfile(switcherProfiles, activeProfileId));
-  const allItems = [...MAIN_NAV, ...MANAGEMENT_NAV].filter((item) =>
-    item.roles.some((r) => effectiveRoles.includes(r)),
-  );
+  const allItems = [...MAIN_NAV, ...MANAGEMENT_NAV]
+    .filter((item) => item.roles.some((r) => effectiveRoles.includes(r)))
+    .filter((item) => item.to !== '/kimonos' || academy?.kimonoLoanEnabled);
 
   const close = () => setMobileMenuOpen(false);
 

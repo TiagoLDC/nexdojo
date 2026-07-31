@@ -112,6 +112,8 @@ export interface Student {
   addressCep?: string;
   addressCity?: string;
   addressState?: string;
+  hasLoanedKimono?: boolean;
+  kimonoLoanDate?: string | null;
 }
 
 // ── Instructor ────────────────────────────────────────────────────────────
@@ -145,6 +147,8 @@ export interface Instructor {
   specialties?: string;
   lastGraduationDate?: string;
   graduationHistory?: GraduationHistoryItem[];
+  hasLoanedKimono?: boolean;
+  kimonoLoanDate?: string | null;
 }
 
 // ── Staff ─────────────────────────────────────────────────────────────────
@@ -290,6 +294,21 @@ export interface Academy {
   graduationRules?: GraduationRules;
   qrCodePresenca?: string;
   plans?: AcademyPlan[];
+  kimonoLoanEnabled?: boolean;
+}
+
+// ── Kimono Loans ──────────────────────────────────────────────────────────
+
+export interface KimonoLoan {
+  id: string;
+  academyId: string;
+  personType: 'student' | 'instructor';
+  personId: string;
+  personName?: string;
+  personPhoto?: string;
+  personBelt?: Belt;
+  borrowedAt: string;
+  returnedAt?: string | null;
 }
 
 export interface SystemPlan {

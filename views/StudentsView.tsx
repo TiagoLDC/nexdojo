@@ -57,11 +57,14 @@ import {
   ShieldOff,
   ShieldCheck as ShieldCheckIcon,
   CreditCard,
-  CheckCircle2
+  CheckCircle2,
+  Shirt,
+  RotateCcw
 } from 'lucide-react';
 import { BeltBadge } from '../components/BeltBadge';
 import { BELT_COLORS } from '../constants';
 import { DateSelectInput, ConfirmDialog } from '@/components/ui';
+import { kimonoLoanService } from '@/features/kimonoLoans/services/kimonoLoanService';
 
 // Funções utilitárias para máscaras removidas daqui e movidas para services/cep.ts
 
@@ -162,6 +165,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
   const [newStudentPassword, setNewStudentPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [accountActionLoading, setAccountActionLoading] = useState<string | null>(null);
+  const [isReturningKimono, setIsReturningKimono] = useState(false);
   const [isMarkingPayment, setIsMarkingPayment] = useState(false);
 
   const markPaymentAsPaid = async () => {
@@ -438,6 +442,20 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
       showNotification('Erro ao alterar acesso', 'error');
     } finally {
       setAccountActionLoading(null);
+    }
+  };
+
+  const handleReturnKimono = async (student: Student) => {
+    setIsReturningKimono(true);
+    try {
+      await kimonoLoanService.return(academy.id, { personType: 'student', personId: student.id });
+      setStudents(prev => prev.map(s => s.id === student.id ? { ...s, hasLoanedKimono: false, kimonoLoanDate: null } : s));
+      setEditingStudent(prev => prev?.id === student.id ? { ...prev, hasLoanedKimono: false, kimonoLoanDate: null } : prev);
+      showNotification('Kimono devolvido com sucesso!');
+    } catch {
+      showNotification('Erro ao devolver kimono.', 'error');
+    } finally {
+      setIsReturningKimono(false);
     }
   };
 
@@ -818,6 +836,9 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   <div className="absolute top-0 right-0 p-4 flex gap-1.5">
                     {readyForBelt && <div className="bg-indigo-600 text-white p-1.5 rounded-full shadow-lg shadow-indigo-500/30 animate-bounce"><Trophy size={14} /></div>}
                     {readyForStripe && <div className="bg-amber-500 text-white p-1.5 rounded-full shadow-lg shadow-amber-500/30 animate-pulse"><Medal size={14} /></div>}
+                    {academy.kimonoLoanEnabled && student.hasLoanedKimono && (
+                      <div title="Kimono emprestado" className="bg-blue-500 text-white p-1.5 rounded-full shadow-lg shadow-blue-500/30"><Shirt size={14} /></div>
+                    )}
                   </div>
 
                   <div className="flex gap-4 items-start mb-4">
@@ -1218,6 +1239,34 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
             </div>
 
             <div className="space-y-8 pb-10">
+              {!isNewStudent && academy.kimonoLoanEnabled && (
+                <div className={`flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl border ${editingStudent.hasLoanedKimono ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/30' : 'bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700'}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-xl ${editingStudent.hasLoanedKimono ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'}`}>
+                      <Shirt size={18} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Kimono</p>
+                      <p className="text-sm font-bold text-slate-700 dark:text-white">
+                        {editingStudent.hasLoanedKimono
+                          ? `Emprestado em ${editingStudent.kimonoLoanDate ? fmtDate(editingStudent.kimonoLoanDate) : '—'}`
+                          : 'Nenhum kimono emprestado'}
+                      </p>
+                    </div>
+                  </div>
+                  {editingStudent.hasLoanedKimono && (
+                    <button
+                      type="button"
+                      onClick={() => handleReturnKimono(editingStudent)}
+                      disabled={isReturningKimono}
+                      className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-4 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center gap-1.5"
+                    >
+                      {isReturningKimono ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
+                      Devolver
+                    </button>
+                  )}
+                </div>
+              )}
               <div className="space-y-4">
                 <h3 className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
                   <UserCheck size={14} /> Dados Pessoais

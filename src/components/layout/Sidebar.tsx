@@ -40,7 +40,9 @@ export const Sidebar: React.FC = () => {
   const activeProfile = getActiveProfile(switcherProfiles, activeProfileId);
   const effectiveRoles = getEffectiveRoles(user.role, activeProfile);
   const mainItems = MAIN_NAV.filter((item) => item.roles.some((r) => effectiveRoles.includes(r)));
-  const mgmtItems = MANAGEMENT_NAV.filter((item) => item.roles.some((r) => effectiveRoles.includes(r)));
+  const mgmtItems = MANAGEMENT_NAV
+    .filter((item) => item.roles.some((r) => effectiveRoles.includes(r)))
+    .filter((item) => item.to !== '/kimonos' || academy?.kimonoLoanEnabled);
 
   const isActive = (to: string) =>
     to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);

@@ -110,6 +110,8 @@ export interface Student {
   addressState?: string;
   userId?: string | null;
   userStatus?: 'Active' | 'Pending' | 'Blocked' | null;
+  hasLoanedKimono?: boolean;
+  kimonoLoanDate?: string | null;
 }
 
 export interface Instructor {
@@ -143,6 +145,8 @@ export interface Instructor {
   graduationHistory?: GraduationHistoryItem[];
   userId?: string | null;
   userStatus?: 'Active' | 'Pending' | 'Blocked' | null;
+  hasLoanedKimono?: boolean;
+  kimonoLoanDate?: string | null;
 }
 
 export interface Staff {
@@ -287,6 +291,19 @@ export interface Academy {
   paymentWarningDays?: number;
   graduationRules?: GraduationRules;
   plans?: AcademyPlan[];
+  kimonoLoanEnabled?: boolean;
+}
+
+export interface KimonoLoan {
+  id: string;
+  academyId: string;
+  personType: 'student' | 'instructor';
+  personId: string;
+  personName?: string;
+  personPhoto?: string;
+  personBelt?: Belt;
+  borrowedAt: string;
+  returnedAt?: string | null;
 }
 
 export interface Product {

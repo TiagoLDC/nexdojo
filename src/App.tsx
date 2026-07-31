@@ -20,6 +20,7 @@ const AttendancePage       = React.lazy(() => import('@/pages/AttendancePage'));
 const CalendarPage         = React.lazy(() => import('@/pages/CalendarPage'));
 const ChatPage             = React.lazy(() => import('@/pages/ChatPage'));
 const InventoryPage        = React.lazy(() => import('@/pages/InventoryPage'));
+const KimonoLoansPage      = React.lazy(() => import('@/pages/KimonoLoansPage'));
 const ReportsPage          = React.lazy(() => import('@/pages/ReportsPage'));
 const RecycleBinPage       = React.lazy(() => import('@/pages/RecycleBinPage'));
 const SettingsPage         = React.lazy(() => import('@/pages/SettingsPage'));
@@ -73,6 +74,7 @@ const App: React.FC = () => (
           {/* Admin + Instructor + Staff */}
           <Route element={<RoleGuard roles={['superuser', 'admin', 'instructor', 'staff']} />}>
             <Route path="/attendance" element={<AttendancePage />} />
+            <Route path="/kimonos" element={<KimonoLoansPage />} />
             {/* DESATIVADO em #090 — Turmas substituídas por Planos de Aula */}
             {/* <Route path="/templates"  element={<TemplatesPage />} /> */}
           </Route>

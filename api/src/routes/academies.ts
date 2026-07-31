@@ -105,8 +105,12 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
     'cep', 'address', 'address_number', 'absence_limit',
     'pix_key', 'pix_type', 'bank_name', 'bank_agency', 'bank_account',
     'current_plan', 'plan_status', 'plan_expiration_date', 'payment_warning_days',
-    'graduation_rules', 'qr_code_presenca',
+    'graduation_rules', 'qr_code_presenca', 'kimono_loan_enabled',
   ];
+
+  if (req.body.kimono_loan_enabled !== undefined) {
+    req.body.kimono_loan_enabled = req.body.kimono_loan_enabled ? 1 : 0;
+  }
 
   // Serializar graduation_rules como JSON string para o MySQL
   if (req.body.graduation_rules !== undefined) {

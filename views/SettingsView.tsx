@@ -93,6 +93,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   const { t, showNotification } = useTranslation();
   const [isEditingAcademy, setIsEditingAcademy] = React.useState(false);
   const [isEditingNotifications, setIsEditingNotifications] = React.useState(false);
+  const [isSavingKimonoLoan, setIsSavingKimonoLoan] = React.useState(false);
   const [isEditingGraduation, setIsEditingGraduation] = React.useState(false);
   const [isEditingPayment, setIsEditingPayment] = React.useState(false);
   const [isEditingQrCode, setIsEditingQrCode] = useState(false);
@@ -277,6 +278,21 @@ const SettingsView: React.FC<SettingsViewProps> = ({
       showNotification("Erro ao salvar notificações. Tente novamente.", 'error');
     } finally {
       setIsSavingAcademy(false);
+    }
+  };
+
+  const handleToggleKimonoLoan = async () => {
+    setIsSavingKimonoLoan(true);
+    try {
+      const saved = await academyService.update(academy.id, { kimonoLoanEnabled: !academy.kimonoLoanEnabled });
+      onUpdateAcademy({ ...academy, ...saved });
+      setEditAcademy({ ...academy, ...saved });
+      showNotification(saved.kimonoLoanEnabled ? 'Empréstimo de Kimono ativado!' : 'Empréstimo de Kimono desativado.');
+    } catch (e) {
+      console.error(e);
+      showNotification('Erro ao alterar configuração. Tente novamente.', 'error');
+    } finally {
+      setIsSavingKimonoLoan(false);
     }
   };
 
@@ -790,6 +806,40 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                 setIsManagingAcademyPlans(true);
               }}
             />
+          </div>
+        </section>
+      )}
+
+      {(user.role === 'admin' || user.role === 'superuser') && (
+        <section className="space-y-4">
+          <h2 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-4">Módulos</h2>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm transition-colors">
+            <div className="w-full flex items-center justify-between p-5">
+              <div className="flex items-center gap-4">
+                <div className="bg-slate-100 dark:bg-slate-800 w-10 h-10 rounded-xl flex items-center justify-center">
+                  <Award className="text-blue-500" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Empréstimo de Kimono</h4>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
+                    {academy.kimonoLoanEnabled ? 'Ativado — aparece no menu' : 'Desativado'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleToggleKimonoLoan}
+                disabled={isSavingKimonoLoan}
+                className="disabled:opacity-50 transition-transform active:scale-90"
+              >
+                {isSavingKimonoLoan ? (
+                  <Loader2 size={36} className="text-slate-400 animate-spin" />
+                ) : academy.kimonoLoanEnabled ? (
+                  <ToggleRight size={36} className="text-indigo-600" />
+                ) : (
+                  <ToggleLeft size={36} className="text-slate-400" />
+                )}
+              </button>
+            </div>
           </div>
         </section>
       )}

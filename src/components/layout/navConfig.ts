@@ -25,6 +25,8 @@ export const MANAGEMENT_NAV: NavItem[] = [
   { to: '/calendar', labelKey: 'calendar', icon: 'Calendar', roles: ['superuser', 'admin', 'instructor', 'staff', 'student'] },
   { to: '/chat', labelKey: 'chat', icon: 'MessageSquare', roles: ['superuser', 'admin', 'instructor', 'staff', 'student'] },
   { to: '/inventory', labelKey: 'inventory', icon: 'Shirt', roles: ['superuser', 'admin', 'instructor', 'staff', 'student'] },
+  // Só aparece se a academia tiver o módulo ativado (ver filtro extra em Sidebar/MobileMenu)
+  { to: '/kimonos', labelKey: 'kimonoLoans', icon: 'Shirt', roles: ['superuser', 'admin', 'instructor', 'staff'] },
   { to: '/pay', labelKey: 'pay', icon: 'CreditCard', roles: ['student', 'guardian'] },
   { to: '/profile', labelKey: 'profile', icon: 'UserCircle', roles: ['student', 'guardian'] },
   { to: '/instructor-profile', labelKey: 'myData', icon: 'UserCircle', roles: ['instructor', 'staff'] },

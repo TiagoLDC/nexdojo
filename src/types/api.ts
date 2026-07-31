@@ -233,6 +233,20 @@ export interface UpdateAcademyDTO {
   graduationRules?: import('./entities').GraduationRules | null;
   qrCodePresenca?: string;
   plans?: AcademyPlan[];
+  kimonoLoanEnabled?: boolean;
+}
+
+// ── Kimono Loan DTOs ──────────────────────────────────────────────────────
+
+export interface CreateKimonoLoanDTO {
+  personType: 'student' | 'instructor';
+  personId: string;
+}
+
+export type ReturnKimonoLoanDTO = CreateKimonoLoanDTO;
+
+export interface GetKimonoLoansParams {
+  status?: 'active' | 'all';
 }
 
 // ── Product DTOs ──────────────────────────────────────────────────────────

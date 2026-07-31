@@ -50,7 +50,8 @@ import {
   EyeOff,
   Lock,
   Loader2,
-  KeyRound
+  KeyRound,
+  Shirt
 } from 'lucide-react';
 import { authService } from '@/features/auth/services/authService';
 import { StorageService } from '../services/storage';
@@ -927,6 +928,24 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
           </div>
         </motion.header>
 
+        {/* KIMONO EMPRESTADO */}
+        {academy?.kimonoLoanEnabled && profile.hasLoanedKimono && (
+          <motion.div variants={itemVariants} className="px-2">
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-[32px] text-white shadow-xl shadow-blue-500/20 flex items-center gap-5 relative overflow-hidden">
+              <div className="bg-white/20 p-4 rounded-2xl shrink-0 relative z-10">
+                <Shirt size={28} />
+              </div>
+              <div className="relative z-10">
+                <h3 className="font-black text-lg uppercase italic tracking-tight leading-none">Kimono Emprestado</h3>
+                <p className="text-[11px] text-blue-100 font-bold uppercase tracking-wider mt-1 opacity-90">
+                  {profile.kimonoLoanDate ? `Desde ${new Date(profile.kimonoLoanDate + 'T12:00:00').toLocaleDateString('pt-BR')}` : 'Empréstimo ativo'}
+                </p>
+              </div>
+              <Shirt size={140} className="absolute -right-8 -bottom-8 text-white/10 pointer-events-none" />
+            </div>
+          </motion.div>
+        )}
+
         {/* AVISO DE MENSAGENS NO MURAL */}
         {hasNewMessages && (
           <motion.div
@@ -1581,6 +1600,24 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
               </div>
             </div>
             <Star size={160} className="absolute -right-12 -bottom-12 text-white/10 pointer-events-none" />
+          </div>
+        </motion.div>
+      )}
+
+      {/* KIMONO EMPRESTADO (INSTRUTOR) */}
+      {user.role === 'instructor' && academy?.kimonoLoanEnabled && instructorProfile?.hasLoanedKimono && (
+        <motion.div variants={itemVariants} className="px-2">
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-[32px] text-white shadow-xl shadow-blue-500/20 flex items-center gap-5 relative overflow-hidden">
+            <div className="bg-white/20 p-4 rounded-2xl shrink-0 relative z-10">
+              <Shirt size={28} />
+            </div>
+            <div className="relative z-10">
+              <h3 className="font-black text-lg uppercase italic tracking-tight leading-none">Kimono Emprestado</h3>
+              <p className="text-[11px] text-blue-100 font-bold uppercase tracking-wider mt-1 opacity-90">
+                {instructorProfile.kimonoLoanDate ? `Desde ${new Date(instructorProfile.kimonoLoanDate + 'T12:00:00').toLocaleDateString('pt-BR')}` : 'Empréstimo ativo'}
+              </p>
+            </div>
+            <Shirt size={140} className="absolute -right-8 -bottom-8 text-white/10 pointer-events-none" />
           </div>
         </motion.div>
       )}
