@@ -20,7 +20,7 @@ const PORT = process.env.PORT || 3005;
 app.set('trust proxy', 1);
 
 app.use(cors({
-  origin: ['http://localhost:3002', 'https://qas.nexdojo.com.br'],
+  origin: ['http://localhost:3002', 'https://qas.nexdojo.com.br', 'https://sistema.nexdojo.com.br'],
   credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));
