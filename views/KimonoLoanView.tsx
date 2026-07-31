@@ -148,7 +148,7 @@ const KimonoLoanView: React.FC<{ academy: Academy; user: User }> = ({ academy })
                     {loan.personType === 'student' ? 'Aluno' : 'Instrutor'}
                   </span>
                 </div>
-                {loan.personBelt && <div className="mt-1"><BeltBadge belt={loan.personBelt} stripes={0} /></div>}
+                {loan.personBelt && <div className="mt-1"><BeltBadge belt={loan.personBelt} stripes={loan.personStripes || 0} /></div>}
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">
                   Emprestado em {fmtDate(loan.borrowedAt)}
                 </p>

@@ -26,7 +26,8 @@ router.get('/', requireAuth, requireRole('superuser', 'admin', 'instructor', 'st
       `SELECT kl.*,
               CASE WHEN kl.person_type = 'student' THEN s.name ELSE i.name END AS person_name,
               CASE WHEN kl.person_type = 'student' THEN s.photo ELSE i.photo END AS person_photo,
-              CASE WHEN kl.person_type = 'student' THEN s.belt ELSE i.belt END AS person_belt
+              CASE WHEN kl.person_type = 'student' THEN s.belt ELSE i.belt END AS person_belt,
+              CASE WHEN kl.person_type = 'student' THEN s.stripes ELSE i.stripes END AS person_stripes
          FROM kimono_loans kl
          LEFT JOIN students s ON kl.person_type = 'student' AND kl.person_id = s.id
          LEFT JOIN instructors i ON kl.person_type = 'instructor' AND kl.person_id = i.id

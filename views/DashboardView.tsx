@@ -652,7 +652,8 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
           ...att,
           studentName: student?.name || 'Desconhecido',
           studentPhoto: student?.photo,
-          studentBelt: student?.belt || Belt.WHITE
+          studentBelt: student?.belt || Belt.WHITE,
+          studentStripes: student?.stripes || 0
         };
       });
   }, [attendance, students]);
@@ -2485,7 +2486,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                       <div className="min-w-0">
                         <h4 className="font-black text-slate-800 dark:text-white text-sm leading-tight uppercase italic truncate">{att.studentName}</h4>
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <BeltBadge belt={att.studentBelt} stripes={0} />
+                          <BeltBadge belt={att.studentBelt} stripes={att.studentStripes} />
                           <span className="text-[10px] font-bold text-slate-400 capitalize">
                             {new Date(att.date).toLocaleDateString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                           </span>

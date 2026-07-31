@@ -302,6 +302,7 @@ export interface KimonoLoan {
   personName?: string;
   personPhoto?: string;
   personBelt?: Belt;
+  personStripes?: number;
   borrowedAt: string;
   returnedAt?: string | null;
 }
