@@ -12,6 +12,7 @@ export const GuardianAccessSection: React.FC<GuardianAccessSectionProps> = ({ st
   const [loading, setLoading] = useState(true);
   const [linkEmail, setLinkEmail] = useState('');
   const [linking, setLinking] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
   const [invitingLink, setInvitingLink] = useState(false);
   const [inviteLink, setInviteLink] = useState('');
 
@@ -58,12 +59,16 @@ export const GuardianAccessSection: React.FC<GuardianAccessSectionProps> = ({ st
   };
 
   const handleUnlink = async (guardianUserId: string) => {
+    if (removingId) return;
+    setRemovingId(guardianUserId);
     try {
       await guardianService.unlink(studentId, guardianUserId);
       onNotify('Vínculo removido.');
       load();
     } catch (e: any) {
       onNotify(e.response?.data?.error || 'Erro ao remover vínculo.', 'error');
+    } finally {
+      setRemovingId(null);
     }
   };
 
@@ -90,10 +95,11 @@ export const GuardianAccessSection: React.FC<GuardianAccessSectionProps> = ({ st
               </div>
               <button
                 onClick={() => handleUnlink(g.user_id)}
-                className="shrink-0 text-slate-400 hover:text-red-500 transition-colors p-1.5"
+                disabled={removingId === g.user_id}
+                className="shrink-0 text-slate-400 hover:text-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors p-1.5"
                 title="Remover vínculo"
               >
-                <Trash2 size={14} />
+                {removingId === g.user_id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
               </button>
             </div>
           ))}
