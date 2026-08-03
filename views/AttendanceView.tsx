@@ -26,6 +26,7 @@ import {
 import { BeltBadge } from '../components/BeltBadge';
 import { BELT_COLORS } from '../constants';
 import { ConfirmDialog } from '@/components/ui';
+import { getTodayBrasilia } from '@/utils/date';
 
 declare const Html5Qrcode: any;
 
@@ -111,7 +112,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
   const lastScannedIdRef = useRef<string | null>(null);
   const isProcessingRef = useRef(false);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getTodayBrasilia();
   const activeDate = selectedDate || todayStr;
   const isRetroactive = activeDate !== todayStr;
 

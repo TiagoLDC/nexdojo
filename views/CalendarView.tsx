@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Academy, User, CalendarEvent } from '../types';
 import { useTranslation } from '../services/LanguageContext';
 import { calendarService } from '@/features/calendar/services/calendarService';
+import { getTodayBrasilia } from '@/utils/date';
 import {
   ChevronLeft,
   ChevronRight,
@@ -101,7 +102,7 @@ const CalendarView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
   for (let d = 1; d <= totalDays; d++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const event = events.find(e => e.date === dateStr);
-    const isToday = new Date().toISOString().split('T')[0] === dateStr;
+    const isToday = getTodayBrasilia() === dateStr;
 
     days.push(
       <div

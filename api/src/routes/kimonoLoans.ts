@@ -6,6 +6,7 @@ import { requireRole } from '../middleware/requireRole';
 import { getAcademyId } from '../utils/academyScope';
 import { validate } from '../utils/validate';
 import { withTransaction } from '../utils/withTransaction';
+import { getTodayBrasilia } from '../utils/date';
 
 const router = Router();
 
@@ -64,7 +65,7 @@ router.post('/', requireAuth, requireRole('superuser', 'admin', 'instructor', 's
     if (personRows[0].has_loaned_kimono) { res.status(409).json({ error: 'Já existe um kimono emprestado para esta pessoa' }); return; }
 
     const loanId = crypto.randomUUID();
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayBrasilia();
 
     await withTransaction(async (conn) => {
       await conn.execute(
@@ -106,7 +107,7 @@ router.post('/return', requireAuth, requireRole('superuser', 'admin', 'instructo
     );
     if (!loanRows[0]) { res.status(404).json({ error: 'Nenhum empréstimo ativo encontrado para esta pessoa' }); return; }
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayBrasilia();
 
     await withTransaction(async (conn) => {
       await conn.execute(`UPDATE kimono_loans SET returned_at = ? WHERE id = ?`, [today, loanRows[0].id]);

@@ -5,6 +5,7 @@ import { instructorService } from '@/features/instructors/services/instructorSer
 import { usersService } from '@/features/users/services/usersService';
 import { useTranslation } from '../services/LanguageContext';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
+import { getTodayBrasilia } from '@/utils/date';
 import {
   UserPlus,
   Search,
@@ -819,7 +820,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                           newBelt: editingInstructor.belt,
                           previousStripes: editingInstructor.stripes,
                           newStripes: editingInstructor.stripes,
-                          date: new Date().toISOString().split('T')[0]
+                          date: getTodayBrasilia()
                         };
                         setEditingInstructor({
                           ...editingInstructor,

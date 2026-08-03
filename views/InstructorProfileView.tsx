@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User, Instructor, Academy, Belt, StudentDocument, Staff } from '../types';
 import { instructorService } from '@/features/instructors/services/instructorService';
 import { staffService } from '@/features/staff/services/staffService';
+import { getTodayBrasilia } from '@/utils/date';
 import {
   User as UserIcon,
   Phone,
@@ -638,7 +639,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
                       newBelt: (editData as Instructor).belt,
                       previousStripes: (editData as Instructor).stripes,
                       newStripes: (editData as Instructor).stripes,
-                      date: new Date().toISOString().split('T')[0]
+                      date: getTodayBrasilia()
                     };
                     setEditData({
                       ...editData,

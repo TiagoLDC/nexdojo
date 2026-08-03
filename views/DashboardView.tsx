@@ -56,6 +56,7 @@ import {
 import { authService } from '@/features/auth/services/authService';
 import { StorageService } from '../services/storage';
 import { advancePaymentDate } from '@/utils/paymentUtils';
+import { getTodayBrasilia } from '@/utils/date';
 import { 
   PieChart, 
   Pie, 
@@ -269,7 +270,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     setSelectedPending({ user: pendingUser, details });
   };
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getTodayBrasilia();
   
   const upcomingOffDays = useMemo(() => {
     const today = new Date();
@@ -374,7 +375,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
         amount: plan?.price ?? 0,
         type: 'income',
         category: 'Mensalidade',
-        date: new Date().toISOString().split('T')[0],
+        date: getTodayBrasilia(),
         paymentMethod: 'Admin',
         status: 'paid',
         studentId: student.id,

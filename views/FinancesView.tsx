@@ -4,6 +4,7 @@ import { financeService } from '@/features/finances/services/financeService';
 import { studentService } from '@/features/students/services/studentService';
 import { useTranslation } from '../services/LanguageContext';
 import { FinanceTransaction, TransactionType, Student, Academy, User } from '../types';
+import { getTodayBrasilia, addDaysToDateString } from '@/utils/date';
 import {
   Plus,
   TrendingUp,
@@ -82,7 +83,7 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =
     amount: 0,
     description: '',
     category: 'Mensalidade',
-    date: new Date().toISOString().split('T')[0],
+    date: getTodayBrasilia(),
     paymentMethod: 'Pix',
     status: 'paid',
     studentId: undefined
@@ -143,7 +144,7 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =
         amount: formData.amount,
         description: formData.description,
         category: formData.category || 'Mensalidade',
-        date: formData.date || new Date().toISOString().split('T')[0],
+        date: formData.date || getTodayBrasilia(),
         paymentMethod: formData.paymentMethod || 'Pix',
         status: formData.status || 'paid',
         studentId: formData.studentId,
@@ -155,11 +156,11 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =
       if (created.type === 'income' && (created.category === 'Mensalidade' || created.description.toLowerCase().includes('mensalidade')) && created.studentId) {
         const student = students.find(s => s.id === created.studentId);
         if (student) {
-          const baseDate = student.nextPaymentDate ? new Date(student.nextPaymentDate + 'T12:00:00') : new Date();
-          const today = new Date();
-          const referenceValue = baseDate.getTime() > today.getTime() ? baseDate : today;
-          referenceValue.setDate(referenceValue.getDate() + 30);
-          const nextDate = referenceValue.toISOString().split('T')[0];
+          const todayStr = getTodayBrasilia();
+          const baseDateStr = student.nextPaymentDate && student.nextPaymentDate > todayStr
+            ? student.nextPaymentDate
+            : todayStr;
+          const nextDate = addDaysToDateString(baseDateStr, 30);
 
           try {
             const updatedStudent = await studentService.update(student.id, { nextPaymentDate: nextDate });
@@ -178,7 +179,7 @@ const FinancesView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =
         amount: 0,
         description: '',
         category: 'Mensalidade',
-        date: new Date().toISOString().split('T')[0],
+        date: getTodayBrasilia(),
         paymentMethod: 'Pix',
         status: 'paid',
         studentId: undefined

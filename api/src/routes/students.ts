@@ -9,6 +9,7 @@ import { validate } from '../utils/validate';
 import { withTransaction } from '../utils/withTransaction';
 import { autoLinkEntityToUser } from '../utils/linkEntityUser';
 import { isGuardianOfStudent, getGuardianStudentIds } from '../utils/guardianAccess';
+import { getTodayBrasilia } from '../utils/date';
 
 const router = Router();
 
@@ -351,7 +352,7 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
         const stripesChanged = req.body.stripes !== undefined && Number(req.body.stripes) !== Number(existing[0].stripes);
         if (beltChanged || stripesChanged) {
           const gradDate = req.body.last_graduation_date
-            ?? new Date().toISOString().split('T')[0];
+            ?? getTodayBrasilia();
           await pool.execute(
             `INSERT INTO graduation_history (id, student_id, previous_belt, new_belt, previous_stripes, new_stripes, date, instructor_id, notes)
              VALUES (?,?,?,?,?,?,?,?,?)`,

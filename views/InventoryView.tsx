@@ -6,6 +6,7 @@ import { useTranslation } from '../services/LanguageContext';
 import { Search, Package, Plus, Edit2, Trash2, X, Tag, DollarSign, Box, Camera, Image as ImageIcon, ShoppingBag, QrCode, Clipboard, CheckCircle2, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ConfirmDialog } from '@/components/ui';
+import { getTodayBrasilia } from '@/utils/date';
 
 const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
   const { t, showNotification } = useTranslation();
@@ -148,7 +149,7 @@ const InventoryView: React.FC<{ academy: Academy; user: User }> = ({ academy, us
         amount: selectedProduct.price,
         type: 'income',
         category: selectedProduct.category || 'Produto',
-        date: new Date().toISOString().split('T')[0],
+        date: getTodayBrasilia(),
         paymentMethod: paymentMethod === 'Pix' ? 'PIX' : 'Cartão',
         status: 'paid',
         studentId: user.role === 'student' ? user.id : undefined,

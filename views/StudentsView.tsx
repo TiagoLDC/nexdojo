@@ -8,6 +8,7 @@ import { usersService } from '@/features/users/services/usersService';
 import { GuardianAccessSection } from '@/components/students/GuardianAccessSection';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
 import { advancePaymentDate } from '@/utils/paymentUtils';
+import { getTodayBrasilia } from '@/utils/date';
 import { calculateAge, isReadyForGraduation, getNextRank, monthsSince, getGraduationThreshold } from '../services/graduation';
 import { useTranslation } from '../services/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -181,7 +182,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
         amount: plan?.price ?? 0,
         type: 'income',
         category: 'Mensalidade',
-        date: new Date().toISOString().split('T')[0],
+        date: getTodayBrasilia(),
         paymentMethod: 'Admin',
         status: 'paid',
         studentId: editingStudent.id,

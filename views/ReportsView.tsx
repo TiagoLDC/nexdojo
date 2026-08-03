@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { studentService } from '@/features/students/services/studentService';
 import { attendanceService } from '@/features/attendance/services/attendanceService';
+import { getTodayBrasilia, addDaysToDateString } from '@/utils/date';
 import { 
   BarChart, 
   Bar, 
@@ -77,12 +78,8 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =>
       .finally(() => setIsLoading(false));
   }, [academy?.id]);
   const [timeRange, setTimeRange] = useState('7');
-  const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 7);
-    return d.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(() => addDaysToDateString(getTodayBrasilia(), -7));
+  const [endDate, setEndDate] = useState(() => getTodayBrasilia());
 
   // Stats Reais
   const stats = useMemo(() => {
@@ -186,11 +183,8 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =>
     
     if (timeRange !== 'custom') {
       const days = parseInt(timeRange);
-      daysList = Array.from({ length: days }, (_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() - (days - 1 - i));
-        return d.toISOString().split('T')[0];
-      });
+      const todayStr = getTodayBrasilia();
+      daysList = Array.from({ length: days }, (_, i) => addDaysToDateString(todayStr, -(days - 1 - i)));
     } else {
       // Custom range
       const start = new Date(startDate);
@@ -201,11 +195,7 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =>
       // Limit to max 90 days for performance/sanity if needed, but let's allow what user selects
       const limitedDiff = Math.min(diffDays, 180); 
       
-      daysList = Array.from({ length: limitedDiff }, (_, i) => {
-        const d = new Date(start);
-        d.setDate(d.getDate() + i);
-        return d.toISOString().split('T')[0];
-      });
+      daysList = Array.from({ length: limitedDiff }, (_, i) => addDaysToDateString(startDate, i));
     }
 
     return daysList.map(date => ({
