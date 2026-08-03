@@ -51,6 +51,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -305,16 +306,42 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
                   </div>
                 )}
                 {isEditing && (
-                  <div
-                    onClick={() => photoInputRef.current?.click()}
-                    className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white"
-                  >
-                    <Camera size={32} />
-                    <span className="text-[10px] font-black uppercase tracking-widest mt-2">Alterar Foto</span>
+                  <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity gap-4">
+                    <button
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="bg-indigo-600 text-white p-4 rounded-full shadow-xl hover:scale-110 transition-transform"
+                      title="Tirar Foto Agora"
+                    >
+                      <Camera size={24} />
+                    </button>
+                    <button
+                      onClick={() => photoInputRef.current?.click()}
+                      className="bg-white/20 text-white p-3 rounded-full hover:bg-white/40 transition-all"
+                      title="Escolher da Galeria"
+                    >
+                      <Upload size={18} />
+                    </button>
                   </div>
                 )}
               </div>
+              {isEditing && (
+                <div className="grid grid-cols-2 gap-2 w-full">
+                  <button
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="text-[9px] font-black uppercase tracking-widest text-white bg-indigo-600 py-3 rounded-2xl border border-indigo-500 shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Camera size={14} /> CÂMERA
+                  </button>
+                  <button
+                    onClick={() => photoInputRef.current?.click()}
+                    className="text-[9px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 py-3 rounded-2xl border border-indigo-100 dark:border-indigo-800 hover:bg-indigo-100 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Upload size={14} /> GALERIA
+                  </button>
+                </div>
+              )}
               <input type="file" ref={photoInputRef} accept="image/*" className="hidden" onChange={handlePhotoCapture} />
+              <input type="file" ref={cameraInputRef} accept="image/*" capture="user" className="hidden" onChange={handlePhotoCapture} />
             </div>
 
             {/* Campos */}
