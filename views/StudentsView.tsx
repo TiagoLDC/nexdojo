@@ -837,7 +837,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   <div className="absolute top-0 right-0 p-4 flex gap-1.5">
                     {readyForBelt && <div className="bg-indigo-600 text-white p-1.5 rounded-full shadow-lg shadow-indigo-500/30 animate-bounce"><Trophy size={14} /></div>}
                     {readyForStripe && <div className="bg-amber-500 text-white p-1.5 rounded-full shadow-lg shadow-amber-500/30 animate-pulse"><Medal size={14} /></div>}
-                    {academy.kimonoLoanEnabled && student.hasLoanedKimono && (
+                    {academy.kimonoLoanEnabled && !!student.hasLoanedKimono && (
                       <div title="Kimono emprestado" className="bg-blue-500 text-white p-1.5 rounded-full shadow-lg shadow-blue-500/30"><Shirt size={14} /></div>
                     )}
                   </div>

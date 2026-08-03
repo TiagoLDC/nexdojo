@@ -931,7 +931,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
         </motion.header>
 
         {/* KIMONO EMPRESTADO */}
-        {academy?.kimonoLoanEnabled && profile.hasLoanedKimono && (
+        {academy?.kimonoLoanEnabled && !!profile.hasLoanedKimono && (
           <motion.div variants={itemVariants} className="px-2">
             <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-[32px] text-white shadow-xl shadow-blue-500/20 flex items-center gap-5 relative overflow-hidden">
               <div className="bg-white/20 p-4 rounded-2xl shrink-0 relative z-10">
@@ -1607,7 +1607,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       )}
 
       {/* KIMONO EMPRESTADO (INSTRUTOR) */}
-      {user.role === 'instructor' && academy?.kimonoLoanEnabled && instructorProfile?.hasLoanedKimono && (
+      {user.role === 'instructor' && academy?.kimonoLoanEnabled && !!instructorProfile?.hasLoanedKimono && (
         <motion.div variants={itemVariants} className="px-2">
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-[32px] text-white shadow-xl shadow-blue-500/20 flex items-center gap-5 relative overflow-hidden">
             <div className="bg-white/20 p-4 rounded-2xl shrink-0 relative z-10">
