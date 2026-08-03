@@ -34,3 +34,8 @@ dist-ssr
 
 # Claude Code memory
 .claude/
+
+# Dados pessoais / dumps de migracao (nao versionar - PII)
+/LEGADO GUERREIROS/
+/backups/
+api/src/scripts/migrate_guerreiros_qas_to_prd.ts
