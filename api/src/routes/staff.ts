@@ -134,6 +134,9 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
+  // String vazia não é NULL para o índice único (academy_id, email) do MySQL — normaliza.
+  if (typeof req.body.email === 'string' && req.body.email.trim() === '') req.body.email = null;
+
   const errors = validate(req.body, {
     name:   { type: 'string', maxLength: 255 },
     email:  { type: 'email' },

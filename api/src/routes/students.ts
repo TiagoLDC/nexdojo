@@ -149,6 +149,10 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'staff'), async 
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
+  // String vazia não é NULL para o índice único (academy_id, email) do MySQL:
+  // duas alunas sem e-mail colidiriam. Normaliza para null antes de validar/inserir.
+  if (typeof req.body.email === 'string' && req.body.email.trim() === '') req.body.email = null;
+
   const errors = validate(req.body, {
     name:     { required: true, type: 'string', maxLength: 255 },
     email:    { type: 'email' },
@@ -272,6 +276,9 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'staff'), async 
 router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
+
+  // String vazia não é NULL para o índice único (academy_id, email) do MySQL — normaliza.
+  if (typeof req.body.email === 'string' && req.body.email.trim() === '') req.body.email = null;
 
   const newPassword = req.body.password ? String(req.body.password) : null;
   if (newPassword && newPassword.length < 6) {
