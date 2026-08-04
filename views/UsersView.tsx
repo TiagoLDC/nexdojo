@@ -42,6 +42,7 @@ const ROLE_LABELS: Record<string, string> = {
   instructor:'Instrutor',
   staff:     'Staff',
   student:   'Aluno',
+  guardian:  'Responsável',
 };
 
 const ROLE_COLORS: Record<string, string> = {
@@ -50,6 +51,7 @@ const ROLE_COLORS: Record<string, string> = {
   instructor:'bg-amber-100  text-amber-700  dark:bg-amber-900/40  dark:text-amber-300',
   staff:     'bg-teal-100   text-teal-700   dark:bg-teal-900/40   dark:text-teal-300',
   student:   'bg-sky-100    text-sky-700    dark:bg-sky-900/40    dark:text-sky-300',
+  guardian:  'bg-rose-100   text-rose-700   dark:bg-rose-900/40   dark:text-rose-300',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -298,6 +300,7 @@ const UsersView: React.FC<{ academy: Academy; user: User }> = ({ user: currentUs
               <option value="instructor">Instrutor</option>
               <option value="staff">Staff</option>
               <option value="student">Aluno</option>
+              <option value="guardian">Responsável</option>
             </select>
           </div>
           <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 shadow-sm">
@@ -619,12 +622,13 @@ const UsersView: React.FC<{ academy: Academy; user: User }> = ({ user: currentUs
                   value={editingUser.role ?? 'admin'}
                   onChange={e => setEditingUser({ ...editingUser, role: e.target.value as any })}
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
-                  disabled={!isNew && editingUser.role === 'superuser'}
+                  disabled={!isNew && ['superuser', 'guardian'].includes(editingUser.role ?? '')}
                 >
                   <option value="admin">Admin</option>
                   <option value="instructor">Instrutor</option>
                   <option value="staff">Staff</option>
                   {!isNew && <option value="student">Aluno</option>}
+                  {!isNew && editingUser.role === 'guardian' && <option value="guardian">Responsável</option>}
                 </select>
               </div>
 
