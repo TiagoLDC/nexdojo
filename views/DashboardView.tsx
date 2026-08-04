@@ -627,11 +627,13 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   }, [instructors, currentMonthDay]);
 
   const financialSummary = useMemo(() => {
-    const income = finances.filter(f => f.type === 'income').reduce((acc, f) => acc + Number(f.amount), 0);
-    const expense = finances.filter(f => f.type === 'expense').reduce((acc, f) => acc + Number(f.amount), 0);
-    const pendingIncome = finances.filter(f => f.type === 'income' && f.status === 'pending').reduce((acc, f) => acc + Number(f.amount), 0);
+    const currentYearMonth = todayStr.slice(0, 7);
+    const currentMonthFinances = finances.filter(f => typeof f.date === 'string' && f.date.startsWith(currentYearMonth));
+    const income = currentMonthFinances.filter(f => f.type === 'income').reduce((acc, f) => acc + Number(f.amount), 0);
+    const expense = currentMonthFinances.filter(f => f.type === 'expense').reduce((acc, f) => acc + Number(f.amount), 0);
+    const pendingIncome = currentMonthFinances.filter(f => f.type === 'income' && f.status === 'pending').reduce((acc, f) => acc + Number(f.amount), 0);
     return { income, expense, balance: income - expense, pendingIncome };
-  }, [finances]);
+  }, [finances, todayStr]);
 
   const absenceAlerts = useMemo(() => {
     return students
