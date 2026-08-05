@@ -138,7 +138,6 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
   const [templates, _setTemplates] = useState<ClassTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const currentUser = user;
-  const canEditTotalClasses = currentUser?.role === 'admin' || currentUser?.role === 'instructor';
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -672,7 +671,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t.manageAccess}</p>
         </div>
         <div className="grid grid-cols-3 md:flex gap-2">
-          {(['admin', 'superuser'] as const).includes(user.role as any) && (
+          {(['admin', 'superuser', 'instructor', 'staff'] as const).includes(user.role as any) && (
           <button
             onClick={() => setIsGraduationCenterOpen(true)}
             className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-4 py-3.5 rounded-2xl font-black flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 text-xs uppercase tracking-widest border border-indigo-100 dark:border-indigo-800"
@@ -1723,21 +1722,17 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase ml-1 mb-2 flex items-center gap-1">
                         <Activity size={12} /> Total de Aulas na Faixa
+                        <span className="ml-1 text-[8px] font-black text-indigo-400 normal-case tracking-normal">(Campo Calculado)</span>
                       </label>
                       <div className="flex gap-2">
                         <input
                           type="number"
                           min="0"
-                          disabled={!canEditTotalClasses}
+                          disabled
                           value={editingStudent.totalClasses}
-                          onChange={(e) => setEditingStudent({...editingStudent, totalClasses: parseInt(e.target.value) || 0})}
-                          className={`flex-1 border rounded-xl px-4 py-3 outline-none font-bold ${
-                            canEditTotalClasses
-                              ? "bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500 text-slate-700 dark:text-slate-200"
-                              : "bg-slate-100 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700/50 text-slate-400 cursor-not-allowed"
-                          }`}
+                          className="flex-1 border rounded-xl px-4 py-3 outline-none font-bold bg-slate-100 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700/50 text-slate-400 cursor-not-allowed"
                         />
-                        {(['admin', 'superuser'] as const).includes(user.role as any) && (() => {
+                        {(['admin', 'superuser', 'instructor', 'staff'] as const).includes(user.role as any) && (() => {
                            const { readyForBelt, readyForStripe } = isReadyForGraduation(editingStudent, academy.graduationRules);
                            if (readyForBelt || readyForStripe) {
                              const { nextBelt, nextStripes } = getNextRank(editingStudent.belt, editingStudent.stripes);
@@ -1755,9 +1750,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         })()}
                       </div>
                       <p className="text-[9px] text-slate-400 mt-1 ml-1 font-medium italic">
-                        {canEditTotalClasses
-                          ? "* Este número é usado para calcular a prontidão para graduação."
-                          : "* Somente administradores e professores podem alterar este valor."}
+                        * Calculado automaticamente pela frequência do aluno; usado para calcular a prontidão para graduação.
                       </p>
                     </div>
 
