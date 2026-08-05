@@ -671,14 +671,12 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
 
   const monthlyClasses = useMemo(() => {
     if (!studentProfile) return 0;
-    const firstDayOfMonth = new Date();
-    firstDayOfMonth.setDate(1);
-    firstDayOfMonth.setHours(0, 0, 0, 0);
+    const currentYearMonth = todayStr.slice(0, 7);
     return attendance.filter(a =>
       a.studentId === studentProfile.id &&
-      new Date(a.date) >= firstDayOfMonth
+      typeof a.date === 'string' && a.date.startsWith(currentYearMonth)
     ).length;
-  }, [attendance, studentProfile]);
+  }, [attendance, studentProfile, todayStr]);
 
   const instructorProfile = useMemo(() => {
     if (user.role === 'instructor') {
