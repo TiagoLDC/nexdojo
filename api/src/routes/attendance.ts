@@ -5,6 +5,7 @@ import { requireRole } from '../middleware/requireRole';
 import { getAcademyId } from '../utils/academyScope';
 import { validate } from '../utils/validate';
 import { withTransaction } from '../utils/withTransaction';
+import { isGuardianOfStudent } from '../utils/guardianAccess';
 
 const router = Router();
 
@@ -68,7 +69,7 @@ router.post('/qr-checkin', requireAuth, async (req: Request, res: Response, next
     return;
   }
 
-  const { qr_code } = req.body;
+  const { qr_code, student_id } = req.body;
   if (!qr_code || typeof qr_code !== 'string') {
     res.status(400).json({ error: 'Código QR não informado.' });
     return;
@@ -111,16 +112,38 @@ router.post('/qr-checkin', requireAuth, async (req: Request, res: Response, next
       return;
     }
 
-    // Localiza o aluno pelo user_id
-    const [studentRows] = await pool.execute<any[]>(
-      `SELECT id, status, birth_date, plan_id, total_classes, total_hours
-       FROM students WHERE user_id = ? AND academy_id = ?`,
-      [userId, academyId]
-    );
-    const student = studentRows[0];
-    if (!student) {
-      res.status(404).json({ error: 'Perfil de aluno não encontrado. Entre em contato com a academia.' });
-      return;
+    // Localiza o aluno: por padrão, a própria conta logada (user_id). Se o front informar
+    // student_id (perfil ativo no "Alternar Perfil"), permite marcar presença de um dependente
+    // vinculado via guardianships — sem isso, o clique sempre batia a presença do responsável
+    // logado, mesmo com o dependente selecionado na tela (idempotência acusava "já registrada").
+    let student: any;
+    if (student_id && typeof student_id === 'string') {
+      const [studentRows] = await pool.execute<any[]>(
+        `SELECT id, user_id, status, birth_date, plan_id, total_classes, total_hours
+         FROM students WHERE id = ? AND academy_id = ?`,
+        [student_id, academyId]
+      );
+      student = studentRows[0];
+      if (!student) {
+        res.status(404).json({ error: 'Perfil de aluno não encontrado. Entre em contato com a academia.' });
+        return;
+      }
+      const isSelf = student.user_id === userId;
+      if (!isSelf && !(await isGuardianOfStudent(userId, student.id))) {
+        res.status(403).json({ error: 'Você não tem permissão para marcar presença deste aluno.' });
+        return;
+      }
+    } else {
+      const [studentRows] = await pool.execute<any[]>(
+        `SELECT id, user_id, status, birth_date, plan_id, total_classes, total_hours
+         FROM students WHERE user_id = ? AND academy_id = ?`,
+        [userId, academyId]
+      );
+      student = studentRows[0];
+      if (!student) {
+        res.status(404).json({ error: 'Perfil de aluno não encontrado. Entre em contato com a academia.' });
+        return;
+      }
     }
     if (student.status !== 'Active') {
       res.status(400).json({ error: 'Aluno inativo. Apenas alunos com status Ativo podem marcar presença.' });

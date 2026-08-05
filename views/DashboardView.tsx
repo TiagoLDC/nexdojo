@@ -431,7 +431,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     setIsQrCheckinLoading(true);
     stopQrCamera();
     try {
-      await attendanceService.qrCheckin(code.trim());
+      await attendanceService.qrCheckin(code.trim(), isViewingDependentProfile ? studentProfile?.id : undefined);
       setQrScanStatus('success');
       setQrScanMessage('Presença registrada com sucesso! OSS!');
       // Recarrega presenças após check-in

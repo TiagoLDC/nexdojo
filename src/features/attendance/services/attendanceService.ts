@@ -34,6 +34,6 @@ export const attendanceService = {
   deleteRecord: (id: string) =>
     api.delete<{ message: string }>(`/attendance/${id}`).then((r) => r.data),
 
-  qrCheckin: (qrCode: string) =>
-    api.post<AttendanceRecord>('/attendance/qr-checkin', { qrCode }).then((r) => r.data),
+  qrCheckin: (qrCode: string, studentId?: string) =>
+    api.post<AttendanceRecord>('/attendance/qr-checkin', { qrCode, studentId }).then((r) => r.data),
 };
