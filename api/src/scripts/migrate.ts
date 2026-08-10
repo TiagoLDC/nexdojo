@@ -6,6 +6,9 @@ dotenv.config({ path: `${__dirname}/../../.env` });
 const DDL_STATEMENTS = [
   // Limpar banco
   'SET FOREIGN_KEY_CHECKS = 0',
+  'DROP TABLE IF EXISTS academy_belt_settings',
+  'DROP TABLE IF EXISTS belt_ranks',
+  'DROP TABLE IF EXISTS sports',
   'DROP TABLE IF EXISTS guardianships',
   'DROP TABLE IF EXISTS password_reset_tokens',
   'DROP TABLE IF EXISTS system_config',
@@ -31,6 +34,54 @@ const DDL_STATEMENTS = [
   'DROP TABLE IF EXISTS academies',
   'SET FOREIGN_KEY_CHECKS = 1',
 
+  // Esportes/modalidades (cadastro global, gerenciado só pelo superuser)
+  `CREATE TABLE sports (
+    id VARCHAR(36) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    slug VARCHAR(100) NOT NULL UNIQUE,
+    active TINYINT(1) DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`,
+
+  // Template de faixas/graus por esporte (gerenciado só pelo superuser)
+  `CREATE TABLE belt_ranks (
+    id VARCHAR(36) PRIMARY KEY,
+    sport_id VARCHAR(36) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    color_key VARCHAR(50) NOT NULL,
+    order_index INT NOT NULL,
+    degree_count TINYINT NOT NULL DEFAULT 4,
+    category ENUM('kids','adult','both') NOT NULL DEFAULT 'adult',
+    min_age INT NULL,
+    max_age INT NULL,
+    FOREIGN KEY (sport_id) REFERENCES sports(id) ON DELETE CASCADE,
+    UNIQUE (sport_id, order_index)
+  )`,
+
+  // Seed do template padrão de Jiu-Jitsu (CBJJ) — mesma sequência hoje hardcoded em constants.ts/services/graduation.ts
+  'SET @sport_jiujitsu = UUID()',
+  `INSERT INTO sports (id, name, slug, active) VALUES (@sport_jiujitsu, 'Jiu-Jitsu', 'jiu-jitsu', 1)`,
+  `INSERT INTO belt_ranks (id, sport_id, name, color_key, order_index, degree_count, category, min_age) VALUES
+    (UUID(), @sport_jiujitsu, 'Branca', 'WHITE', 0, 4, 'both', NULL),
+    (UUID(), @sport_jiujitsu, 'Cinza e Branca', 'GREY_WHITE', 1, 4, 'kids', NULL),
+    (UUID(), @sport_jiujitsu, 'Cinza', 'GREY', 2, 4, 'kids', NULL),
+    (UUID(), @sport_jiujitsu, 'Cinza e Preta', 'GREY_BLACK', 3, 4, 'kids', NULL),
+    (UUID(), @sport_jiujitsu, 'Amarela e Branca', 'YELLOW_WHITE', 4, 4, 'kids', NULL),
+    (UUID(), @sport_jiujitsu, 'Amarela', 'YELLOW', 5, 4, 'kids', NULL),
+    (UUID(), @sport_jiujitsu, 'Amarela e Preta', 'YELLOW_BLACK', 6, 4, 'kids', NULL),
+    (UUID(), @sport_jiujitsu, 'Laranja e Branca', 'ORANGE_WHITE', 7, 4, 'kids', NULL),
+    (UUID(), @sport_jiujitsu, 'Laranja', 'ORANGE', 8, 4, 'kids', NULL),
+    (UUID(), @sport_jiujitsu, 'Laranja e Preta', 'ORANGE_BLACK', 9, 4, 'kids', NULL),
+    (UUID(), @sport_jiujitsu, 'Verde e Branca', 'GREEN_WHITE', 10, 4, 'kids', NULL),
+    (UUID(), @sport_jiujitsu, 'Verde', 'GREEN', 11, 4, 'kids', NULL),
+    (UUID(), @sport_jiujitsu, 'Verde e Preta', 'GREEN_BLACK', 12, 4, 'kids', NULL),
+    (UUID(), @sport_jiujitsu, 'Azul', 'BLUE', 13, 4, 'adult', 16),
+    (UUID(), @sport_jiujitsu, 'Roxa', 'PURPLE', 14, 4, 'adult', 16),
+    (UUID(), @sport_jiujitsu, 'Marrom', 'BROWN', 15, 4, 'adult', 18),
+    (UUID(), @sport_jiujitsu, 'Preta', 'BLACK', 16, 6, 'adult', 19),
+    (UUID(), @sport_jiujitsu, 'Coral', 'CORAL', 17, 0, 'adult', NULL),
+    (UUID(), @sport_jiujitsu, 'Vermelha', 'RED', 18, 0, 'adult', NULL)`,
+
   // Academias
   `CREATE TABLE academies (
     id VARCHAR(36) PRIMARY KEY,
@@ -54,8 +105,10 @@ const DDL_STATEMENTS = [
     plan_expiration_date DATE,
     payment_warning_days INT DEFAULT 5,
     graduation_rules JSON DEFAULT NULL,
+    sport_id VARCHAR(36) NULL COMMENT 'Definido só na criação da academia — imutável depois (ver PLANO_GRADUACAO.md D6)',
     qr_code_presenca VARCHAR(500) NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (sport_id) REFERENCES sports(id) ON DELETE SET NULL
   )`,
 
   // Planos da academia (plano de aula: mensalidade, idade, tolerâncias de presença)
@@ -91,6 +144,20 @@ const DDL_STATEMENTS = [
     INDEX idx_plan_day (plan_id, day_of_week)
   )`,
 
+  // Configuração de meses/aulas necessários por faixa, por academia (substitui o JSON graduation_rules)
+  `CREATE TABLE academy_belt_settings (
+    id VARCHAR(36) PRIMARY KEY,
+    academy_id VARCHAR(36) NOT NULL,
+    belt_rank_id VARCHAR(36) NOT NULL,
+    months_required INT NULL,
+    classes_required INT NULL,
+    warn_before_months INT NULL,
+    warn_before_classes INT NULL,
+    FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE,
+    FOREIGN KEY (belt_rank_id) REFERENCES belt_ranks(id) ON DELETE CASCADE,
+    UNIQUE (academy_id, belt_rank_id)
+  )`,
+
   // Usuários do sistema
   `CREATE TABLE users (
     id VARCHAR(36) PRIMARY KEY,
@@ -116,6 +183,7 @@ const DDL_STATEMENTS = [
     email VARCHAR(255),
     phone VARCHAR(20),
     belt ENUM('Branca','Cinza e Branca','Cinza','Cinza e Preta','Amarela e Branca','Amarela','Amarela e Preta','Laranja e Branca','Laranja','Laranja e Preta','Verde e Branca','Verde','Verde e Preta','Azul','Roxa','Marrom','Preta','Coral','Vermelha') DEFAULT 'Branca',
+    belt_rank_id VARCHAR(36) NULL COMMENT 'Nova referência a belt_ranks — belt (ENUM) mantido até a migração de dados (Fase 3) e limpeza (Fase 9)',
     stripes TINYINT DEFAULT 0,
     birth_date DATE,
     gender ENUM('Masculino','Feminino','Outro'),
@@ -154,6 +222,7 @@ const DDL_STATEMENTS = [
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE,
     FOREIGN KEY (plan_id) REFERENCES academy_plans(id) ON DELETE SET NULL,
+    FOREIGN KEY (belt_rank_id) REFERENCES belt_ranks(id) ON DELETE SET NULL,
     UNIQUE KEY uniq_academy_email (academy_id, email)
   )`,
 
@@ -184,13 +253,17 @@ const DDL_STATEMENTS = [
     id VARCHAR(36) PRIMARY KEY,
     student_id VARCHAR(36) NOT NULL,
     previous_belt VARCHAR(50),
+    previous_belt_rank_id VARCHAR(36) NULL COMMENT 'Snapshot textual (previous_belt) permanece autoritativo mesmo se a faixa for renomeada/removida depois',
     new_belt VARCHAR(50),
+    belt_rank_id VARCHAR(36) NULL COMMENT 'Snapshot textual (new_belt) permanece autoritativo mesmo se a faixa for renomeada/removida depois',
     previous_stripes TINYINT,
     new_stripes TINYINT,
     date DATE,
     instructor_id VARCHAR(36),
     notes TEXT,
-    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+    FOREIGN KEY (previous_belt_rank_id) REFERENCES belt_ranks(id) ON DELETE SET NULL,
+    FOREIGN KEY (belt_rank_id) REFERENCES belt_ranks(id) ON DELETE SET NULL
   )`,
 
   // Instrutores
@@ -202,6 +275,7 @@ const DDL_STATEMENTS = [
     email VARCHAR(255),
     phone VARCHAR(20),
     belt ENUM('Branca','Cinza e Branca','Cinza','Cinza e Preta','Amarela e Branca','Amarela','Amarela e Preta','Laranja e Branca','Laranja','Laranja e Preta','Verde e Branca','Verde','Verde e Preta','Azul','Roxa','Marrom','Preta','Coral','Vermelha') DEFAULT 'Branca',
+    belt_rank_id VARCHAR(36) NULL COMMENT 'Nova referência a belt_ranks — belt (ENUM) mantido até a migração de dados (Fase 3) e limpeza (Fase 9)',
     stripes TINYINT DEFAULT 0,
     birth_date DATE,
     gender ENUM('Masculino','Feminino','Outro'),
@@ -224,6 +298,7 @@ const DDL_STATEMENTS = [
     last_graduation_date DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE,
+    FOREIGN KEY (belt_rank_id) REFERENCES belt_ranks(id) ON DELETE SET NULL,
     UNIQUE KEY uniq_academy_email (academy_id, email)
   )`,
 

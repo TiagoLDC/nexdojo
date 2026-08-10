@@ -39,6 +39,40 @@ export interface GraduationRules {
   black?: Pick<GraduationGroupRules, 'stripeThreshold' | 'warnBefore'>;
 }
 
+// ── Sports & Belt Ranks (novo modelo — ver PLANO_GRADUACAO.md) ─────────────
+// Substitui gradualmente o `Belt` enum fixo e o `GraduationRules` por balde acima.
+
+export type BeltCategory = 'kids' | 'adult' | 'both';
+
+export interface Sport {
+  id: string;
+  name: string;
+  slug: string;
+  active: boolean;
+}
+
+export interface BeltRank {
+  id: string;
+  sportId: string;
+  name: string;
+  colorKey: string;
+  orderIndex: number;
+  degreeCount: number;
+  category: BeltCategory;
+  minAge?: number;
+  maxAge?: number;
+}
+
+export interface AcademyBeltSetting {
+  id: string;
+  academyId: string;
+  beltRankId: string;
+  monthsRequired?: number;
+  classesRequired?: number;
+  warnBeforeMonths?: number;
+  warnBeforeClasses?: number;
+}
+
 // ── Documents & Graduation ────────────────────────────────────────────────
 
 export interface StudentDocument {
@@ -292,6 +326,8 @@ export interface Academy {
   planExpirationDate?: string;
   paymentWarningDays?: number;
   graduationRules?: GraduationRules;
+  /** Definido só na criação da academia — imutável depois (ver PLANO_GRADUACAO.md D6). */
+  sportId?: string;
   qrCodePresenca?: string;
   plans?: AcademyPlan[];
   kimonoLoanEnabled?: boolean;
