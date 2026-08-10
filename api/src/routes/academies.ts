@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import crypto from 'crypto';
 import pool from '../db';
 import { requireAuth } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
@@ -182,6 +183,101 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
     );
     academy.plans = mapPlans(planRows as any[]);
     res.json(academy);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/academies/:id/belt-settings — faixas do esporte da academia + config atual de meses/aulas
+router.get('/:id/belt-settings', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { role, academyId: tokenAcademyId } = req.user!;
+
+  if (role !== 'superuser' && tokenAcademyId !== req.params.id) {
+    res.status(403).json({ error: 'Sem permissão para acessar esta academia' });
+    return;
+  }
+
+  try {
+    const [academyRows] = await pool.execute<any[]>('SELECT sport_id FROM academies WHERE id = ?', [req.params.id]);
+    if (!academyRows[0]) { res.status(404).json({ error: 'Academia não encontrada' }); return; }
+
+    const sportId = academyRows[0].sport_id;
+    if (!sportId) {
+      // Academia ainda sem esporte definido (pendente de migração de dados) — sem faixas para configurar.
+      res.json({ sport: null, belt_ranks: [] });
+      return;
+    }
+
+    const [sportRows] = await pool.execute<any[]>('SELECT id, name, slug FROM sports WHERE id = ?', [sportId]);
+    const [rankRows] = await pool.execute<any[]>(
+      `SELECT br.*, abs.months_required, abs.classes_required, abs.warn_before_months, abs.warn_before_classes
+       FROM belt_ranks br
+       LEFT JOIN academy_belt_settings abs ON abs.belt_rank_id = br.id AND abs.academy_id = ?
+       WHERE br.sport_id = ?
+       ORDER BY br.order_index ASC`,
+      [req.params.id, sportId]
+    );
+
+    res.json({ sport: sportRows[0] ?? null, belt_ranks: rankRows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PUT /api/academies/:id/belt-settings — define meses/aulas necessários por faixa
+router.put('/:id/belt-settings', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { role, academyId: tokenAcademyId } = req.user!;
+
+  if (role !== 'superuser' && tokenAcademyId !== req.params.id) {
+    res.status(403).json({ error: 'Sem permissão para editar esta academia' });
+    return;
+  }
+
+  const settings = req.body.settings;
+  if (!Array.isArray(settings)) { res.status(400).json({ error: 'settings deve ser uma lista' }); return; }
+
+  try {
+    const [academyRows] = await pool.execute<any[]>('SELECT sport_id FROM academies WHERE id = ?', [req.params.id]);
+    if (!academyRows[0]) { res.status(404).json({ error: 'Academia não encontrada' }); return; }
+
+    const sportId = academyRows[0].sport_id;
+    if (!sportId) { res.status(409).json({ error: 'Academia ainda sem esporte definido' }); return; }
+
+    for (const item of settings) {
+      const [rankCheck] = await pool.execute<any[]>(
+        'SELECT id FROM belt_ranks WHERE id = ? AND sport_id = ?',
+        [item.belt_rank_id, sportId]
+      );
+      if (!rankCheck[0]) { res.status(400).json({ error: `Faixa inválida para o esporte desta academia: ${item.belt_rank_id}` }); return; }
+    }
+
+    for (const item of settings) {
+      await pool.execute(
+        `INSERT INTO academy_belt_settings
+           (id, academy_id, belt_rank_id, months_required, classes_required, warn_before_months, warn_before_classes)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           months_required = VALUES(months_required),
+           classes_required = VALUES(classes_required),
+           warn_before_months = VALUES(warn_before_months),
+           warn_before_classes = VALUES(warn_before_classes)`,
+        [
+          crypto.randomUUID(), req.params.id, item.belt_rank_id,
+          item.months_required ?? null, item.classes_required ?? null,
+          item.warn_before_months ?? null, item.warn_before_classes ?? null,
+        ]
+      );
+    }
+
+    const [rankRows] = await pool.execute<any[]>(
+      `SELECT br.*, abs.months_required, abs.classes_required, abs.warn_before_months, abs.warn_before_classes
+       FROM belt_ranks br
+       LEFT JOIN academy_belt_settings abs ON abs.belt_rank_id = br.id AND abs.academy_id = ?
+       WHERE br.sport_id = ?
+       ORDER BY br.order_index ASC`,
+      [req.params.id, sportId]
+    );
+    res.json({ belt_ranks: rankRows });
   } catch (err) {
     next(err);
   }

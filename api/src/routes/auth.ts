@@ -158,6 +158,17 @@ router.post('/register/academy', async (req: Request, res: Response, next: NextF
     const userId = 'usr_' + Math.random().toString(36).substr(2, 9);
     const passwordHash = await bcrypt.hash(String(password), 10);
 
+    // sport_id é definido só aqui, na criação — imutável depois (PLANO_GRADUACAO.md D6).
+    // Por ora só existe o esporte Jiu-Jitsu; quando houver mais de um esporte ativo,
+    // o formulário de cadastro precisa passar sport_id explicitamente no body.
+    let sportId: string | null = req.body.sport_id ?? null;
+    if (!sportId) {
+      const [sportRows] = await pool.execute<any[]>(
+        `SELECT id FROM sports WHERE active = 1 ORDER BY created_at ASC LIMIT 1`
+      );
+      sportId = (sportRows as any[])[0]?.id ?? null;
+    }
+
     const baseAlias = String(name)
       .normalize('NFD').replace(/[̀-ͯ]/g, '')
       .toLowerCase()
@@ -173,8 +184,8 @@ router.post('/register/academy', async (req: Request, res: Response, next: NextF
     }
 
     await pool.execute(
-      `INSERT INTO academies (id, name, alias, owner_name, email, logo, cep, address, address_number, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [academyId, name, alias, ownerName, String(email).toLowerCase().trim(), logo || null, cep || null, address || null, addressNumber || null, phone || null]
+      `INSERT INTO academies (id, name, alias, owner_name, email, logo, cep, address, address_number, phone, sport_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [academyId, name, alias, ownerName, String(email).toLowerCase().trim(), logo || null, cep || null, address || null, addressNumber || null, phone || null, sportId]
     );
     await pool.execute(
       `INSERT INTO users (id, academy_id, role, name, email, password_hash, status) VALUES (?, ?, 'admin', ?, ?, ?, 'Active')`,

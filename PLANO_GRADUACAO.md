@@ -111,12 +111,9 @@ Aplica-se uniformemente a cada "passo" dentro daquela faixa (cada troca de grau 
 - **`GET/POST/PUT /api/sports`** — CRUD de esportes, restrito a `superuser`.
 - **`GET/POST/PUT/DELETE /api/sports/:id/belt-ranks`** — CRUD do template de faixas/graus (nome, cor, ordem, graus, categoria, idade), restrito a `superuser`. `DELETE` bloqueado se a faixa estiver em uso (`academy_belt_settings` ou `students/instructors.belt_rank_id` referenciando).
 - **`GET/PUT /api/academies/:id/belt-settings`** — lista as faixas do esporte da academia + configuração atual (`months_required`, `classes_required`, `warn_before_*`); `PUT` aceita array de `{ belt_rank_id, months_required, classes_required, warn_before_months, warn_before_classes }`. Restrito a `admin` da própria academia (+ `superuser`).
-- **`POST /api/academies`** — passa a exigir `sport_id` no cadastro (restrito a `superuser`, que é quem cria academias).
+- **`POST /api/auth/register/academy`** — ⚠️ correção em relação à primeira versão deste plano: **não existe rota `POST /academies` nem cadastro de academia pelo super**. Toda academia é criada pelo próprio usuário via **auto-cadastro público** (`POST /api/auth/register/academy`, consumido por `views/LoginView.tsx`). É esse o único lugar em todo o sistema que grava `sport_id` — hoje escolhe automaticamente o único esporte ativo (Jiu-Jitsu) se o body não especificar um, e aceita um `sport_id` explícito no body para o dia em que houver mais de um esporte e o formulário de cadastro ganhar um seletor.
 - **`PUT /api/academies/:id`** — `sport_id` **não entra** no whitelist `ALLOWED`; é imutável após a criação, sem exceção (nenhuma rota de edição aceita esse campo).
-- **`students.ts` / `instructors.ts`**:
-  - Trocar validação de `belt` (enum fixo `BELT_VALUES`) por `belt_rank_id` (deve existir e pertencer ao `sport_id` da academia do aluno).
-  - `POST /students/:id/graduate`: `new_stripes` valida contra `belt_ranks.degree_count` da faixa em vez do `0-4` fixo.
-  - `GET /students?belt=` → `?beltRankId=`.
+- **`students.ts` / `instructors.ts`**: ⚠️ **decisão de sequenciamento tomada na Fase 2** — a troca de validação de `belt` (enum) para `belt_rank_id` **foi deliberadamente adiada para a Fase 3**, junto com o backfill de dados. Motivo: essas colunas (`students.belt_rank_id`, `instructors.belt_rank_id`) ainda estão `NULL` em todos os registros existentes (backfill é Fase 3); trocar a validação/o campo primário agora quebraria o app em produção no QAS *antes* de os dados existirem. Mantém-se o "aditivo primeiro" do plano: `belt` (ENUM) continua sendo o campo válido/funcional em `students.ts`/`instructors.ts`/`/graduate`/`GET ?belt=` até a Fase 3 rodar o backfill e então trocar essas rotas atomicamente na mesma fase.
 - **Elegibilidade de graduação** (usada pela Central de Graduação): nova função que, para o `belt_rank_id` atual do aluno, busca a linha em `academy_belt_settings` e aplica OR: elegível se (`classes_required` preenchido E `classesSinceGraduation >= classes_required`) OU (`months_required` preenchido E `monthsSince(lastGraduationDate) >= months_required`). "Prestes a graduar" usa os `warn_before_*` da mesma linha, mesma lógica OR com a métrica mais próxima do limite.
 
 ---
@@ -148,8 +145,8 @@ Aplica-se uniformemente a cada "passo" dentro daquela faixa (cada troca de grau 
 
 - [x] **Fase 0 — Decisões** ✅ concluída (D1–D6 acima)
 - [x] **Fase 1 — Schema do banco** ✅ concluída (07/08/2026) — código pronto e `migrate_belt_ranks_schema.ts` executado com sucesso no QAS
-- [ ] **Fase 2 — Backend**: rotas `/sports` e `/sports/:id/belt-ranks` (CRUD, superuser); rotas `/academies/:id/belt-settings`; ajustar `students.ts`/`instructors.ts` (validação de `belt_rank_id`, cap de graus, `/graduate`, filtro `?beltRankId=`); `sport_id` no whitelist de `academies.ts` com bloqueio pós-primeiro-aluno
-- [ ] **Fase 3 — Migração de dados**: script one-off (idempotente), rodar em QAS primeiro, validar contagens antes de considerar pronto para PRD
+- [x] **Fase 2 — Backend** ✅ concluída (10/08/2026) — rotas novas de `/sports` e `/academies/:id/belt-settings` + `sport_id` na criação de academia. **Cutover de `students.ts`/`instructors.ts`/`/graduate` de `belt` para `belt_rank_id` foi movido para a Fase 3** (ver nota acima) — sem mudança de comportamento em rotas já existentes nesta fase.
+- [ ] **Fase 3 — Migração de dados + cutover das rotas de aluno/instrutor**: script one-off de backfill (idempotente) + troca de `students.ts`/`instructors.ts`/`/graduate`/filtros de `belt` para `belt_rank_id` na mesma fase; rodar em QAS primeiro, validar contagens antes de considerar pronto para PRD
 - [ ] **Fase 4 — Frontend infra**: hook/serviço único de faixas; refatorar `BeltBadge`; remover os 5 arrays duplicados
 - [ ] **Fase 5 — Frontend**: tela "Esportes" (superuser) — CRUD do template
 - [ ] **Fase 6 — Frontend**: `SettingsView` — nova seção "Faixas e Graduação" por academia
@@ -168,6 +165,15 @@ Aplica-se uniformemente a cada "passo" dentro daquela faixa (cada troca de grau 
 - **`src/types/entities.ts`**: novos tipos `Sport`, `BeltRank`, `AcademyBeltSetting`, `BeltCategory` (seção "Sports & Belt Ranks"); campo `sportId?: string` adicionado a `Academy`.
 - **Verificação**: `npx tsc --noEmit` limpo no backend (`api/`); no frontend, os erros existentes são todos pré-existentes (confirmado via `git stash` + `tsc --noEmit` antes desta mudança) — nenhum erro novo introduzido.
 - **Execução confirmada em QAS (07/08/2026)**: `migrate_belt_ranks_schema.ts` rodado contra o banco `qasnexdojo_qas` (162.240.167.149) — único MySQL disponível para este projeto, já que o `api/.env` local aponta direto para o QAS (não há MySQL local separado). Saída: 3 tabelas criadas, 5 colunas novas adicionadas, 5 FKs nomeadas criadas, esporte "Jiu-Jitsu" e as 19 faixas semeadas. Verificado por query direta: `sports` com 1 linha, `belt_ranks` com 19 linhas na ordem/categoria/degree_count esperados (script de verificação temporário, removido após a checagem). Nenhuma tabela/coluna/linha pré-existente foi alterada.
+
+### Detalhes do que foi feito na Fase 2 (10/08/2026)
+
+- **`api/src/routes/sports.ts`** (novo): router inteiro protegido por `requireAuth, requireRole('superuser')`. CRUD de `sports` (`GET/POST/PUT /`) e de `belt_ranks` (`GET/POST/PUT/DELETE /:id/belt-ranks[/:rankId]`), com slug único auto-gerado, validação de `order_index` duplicado dentro do mesmo esporte, e bloqueio de `DELETE` de faixa em uso (`students`, `instructors` ou `academy_belt_settings` referenciando). Registrado em `api/src/routes/index.ts` como `/api/sports`.
+- **`api/src/routes/academies.ts`**: novas rotas `GET/PUT /:id/belt-settings` (admin da própria academia ou superuser). `GET` faz `LEFT JOIN belt_ranks` + `academy_belt_settings` pelo `sport_id` da academia, ordenado por `order_index`; se a academia ainda não tem `sport_id` (caso de todas as academias existentes agora, antes do backfill da Fase 3), retorna `{ sport: null, belt_ranks: [] }` em vez de erro. `PUT` recebe `{ settings: [...] }` e faz upsert (`INSERT ... ON DUPLICATE KEY UPDATE`) validando que cada `belt_rank_id` pertence ao esporte da academia.
+- **`api/src/routes/auth.ts`** (`POST /register/academy`): agora grava `sport_id` na criação — usa o valor do body se enviado, senão busca automaticamente o único esporte `active=1` mais antigo (hoje só existe Jiu-Jitsu). Único ponto de escrita de `sport_id` em todo o sistema, conforme D6.
+- **Correção ao plano original**: a Fase 2 revelou que **não existe rota de criação de academia pelo superuser** — toda academia nasce por auto-cadastro público (`register/academy`, sem `superuser` envolvido). A seção "Mudanças de API" acima foi corrigida para refletir isso.
+- **Decisão de sequenciamento**: o cutover de `students.ts`/`instructors.ts`/`/graduate`/filtro `?belt=` de `belt` (ENUM) para `belt_rank_id` foi **adiado para a Fase 3** — ver nota na seção "Mudanças de API" acima. Nenhuma rota existente teve comportamento alterado nesta fase.
+- **Verificação**: `npx tsc --noEmit` limpo no backend. Rotas não testadas via HTTP (servidor não foi iniciado nesta sessão, conforme regra do projeto de não subir servidor sem pedido explícito) — validação ficou restrita à revisão de código e checagem de tipos.
 
 ### Nota de risco identificada durante a implementação
 

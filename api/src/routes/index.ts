@@ -16,6 +16,7 @@ import academiesRouter from './academies';
 import recycleBinRouter from './recycleBin';
 import systemConfigRouter from './systemConfig';
 import kimonoLoansRouter from './kimonoLoans';
+import sportsRouter from './sports';
 
 const router = Router();
 
@@ -40,5 +41,6 @@ router.use('/academies', academiesRouter);
 router.use('/recycle-bin', recycleBinRouter);
 router.use('/system-config', systemConfigRouter);
 router.use('/kimono-loans', kimonoLoansRouter);
+router.use('/sports', sportsRouter);
 
 export default router;
