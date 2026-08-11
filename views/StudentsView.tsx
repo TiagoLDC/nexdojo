@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { Student, Belt, StudentDocument, ClassTemplate, Academy, User } from '../types';
 import { studentService } from '@/features/students/services/studentService';
 import { financeService } from '@/features/finances/services/financeService';
@@ -9,8 +9,10 @@ import { GuardianAccessSection } from '@/components/students/GuardianAccessSecti
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
 import { advancePaymentDate } from '@/utils/paymentUtils';
 import { getTodayBrasilia } from '@/utils/date';
-import { calculateAge, isReadyForGraduation, getNextRank, monthsSince, getGraduationThreshold, BELT_LIST } from '../services/graduation';
+import { calculateAge, getNextRank, BELT_LIST, isReadyForGraduationByBeltRank, getGraduationProgressByBeltRank, isCloseToGraduationByBeltRank } from '../services/graduation';
 import { useTranslation } from '../services/LanguageContext';
+import { beltRankService, AcademyBeltRank } from '@/features/settings/services/beltRankService';
+import type { Sport } from '@/types';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Plus,
@@ -60,7 +62,8 @@ import {
   CreditCard,
   CheckCircle2,
   Shirt,
-  RotateCcw
+  RotateCcw,
+  Clock
 } from 'lucide-react';
 import { BeltBadge } from '../components/BeltBadge';
 import { BELT_COLORS } from '../constants';
@@ -146,6 +149,11 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
   const [isGraduationCenterOpen, setIsGraduationCenterOpen] = useState(false);
   const [isPromoting, setIsPromoting] = useState(false);
+
+  // Faixas e Graduação por academia (substitui os baldes fixos — ver PLANO_GRADUACAO.md Fase 7)
+  const [beltRanksConfig, setBeltRanksConfig] = useState<AcademyBeltRank[]>([]);
+  const [beltSettingsSport, setBeltSettingsSport] = useState<Sport | null>(null);
+  const getBeltConfig = (student: Student) => beltRanksConfig.find(b => b.name === student.belt);
 
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [beltFilter, setBeltFilter] = useState<string>('All');
@@ -278,6 +286,16 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
       setIsGraduationCenterOpen(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (!academy?.id) return;
+    beltRankService.getAcademyBeltSettings(academy.id)
+      .then(res => {
+        setBeltSettingsSport(res.sport);
+        setBeltRanksConfig(res.beltRanks);
+      })
+      .catch(err => console.error('Erro ao carregar faixas e graduação:', err));
+  }, [academy?.id]);
 
   const exportStudentsToCSV = () => {
     if (students.length === 0) return;
@@ -634,7 +652,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
     let matchesReadiness = true;
     if (readinessFilter !== 'All') {
-      const { readyForBelt, readyForStripe } = isReadyForGraduation(s, academy.graduationRules);
+      const { readyForBelt, readyForStripe } = isReadyForGraduationByBeltRank(s, getBeltConfig(s));
       if (readinessFilter === 'Stripe') matchesReadiness = readyForStripe;
       if (readinessFilter === 'Belt') matchesReadiness = readyForBelt;
       if (readinessFilter === 'Any') matchesReadiness = readyForStripe || readyForBelt;
@@ -816,7 +834,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
           ) : filtered.length > 0 ? (
             filtered.map(student => {
               const contactPhone = student.phone || student.guardianPhone;
-              const { readyForBelt, readyForStripe } = isReadyForGraduation(student, academy.graduationRules);
+              const { readyForBelt, readyForStripe } = isReadyForGraduationByBeltRank(student, getBeltConfig(student));
               const effectiveLimit = getEffectiveAbsenceLimit(student);
 
               return (
@@ -1005,7 +1023,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                           <div className="flex items-center gap-2">
                             <div className="font-bold text-slate-800 dark:text-slate-100">{student.name}</div>
                             {(() => {
-                              const { readyForBelt, readyForStripe } = isReadyForGraduation(student, academy.graduationRules);
+                              const { readyForBelt, readyForStripe } = isReadyForGraduationByBeltRank(student, getBeltConfig(student));
                               const effectiveLimit = getEffectiveAbsenceLimit(student);
                               const isAbsentee = student.absentCount >= effectiveLimit;
 
@@ -1726,7 +1744,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                           className="flex-1 border rounded-xl px-4 py-3 outline-none font-bold bg-slate-100 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700/50 text-slate-400 cursor-not-allowed"
                         />
                         {(['admin', 'superuser', 'instructor', 'staff'] as const).includes(user.role as any) && (() => {
-                           const { readyForBelt, readyForStripe } = isReadyForGraduation(editingStudent, academy.graduationRules);
+                           const { readyForBelt, readyForStripe } = isReadyForGraduationByBeltRank(editingStudent, getBeltConfig(editingStudent));
                            if (readyForBelt || readyForStripe) {
                              const { nextBelt, nextStripes } = getNextRank(editingStudent.belt, editingStudent.stripes);
                              return (
@@ -1967,13 +1985,13 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   <div className="bg-white/5 border border-white/10 rounded-[32px] p-6 text-center">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Prontos p/ Grau</p>
                     <p className="text-3xl font-black text-amber-500 leading-none">
-                      {students.filter(s => isReadyForGraduation(s, academy.graduationRules).readyForStripe).length}
+                      {students.filter(s => isReadyForGraduationByBeltRank(s, getBeltConfig(s)).readyForStripe).length}
                     </p>
                   </div>
                   <div className="bg-white/5 border border-white/10 rounded-[32px] p-6 text-center">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Prontos p/ Faixa</p>
                     <p className="text-3xl font-black text-indigo-500 leading-none">
-                      {students.filter(s => isReadyForGraduation(s, academy.graduationRules).readyForBelt).length}
+                      {students.filter(s => isReadyForGraduationByBeltRank(s, getBeltConfig(s)).readyForBelt).length}
                     </p>
                   </div>
                   <div className="bg-white/5 border border-white/10 rounded-[32px] p-6 text-center">
@@ -1998,42 +2016,25 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                 </div>
 
                 {/* CONFIGURAÇÃO ATIVA */}
-                {academy.graduationRules ? (
-                  <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-4 flex flex-wrap gap-6">
+                {beltSettingsSport ? (
+                  <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-4 flex flex-wrap items-center gap-6">
                     <div>
-                      <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Critério</p>
+                      <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Esporte</p>
+                      <p className="text-sm font-black text-white">{beltSettingsSport.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Faixas Configuradas</p>
                       <p className="text-sm font-black text-white">
-                        {academy.graduationRules.mode === 'months' ? 'Meses' : academy.graduationRules.mode === 'hours' ? 'Horas' : 'Treinos'}
+                        {beltRanksConfig.filter(b => b.monthsRequired != null || b.classesRequired != null).length} de {beltRanksConfig.length}
                       </p>
                     </div>
-                    {academy.graduationRules.kids && (
-                      <div>
-                        <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Infantil</p>
-                        <p className="text-sm font-black text-white">{academy.graduationRules.kids.stripeThreshold}</p>
-                      </div>
-                    )}
-                    {academy.graduationRules.white && (
-                      <div>
-                        <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Branca</p>
-                        <p className="text-sm font-black text-white">{academy.graduationRules.white.stripeThreshold}</p>
-                      </div>
-                    )}
-                    {academy.graduationRules.intermediate && (
-                      <div>
-                        <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Intermediário</p>
-                        <p className="text-sm font-black text-white">{academy.graduationRules.intermediate.stripeThreshold}</p>
-                      </div>
-                    )}
-                    {academy.graduationRules.black && (
-                      <div>
-                        <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Preta</p>
-                        <p className="text-sm font-black text-white">{academy.graduationRules.black.stripeThreshold}</p>
-                      </div>
-                    )}
+                    <Link to="/settings" className="text-[9px] font-black text-indigo-300 hover:text-white uppercase tracking-widest underline underline-offset-2">
+                      Ajustar em Configurações →
+                    </Link>
                   </div>
                 ) : (
                   <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-amber-400 text-xs font-bold">
-                    Sem critérios configurados — usando padrões: Treinos (Infantil: 25 | Branca: 20 | Intermediário: 40 | Preta: 300)
+                    Esporte ainda não definido para esta academia.
                   </div>
                 )}
 
@@ -2050,7 +2051,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       <button
                         onClick={() => {
                           const ready = students.filter(s => {
-                            const { readyForBelt, readyForStripe } = isReadyForGraduation(s, academy.graduationRules);
+                            const { readyForBelt, readyForStripe } = isReadyForGraduationByBeltRank(s, getBeltConfig(s));
                             return readyForBelt || readyForStripe;
                           });
                           const names = ready.map(s => s.name).join('\n');
@@ -2063,7 +2064,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       </button>
                       <button
                         onClick={() => {
-                          const ready = students.filter(s => isReadyForGraduation(s, academy.graduationRules).readyForBelt);
+                          const ready = students.filter(s => isReadyForGraduationByBeltRank(s, getBeltConfig(s)).readyForBelt);
                           const names = ready.map(s => s.name).join('\n');
                           navigator.clipboard.writeText(names);
                           showNotification(`${ready.length} nomes de Faixa copiados!`);
@@ -2074,7 +2075,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       </button>
                       <button
                         onClick={() => {
-                          const ready = students.filter(s => isReadyForGraduation(s, academy.graduationRules).readyForStripe);
+                          const ready = students.filter(s => isReadyForGraduationByBeltRank(s, getBeltConfig(s)).readyForStripe);
                           const names = ready.map(s => s.name).join('\n');
                           navigator.clipboard.writeText(names);
                           showNotification(`${ready.length} nomes de Graus copiados!`);
@@ -2088,24 +2089,19 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {(() => {
-                      const gradMode = academy.graduationRules?.mode ?? 'classes';
-                      const getStudentMetric = (s: any): number => {
-                        if (gradMode === 'months') return monthsSince(s.lastGraduationDate);
-                        if (gradMode === 'hours') return s.hoursSinceGraduation ?? 0;
-                        return s.classesSinceGraduation ?? 0;
+                      const getProgressRatio = (s: Student) => {
+                        const p = getGraduationProgressByBeltRank(s, getBeltConfig(s));
+                        return p ? p.current / p.target : 0;
                       };
-                      const metricLabel = gradMode === 'months' ? 'Meses desde última graduação' : gradMode === 'hours' ? 'Horas nesta faixa' : 'Treinos nesta faixa';
-                      const metricUnit = gradMode === 'months' ? 'meses' : gradMode === 'hours' ? 'h' : 'aulas';
                       return students
                         .filter(s => {
-                          const { readyForBelt, readyForStripe } = isReadyForGraduation(s, academy.graduationRules);
+                          const { readyForBelt, readyForStripe } = isReadyForGraduationByBeltRank(s, getBeltConfig(s));
                           return readyForBelt || readyForStripe;
                         })
-                        .sort((a, b) => getStudentMetric(b) - getStudentMetric(a))
+                        .sort((a, b) => getProgressRatio(b) - getProgressRatio(a))
                         .map(student => {
                           const { nextBelt, nextStripes } = getNextRank(student.belt, student.stripes);
-                          const metric = getStudentMetric(student);
-                          const threshold = getGraduationThreshold(student, academy.graduationRules);
+                          const progress = getGraduationProgressByBeltRank(student, getBeltConfig(student));
 
                         return (
                           <motion.div
@@ -2149,8 +2145,10 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                               </div>
                               <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
                                 <div className="shrink-0">
-                                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">{metricLabel}</p>
-                                  <p className="text-sm font-black text-white">{metric} / {threshold} {metricUnit}</p>
+                                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">
+                                    Progresso ({progress?.unit === 'meses' ? 'meses desde a última graduação' : 'aulas nesta faixa'})
+                                  </p>
+                                  <p className="text-sm font-black text-white">{progress ? `${progress.current} / ${progress.target} ${progress.unit}` : '—'}</p>
                                 </div>
                                 <button
                                   onClick={() => handlePromoteStudent(student, nextBelt, nextStripes)}
@@ -2167,7 +2165,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     })()}
 
                     {students.filter(s => {
-                      const { readyForBelt, readyForStripe } = isReadyForGraduation(s, academy.graduationRules);
+                      const { readyForBelt, readyForStripe } = isReadyForGraduationByBeltRank(s, getBeltConfig(s));
                       return readyForBelt || readyForStripe;
                     }).length === 0 && (
                       <div className="col-span-full py-20 text-center text-slate-500">
@@ -2180,6 +2178,35 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     )}
                   </div>
                 </div>
+
+                {/* QUASE LÁ (aviso antecipado) */}
+                {(() => {
+                  const close = students.filter(s => isCloseToGraduationByBeltRank(s, getBeltConfig(s)));
+                  if (!close.length) return null;
+                  return (
+                    <div>
+                      <h3 className="text-sm font-black text-white uppercase italic tracking-widest mb-4 flex items-center gap-2">
+                        <Clock size={16} className="text-amber-400" /> Quase Lá
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        {close.map(student => {
+                          const progress = getGraduationProgressByBeltRank(student, getBeltConfig(student));
+                          return (
+                            <div key={student.id} className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-3">
+                              <BeltBadge belt={student.belt} stripes={student.stripes} showText={false} />
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-white truncate">{student.name}</p>
+                                {progress && (
+                                  <p className="text-[10px] font-black text-amber-400">{progress.current} / {progress.target} {progress.unit}</p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* HISTÓRICO RECENTE */}
                 <div className="pb-20">

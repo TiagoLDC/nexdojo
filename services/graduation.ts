@@ -138,6 +138,62 @@ const getWarnBefore = (student: Student, rules?: GraduationRules): number => {
   return 0;
 };
 
+// ── Elegibilidade por faixa individual (academy_belt_settings) ────────────
+// Substitui, na Central de Graduação, os baldes fixos (kids/white/intermediate/black)
+// acima por configuração de meses e/ou aulas por faixa — o que ocorrer primeiro.
+// Ver PLANO_GRADUACAO.md Fase 7. As funções acima (baldes) continuam em uso em
+// DashboardView/ReportsView/StudentProfileView até a migração da Fase 8.
+
+export interface BeltRankConfig {
+  degreeCount: number;
+  monthsRequired?: number | null;
+  classesRequired?: number | null;
+  warnBeforeMonths?: number | null;
+  warnBeforeClasses?: number | null;
+}
+
+export const isReadyForGraduationByBeltRank = (student: Student, config?: BeltRankConfig) => {
+  if (!config) return { readyForBelt: false, readyForStripe: false };
+  const classesReady = config.classesRequired != null && (student.classesSinceGraduation ?? 0) >= config.classesRequired;
+  const monthsReady = config.monthsRequired != null && monthsSince(student.lastGraduationDate) >= config.monthsRequired;
+  const ready = classesReady || monthsReady;
+  return {
+    readyForBelt: ready && student.stripes >= config.degreeCount,
+    readyForStripe: ready && student.stripes < config.degreeCount,
+  };
+};
+
+// Progresso a exibir: quando meses E aulas estão configurados, mostra o que estiver
+// mais perto de bater (maior proporção concluída) — é o que vai disparar primeiro.
+export const getGraduationProgressByBeltRank = (
+  student: Student,
+  config?: BeltRankConfig,
+): { current: number; target: number; unit: 'aulas' | 'meses' } | null => {
+  if (!config) return null;
+  const classes = config.classesRequired != null
+    ? { current: student.classesSinceGraduation ?? 0, target: config.classesRequired, unit: 'aulas' as const }
+    : null;
+  const months = config.monthsRequired != null
+    ? { current: monthsSince(student.lastGraduationDate), target: config.monthsRequired, unit: 'meses' as const }
+    : null;
+  if (classes && months) {
+    return (classes.current / classes.target) >= (months.current / months.target) ? classes : months;
+  }
+  return classes ?? months ?? null;
+};
+
+// "Quase lá": dentro da margem de aviso antecipado configurada, mas ainda não elegível.
+export const isCloseToGraduationByBeltRank = (student: Student, config?: BeltRankConfig): boolean => {
+  if (!config) return false;
+  const { readyForBelt, readyForStripe } = isReadyForGraduationByBeltRank(student, config);
+  if (readyForBelt || readyForStripe) return false;
+  const classesRemaining = config.classesRequired != null ? config.classesRequired - (student.classesSinceGraduation ?? 0) : null;
+  const monthsRemaining = config.monthsRequired != null ? config.monthsRequired - monthsSince(student.lastGraduationDate) : null;
+  const classesClose = classesRemaining != null && config.warnBeforeClasses != null && classesRemaining > 0 && classesRemaining <= config.warnBeforeClasses;
+  const monthsClose = monthsRemaining != null && config.warnBeforeMonths != null && monthsRemaining > 0 && monthsRemaining <= config.warnBeforeMonths;
+  return classesClose || monthsClose;
+};
+
 export const getGraduationWarning = (
   student: Student,
   rules?: GraduationRules,
