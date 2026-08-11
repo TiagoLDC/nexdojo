@@ -34,7 +34,7 @@ import {
   Clipboard
 } from 'lucide-react';
 import { Belt, Academy, User, Student } from '../types';
-import { isReadyForGraduation, calculateAge } from '../services/graduation';
+import { isReadyForGraduation, calculateAge, BELT_LIST } from '../services/graduation';
 import { BELT_COLORS } from '../constants';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -206,14 +206,10 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =>
 
   // Belt distribution with actual colors
   const beltDistribution = useMemo(() => {
-    const order = [
-      Belt.WHITE,
-      Belt.GREY_WHITE, Belt.GREY, Belt.GREY_BLACK,
-      Belt.YELLOW_WHITE, Belt.YELLOW, Belt.YELLOW_BLACK,
-      Belt.ORANGE_WHITE, Belt.ORANGE, Belt.ORANGE_BLACK,
-      Belt.GREEN_WHITE, Belt.GREEN, Belt.GREEN_BLACK,
-      Belt.BLUE, Belt.PURPLE, Belt.BROWN, Belt.BLACK,
-    ];
+    // Fonte única da sequência de faixas — ver services/graduation.ts (BELT_LIST).
+    // Antes esta lista local não incluía Coral/Vermelha, então alunos nessas faixas
+    // nunca apareciam no gráfico mesmo com colorMap já tendo as cores definidas.
+    const order = BELT_LIST;
     const colorMap: Record<Belt, string> = {
       [Belt.WHITE]: '#f8fafc',
       [Belt.GREY_WHITE]: '#cbd5e1', [Belt.GREY]: '#94a3b8', [Belt.GREY_BLACK]: '#475569',

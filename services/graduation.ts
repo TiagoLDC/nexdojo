@@ -12,6 +12,15 @@ export const BELT_LIST = [
   Belt.BLUE, Belt.PURPLE, Belt.BROWN, Belt.BLACK, Belt.CORAL, Belt.RED
 ];
 
+// Faixas infantis "mistas" (exclui a Branca, que é compartilhada com o balde adulto — ver isKidsPath abaixo).
+// Fonte única: antes duplicado 3x dentro deste arquivo (isReadyForGraduation, getGraduationThreshold, getWarnBefore).
+export const KIDS_MIXED_BELTS = [
+  Belt.GREY_WHITE, Belt.GREY, Belt.GREY_BLACK,
+  Belt.YELLOW_WHITE, Belt.YELLOW, Belt.YELLOW_BLACK,
+  Belt.ORANGE_WHITE, Belt.ORANGE, Belt.ORANGE_BLACK,
+  Belt.GREEN_WHITE, Belt.GREEN, Belt.GREEN_BLACK,
+];
+
 export const calculateAge = (birthDate: string) => {
   if (!birthDate) return 0;
   const today = new Date();
@@ -49,14 +58,7 @@ export const isReadyForGraduation = (student: Student, rules?: GraduationRules) 
   const mode = rules?.mode ?? 'classes';
   const metric = getMetric(student, mode);
 
-  const KIDS_MIXED = [
-    Belt.GREY_WHITE, Belt.GREY, Belt.GREY_BLACK,
-    Belt.YELLOW_WHITE, Belt.YELLOW, Belt.YELLOW_BLACK,
-    Belt.ORANGE_WHITE, Belt.ORANGE, Belt.ORANGE_BLACK,
-    Belt.GREEN_WHITE, Belt.GREEN, Belt.GREEN_BLACK,
-  ];
-
-  const isKidsPath = KIDS_MIXED.includes(student.belt)
+  const isKidsPath = KIDS_MIXED_BELTS.includes(student.belt)
     || (age < 16 && student.belt === Belt.WHITE);
 
   if (isKidsPath) {
@@ -117,13 +119,7 @@ export const getGraduationThreshold = (
   rules?: GraduationRules,
 ): number => {
   const age = calculateAge(student.birthDate);
-  const KIDS_MIXED = [
-    Belt.GREY_WHITE, Belt.GREY, Belt.GREY_BLACK,
-    Belt.YELLOW_WHITE, Belt.YELLOW, Belt.YELLOW_BLACK,
-    Belt.ORANGE_WHITE, Belt.ORANGE, Belt.ORANGE_BLACK,
-    Belt.GREEN_WHITE, Belt.GREEN, Belt.GREEN_BLACK,
-  ];
-  const isKids = KIDS_MIXED.includes(student.belt)
+  const isKids = KIDS_MIXED_BELTS.includes(student.belt)
     || (age < 16 && student.belt === Belt.WHITE);
   if (isKids) return rules?.kids?.stripeThreshold ?? 25;
   if (student.belt === Belt.WHITE) return rules?.white?.stripeThreshold ?? 20;
@@ -131,13 +127,6 @@ export const getGraduationThreshold = (
   if (student.belt === Belt.BLACK) return rules?.black?.stripeThreshold ?? 300;
   return 0;
 };
-
-const KIDS_MIXED_BELTS = [
-  Belt.GREY_WHITE, Belt.GREY, Belt.GREY_BLACK,
-  Belt.YELLOW_WHITE, Belt.YELLOW, Belt.YELLOW_BLACK,
-  Belt.ORANGE_WHITE, Belt.ORANGE, Belt.ORANGE_BLACK,
-  Belt.GREEN_WHITE, Belt.GREEN, Belt.GREEN_BLACK,
-];
 
 const getWarnBefore = (student: Student, rules?: GraduationRules): number => {
   const age = calculateAge(student.birthDate);

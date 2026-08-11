@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Belt } from '../types';
+import { BELT_VISUAL_CONFIG, DEFAULT_BELT_VISUAL_CONFIG } from '../constants';
 
 interface BeltBadgeProps {
   belt: Belt;
@@ -9,41 +10,8 @@ interface BeltBadgeProps {
   showText?: boolean;
 }
 
-type BeltColorConfig = {
-  bg: string;
-  border: string;
-  text: string;
-  bar: string;
-  middleStripe?: string;
-};
-
 export const BeltBadge: React.FC<BeltBadgeProps> = ({ belt, stripes, className = '', showText = true }) => {
-  const getBeltColors = (belt: Belt): BeltColorConfig => {
-    switch (belt) {
-      case Belt.WHITE:        return { bg: 'bg-white',     border: 'border-slate-300',  text: 'text-slate-800', bar: 'bg-slate-900' };
-      case Belt.GREY_WHITE:   return { bg: 'bg-slate-400', border: 'border-slate-400',  text: 'text-white',     bar: 'bg-slate-900', middleStripe: 'bg-white' };
-      case Belt.GREY:         return { bg: 'bg-slate-400', border: 'border-slate-500',  text: 'text-white',     bar: 'bg-slate-900' };
-      case Belt.GREY_BLACK:   return { bg: 'bg-slate-400', border: 'border-slate-500',  text: 'text-white',     bar: 'bg-white',     middleStripe: 'bg-zinc-900' };
-      case Belt.YELLOW_WHITE: return { bg: 'bg-yellow-400',border: 'border-yellow-400', text: 'text-slate-900', bar: 'bg-slate-900', middleStripe: 'bg-white' };
-      case Belt.YELLOW:       return { bg: 'bg-yellow-400',border: 'border-yellow-500', text: 'text-slate-900', bar: 'bg-slate-900' };
-      case Belt.YELLOW_BLACK: return { bg: 'bg-yellow-400',border: 'border-yellow-500', text: 'text-slate-900', bar: 'bg-white',     middleStripe: 'bg-zinc-900' };
-      case Belt.ORANGE_WHITE: return { bg: 'bg-orange-500',border: 'border-orange-500', text: 'text-white',     bar: 'bg-slate-900', middleStripe: 'bg-white' };
-      case Belt.ORANGE:       return { bg: 'bg-orange-500',border: 'border-orange-600', text: 'text-white',     bar: 'bg-slate-900' };
-      case Belt.ORANGE_BLACK: return { bg: 'bg-orange-500',border: 'border-orange-600', text: 'text-white',     bar: 'bg-white',     middleStripe: 'bg-zinc-900' };
-      case Belt.GREEN_WHITE:  return { bg: 'bg-green-600', border: 'border-green-600',  text: 'text-white',     bar: 'bg-slate-900', middleStripe: 'bg-white' };
-      case Belt.GREEN:        return { bg: 'bg-green-600', border: 'border-green-700',  text: 'text-white',     bar: 'bg-slate-900' };
-      case Belt.GREEN_BLACK:  return { bg: 'bg-green-600', border: 'border-green-700',  text: 'text-white',     bar: 'bg-white',     middleStripe: 'bg-zinc-900' };
-      case Belt.BLUE:         return { bg: 'bg-blue-600',  border: 'border-blue-700',   text: 'text-white',     bar: 'bg-slate-900' };
-      case Belt.PURPLE:       return { bg: 'bg-purple-700',border: 'border-purple-800', text: 'text-white',     bar: 'bg-slate-900' };
-      case Belt.BROWN:        return { bg: 'bg-amber-800', border: 'border-amber-900',  text: 'text-white',     bar: 'bg-slate-900' };
-      case Belt.BLACK:        return { bg: 'bg-zinc-900',  border: 'border-zinc-950',   text: 'text-white',     bar: 'bg-red-600' };
-      case Belt.CORAL:        return { bg: 'bg-red-700',   border: 'border-red-700',    text: 'text-white',     bar: 'bg-white',     middleStripe: 'bg-zinc-900' };
-      case Belt.RED:          return { bg: 'bg-red-700',   border: 'border-red-800',    text: 'text-white',     bar: 'bg-white' };
-      default:                return { bg: 'bg-slate-200', border: 'border-slate-300',  text: 'text-slate-600', bar: 'bg-slate-900' };
-    }
-  };
-
-  const colors = getBeltColors(belt);
+  const colors = BELT_VISUAL_CONFIG[belt] ?? DEFAULT_BELT_VISUAL_CONFIG;
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>

@@ -9,7 +9,7 @@ import { GuardianAccessSection } from '@/components/students/GuardianAccessSecti
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
 import { advancePaymentDate } from '@/utils/paymentUtils';
 import { getTodayBrasilia } from '@/utils/date';
-import { calculateAge, isReadyForGraduation, getNextRank, monthsSince, getGraduationThreshold } from '../services/graduation';
+import { calculateAge, isReadyForGraduation, getNextRank, monthsSince, getGraduationThreshold, BELT_LIST } from '../services/graduation';
 import { useTranslation } from '../services/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -647,15 +647,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     return matchesSearch && matchesStatus && matchesBelt && matchesReadiness && matchesAbsence && matchesNoPlan && matchesNoDueDate;
   }).sort((a, b) => a.name.localeCompare(b.name));
 
-  const kidsBelts = [
-    Belt.WHITE,
-    Belt.GREY_WHITE, Belt.GREY, Belt.GREY_BLACK,
-    Belt.YELLOW_WHITE, Belt.YELLOW, Belt.YELLOW_BLACK,
-    Belt.ORANGE_WHITE, Belt.ORANGE, Belt.ORANGE_BLACK,
-    Belt.GREEN_WHITE, Belt.GREEN, Belt.GREEN_BLACK,
-  ];
-  const adultBelts = [Belt.BLUE, Belt.PURPLE, Belt.BROWN, Belt.BLACK, Belt.CORAL, Belt.RED];
-  const allBeltOptions = [...kidsBelts, ...adultBelts];
+  // Fonte única da sequência de faixas — ver services/graduation.ts (BELT_LIST)
+  const allBeltOptions = BELT_LIST;
 
   const studentAge = editingStudent ? calculateAge(editingStudent.birthDate) : 0;
   const isMinor = editingStudent ? (editingStudent.birthDate ? studentAge < 18 : false) : false;
