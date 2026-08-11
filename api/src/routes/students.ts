@@ -10,6 +10,7 @@ import { withTransaction } from '../utils/withTransaction';
 import { autoLinkEntityToUser } from '../utils/linkEntityUser';
 import { isGuardianOfStudent, getGuardianStudentIds } from '../utils/guardianAccess';
 import { getTodayBrasilia } from '../utils/date';
+import { resolveBeltRank } from '../utils/beltRanks';
 
 const router = Router();
 
@@ -43,7 +44,7 @@ router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunct
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
-  const { search, email, userId, belt, status, page = '1', limit = '20' } = req.query;
+  const { search, email, userId, belt, beltRankId, status, page = '1', limit = '20' } = req.query;
   const pageNum = Math.max(1, parseInt(String(page), 10));
   const limitNum = Math.min(1000, Math.max(1, parseInt(String(limit), 10)));
   const offset = (pageNum - 1) * limitNum;
@@ -76,6 +77,10 @@ router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunct
   if (belt) {
     where += ' AND s.belt = ?';
     params.push(belt);
+  }
+  if (beltRankId) {
+    where += ' AND s.belt_rank_id = ?';
+    params.push(beltRankId);
   }
   if (status) {
     where += ' AND s.status = ?';
@@ -192,11 +197,14 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'staff'), async 
 
   try {
     const studentId = crypto.randomUUID();
+    // Dual-write: resolve belt_rank_id em paralelo ao belt (ENUM) — ver PLANO_GRADUACAO.md Fase 3.
+    // Não bloqueia o cadastro se não resolver (academia sem sport_id ainda, etc.).
+    const resolvedBeltRank = await resolveBeltRank(academyId, b.belt ?? 'Branca');
 
     const studentValues = [
       studentId, academyId,
       b.name, b.email ?? null, b.phone ?? null,
-      b.belt ?? 'Branca', b.stripes ?? 0,
+      b.belt ?? 'Branca', resolvedBeltRank?.id ?? null, b.stripes ?? 0,
       b.birth_date ?? null, b.gender ?? null, b.photo ?? null,
       b.cpf ?? null, b.rg ?? null, b.weight ?? null, b.height ?? null, b.blood_type ?? null,
       b.emergency_contact ?? null, b.emergency_phone ?? null,
@@ -231,12 +239,12 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'staff'), async 
 
         await conn.execute(
           `INSERT INTO students (
-            id, academy_id, user_id, name, email, phone, belt, stripes, birth_date, gender, photo,
+            id, academy_id, user_id, name, email, phone, belt, belt_rank_id, stripes, birth_date, gender, photo,
             cpf, rg, weight, height, blood_type, emergency_contact, emergency_phone,
             cep, address, address_number, guardian_name, guardian_phone, guardian_email,
             guardian_cpf, guardian_rg, guardian_relation, guardian_profession,
             medical_notes, status, join_date, plan_id, next_payment_date, absence_limit
-          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [studentId, academyId, userId, ...studentValues.slice(2)]
         );
 
@@ -247,12 +255,12 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'staff'), async 
       // Sem senha: insere student e vincula a usuário existente pelo email (se houver)
       await pool.execute(
         `INSERT INTO students (
-          id, academy_id, name, email, phone, belt, stripes, birth_date, gender, photo,
+          id, academy_id, name, email, phone, belt, belt_rank_id, stripes, birth_date, gender, photo,
           cpf, rg, weight, height, blood_type, emergency_contact, emergency_phone,
           cep, address, address_number, guardian_name, guardian_phone, guardian_email,
           guardian_cpf, guardian_rg, guardian_relation, guardian_profession,
           medical_notes, status, join_date, plan_id, next_payment_date, absence_limit
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         studentValues
       );
       if (b.email) {
@@ -288,7 +296,7 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
 
   try {
     const [existing] = await pool.execute<any[]>(
-      'SELECT id, user_id, name, email, belt, stripes FROM students WHERE id = ? AND academy_id = ?',
+      'SELECT id, user_id, name, email, belt, belt_rank_id, stripes FROM students WHERE id = ? AND academy_id = ?',
       [req.params.id, academyId]
     );
     if (!existing[0]) { res.status(404).json({ error: 'Aluno não encontrado' }); return; }
@@ -360,13 +368,20 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
         if (beltChanged || stripesChanged) {
           const gradDate = req.body.last_graduation_date
             ?? getTodayBrasilia();
+
+          // Dual-write: resolve belt_rank_id do novo belt (ENUM) antes de gravar o histórico —
+          // ver PLANO_GRADUACAO.md Fase 3. Não bloqueia se não resolver.
+          const newBeltName = req.body.belt ?? existing[0].belt;
+          const resolvedNewRank = beltChanged ? await resolveBeltRank(academyId, newBeltName) : null;
+
           await pool.execute(
-            `INSERT INTO graduation_history (id, student_id, previous_belt, new_belt, previous_stripes, new_stripes, date, instructor_id, notes)
-             VALUES (?,?,?,?,?,?,?,?,?)`,
+            `INSERT INTO graduation_history
+               (id, student_id, previous_belt, previous_belt_rank_id, new_belt, belt_rank_id, previous_stripes, new_stripes, date, instructor_id, notes)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
             [
               crypto.randomUUID(), req.params.id,
-              existing[0].belt,
-              req.body.belt    ?? existing[0].belt,
+              existing[0].belt, existing[0].belt_rank_id ?? null,
+              newBeltName, resolvedNewRank?.id ?? null,
               existing[0].stripes,
               req.body.stripes ?? existing[0].stripes,
               gradDate,
@@ -379,6 +394,10 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
             `UPDATE students SET classes_since_graduation = 0, hours_since_graduation = 0 WHERE id = ?`,
             [req.params.id]
           );
+
+          if (resolvedNewRank) {
+            await pool.execute(`UPDATE students SET belt_rank_id = ? WHERE id = ?`, [resolvedNewRank.id, req.params.id]);
+          }
         }
       }
 
@@ -643,7 +662,7 @@ router.post('/:id/graduate', requireAuth, requireRole('admin', 'superuser', 'ins
 
   const errors = validate(req.body, {
     new_belt:    { required: true, enum: BELT_VALUES },
-    new_stripes: { type: 'number', min: 0, max: 4 },
+    new_stripes: { type: 'number', min: 0 },
     date:        { required: true, type: 'date' },
   });
   if (errors.length) { res.status(400).json({ error: errors[0] }); return; }
@@ -658,23 +677,38 @@ router.post('/:id/graduate', requireAuth, requireRole('admin', 'superuser', 'ins
     const student = rows[0];
     const { new_belt, new_stripes = 0, date, instructor_id, notes } = req.body;
 
+    // Cap de graus: usa belt_ranks.degree_count quando resolvível (ex: Preta = 6),
+    // com fallback para o comportamento antigo (4, ou 6 para Preta) se não resolver.
+    const resolvedNewRank = await resolveBeltRank(academyId, new_belt);
+    const maxStripes = resolvedNewRank?.degreeCount ?? (new_belt === 'Preta' ? 6 : 4);
+    if (Number(new_stripes) > maxStripes) {
+      res.status(400).json({ error: `new_stripes deve ser no máximo ${maxStripes} para a faixa ${new_belt}` });
+      return;
+    }
+
     await pool.execute(
       `INSERT INTO graduation_history
-         (id, student_id, previous_belt, new_belt, previous_stripes, new_stripes, date, instructor_id, notes)
-       VALUES (?,?,?,?,?,?,?,?,?)`,
+         (id, student_id, previous_belt, previous_belt_rank_id, new_belt, belt_rank_id, previous_stripes, new_stripes, date, instructor_id, notes)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
       [
         crypto.randomUUID(), req.params.id,
-        student.belt, new_belt, student.stripes, new_stripes,
+        student.belt, student.belt_rank_id ?? null,
+        new_belt, resolvedNewRank?.id ?? null,
+        student.stripes, new_stripes,
         date, instructor_id ?? null, notes ?? null,
       ]
     );
 
+    // belt_rank_id só entra no SET quando resolvido — não sobrescreve um valor válido
+    // existente com NULL no caso raro de não achar correspondência (ver resolveBeltRank).
     await pool.execute(
       `UPDATE students
-       SET belt = ?, stripes = ?, last_graduation_date = ?,
+       SET belt = ?, ${resolvedNewRank ? 'belt_rank_id = ?, ' : ''}stripes = ?, last_graduation_date = ?,
            classes_since_graduation = 0, hours_since_graduation = 0
        WHERE id = ?`,
-      [new_belt, new_stripes, date, req.params.id]
+      resolvedNewRank
+        ? [new_belt, resolvedNewRank.id, new_stripes, date, req.params.id]
+        : [new_belt, new_stripes, date, req.params.id]
     );
 
     const [updated] = await pool.execute<any[]>('SELECT * FROM students WHERE id = ?', [req.params.id]);

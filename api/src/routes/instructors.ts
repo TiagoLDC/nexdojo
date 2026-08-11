@@ -6,6 +6,7 @@ import { requireRole } from '../middleware/requireRole';
 import { getAcademyId } from '../utils/academyScope';
 import { validate } from '../utils/validate';
 import { autoLinkEntityToUser } from '../utils/linkEntityUser';
+import { resolveBeltRank } from '../utils/beltRanks';
 
 const router = Router();
 
@@ -42,7 +43,7 @@ router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunct
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
-  const { search, belt, status, page = '1', limit = '20' } = req.query;
+  const { search, belt, beltRankId, status, page = '1', limit = '20' } = req.query;
   const pageNum = Math.max(1, parseInt(String(page), 10));
   const limitNum = Math.min(1000, Math.max(1, parseInt(String(limit), 10)));
   const offset = (pageNum - 1) * limitNum;
@@ -57,6 +58,10 @@ router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunct
   if (belt) {
     where += ' AND i.belt = ?';
     params.push(belt);
+  }
+  if (beltRankId) {
+    where += ' AND i.belt_rank_id = ?';
+    params.push(beltRankId);
   }
   if (status) {
     where += ' AND i.status = ?';
@@ -134,16 +139,19 @@ router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Req
   const b = req.body;
 
   try {
+    // Dual-write: resolve belt_rank_id em paralelo ao belt (ENUM) — ver PLANO_GRADUACAO.md Fase 3
+    const resolvedBeltRank = await resolveBeltRank(academyId, b.belt ?? 'Branca');
+
     await pool.execute(
       `INSERT INTO instructors (
-        id, academy_id, user_id, name, email, phone, belt, stripes, birth_date, gender, photo,
+        id, academy_id, user_id, name, email, phone, belt, belt_rank_id, stripes, birth_date, gender, photo,
         cpf, rg, weight, height, blood_type, marital_status, emergency_contact, emergency_phone,
         cep, address, address_number, specialties, medical_notes, status, join_date
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         id, academyId, b.user_id ?? null,
         b.name, b.email ?? null, b.phone ?? null,
-        b.belt ?? 'Branca', b.stripes ?? 0,
+        b.belt ?? 'Branca', resolvedBeltRank?.id ?? null, b.stripes ?? 0,
         b.birth_date ?? null, b.gender ?? null, b.photo ?? null,
         b.cpf ?? null, b.rg ?? null, b.weight ?? null, b.height ?? null, b.blood_type ?? null,
         b.marital_status ?? null, b.emergency_contact ?? null, b.emergency_phone ?? null,
@@ -186,7 +194,7 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
 
   try {
     const [existing] = await pool.execute<any[]>(
-      'SELECT id, user_id, name, email FROM instructors WHERE id = ? AND academy_id = ?',
+      'SELECT id, user_id, name, email, belt FROM instructors WHERE id = ? AND academy_id = ?',
       [req.params.id, academyId]
     );
     if (!existing[0]) { res.status(404).json({ error: 'Instrutor não encontrado' }); return; }
@@ -239,6 +247,15 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
         `UPDATE instructors SET ${set} WHERE id = ? AND academy_id = ?`,
         [...values, req.params.id, academyId]
       );
+
+      // Dual-write: mantém belt_rank_id em dia com o belt (ENUM) — ver PLANO_GRADUACAO.md Fase 3
+      const beltChanged = req.body.belt !== undefined && req.body.belt !== existing[0].belt;
+      if (beltChanged) {
+        const resolved = await resolveBeltRank(academyId, req.body.belt);
+        if (resolved) {
+          await pool.execute(`UPDATE instructors SET belt_rank_id = ? WHERE id = ?`, [resolved.id, req.params.id]);
+        }
+      }
 
       // Ao ativar instrutor, ativa também o usuário vinculado
       if (req.body.status === 'Active') {

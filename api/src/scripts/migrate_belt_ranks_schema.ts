@@ -139,10 +139,14 @@ async function main() {
   await addColumn('graduation_history', `previous_belt_rank_id VARCHAR(36) NULL AFTER previous_belt`, 'graduation_history.previous_belt_rank_id');
   await addColumn('graduation_history', `belt_rank_id VARCHAR(36) NULL AFTER new_belt`, 'graduation_history.belt_rank_id');
 
-  // 3. Foreign keys (nomeadas para a checagem de idempotência funcionar em reruns)
-  await addForeignKey('academies', 'fk_academies_sport', 'FOREIGN KEY (sport_id) REFERENCES sports(id) ON DELETE SET NULL');
-  await addForeignKey('students', 'fk_students_belt_rank', 'FOREIGN KEY (belt_rank_id) REFERENCES belt_ranks(id) ON DELETE SET NULL');
-  await addForeignKey('instructors', 'fk_instructors_belt_rank', 'FOREIGN KEY (belt_rank_id) REFERENCES belt_ranks(id) ON DELETE SET NULL');
+  // 3. Foreign keys (nomeadas para a checagem de idempotência funcionar em reruns).
+  // academies.sport_id / students.belt_rank_id / instructors.belt_rank_id usam RESTRICT
+  // (não SET NULL) de propósito: essas colunas devem poder se tornar NOT NULL depois do
+  // backfill (Fase 3), e o MySQL proíbe NOT NULL numa coluna cuja FK é ON DELETE SET NULL.
+  // graduation_history é só snapshot histórico — não vira NOT NULL, então mantém SET NULL.
+  await addForeignKey('academies', 'fk_academies_sport', 'FOREIGN KEY (sport_id) REFERENCES sports(id) ON DELETE RESTRICT');
+  await addForeignKey('students', 'fk_students_belt_rank', 'FOREIGN KEY (belt_rank_id) REFERENCES belt_ranks(id) ON DELETE RESTRICT');
+  await addForeignKey('instructors', 'fk_instructors_belt_rank', 'FOREIGN KEY (belt_rank_id) REFERENCES belt_ranks(id) ON DELETE RESTRICT');
   await addForeignKey('graduation_history', 'fk_graduation_history_prev_belt_rank', 'FOREIGN KEY (previous_belt_rank_id) REFERENCES belt_ranks(id) ON DELETE SET NULL');
   await addForeignKey('graduation_history', 'fk_graduation_history_belt_rank', 'FOREIGN KEY (belt_rank_id) REFERENCES belt_ranks(id) ON DELETE SET NULL');
 

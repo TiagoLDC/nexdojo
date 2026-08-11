@@ -108,7 +108,7 @@ const DDL_STATEMENTS = [
     sport_id VARCHAR(36) NULL COMMENT 'Definido só na criação da academia — imutável depois (ver PLANO_GRADUACAO.md D6)',
     qr_code_presenca VARCHAR(500) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (sport_id) REFERENCES sports(id) ON DELETE SET NULL
+    FOREIGN KEY (sport_id) REFERENCES sports(id) ON DELETE RESTRICT
   )`,
 
   // Planos da academia (plano de aula: mensalidade, idade, tolerâncias de presença)
@@ -222,7 +222,7 @@ const DDL_STATEMENTS = [
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE,
     FOREIGN KEY (plan_id) REFERENCES academy_plans(id) ON DELETE SET NULL,
-    FOREIGN KEY (belt_rank_id) REFERENCES belt_ranks(id) ON DELETE SET NULL,
+    FOREIGN KEY (belt_rank_id) REFERENCES belt_ranks(id) ON DELETE RESTRICT,
     UNIQUE KEY uniq_academy_email (academy_id, email)
   )`,
 
@@ -298,7 +298,7 @@ const DDL_STATEMENTS = [
     last_graduation_date DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE,
-    FOREIGN KEY (belt_rank_id) REFERENCES belt_ranks(id) ON DELETE SET NULL,
+    FOREIGN KEY (belt_rank_id) REFERENCES belt_ranks(id) ON DELETE RESTRICT,
     UNIQUE KEY uniq_academy_email (academy_id, email)
   )`,
 
