@@ -59,6 +59,7 @@ import StudentProfileView from './views/StudentProfileView';
 import InstructorProfileView from './views/InstructorProfileView';
 import PaymentView from './views/PaymentView';
 import SchedulesView from './views/SchedulesView';
+import SportsView from './views/SportsView';
 
 // Itens principais (Linha Inteira)
 const MAIN_MENU = [
@@ -447,7 +448,12 @@ const App: React.FC = () => {
 
           <Routes>
             <Route path="/" element={<DashboardView academy={academy} user={user} onSwitchAcademy={handleSwitchAcademy} />} />
-            
+            <Route path="/sports" element={
+              <ProtectedRoute roles={['superuser']} user={user}>
+                <SportsView user={user} />
+              </ProtectedRoute>
+            } />
+
             {academy ? (
               <>
                 <Route path="/templates" element={
@@ -681,6 +687,12 @@ const Sidebar: React.FC<{
                       <option key={a.id} value={a.id}>{a.name}</option>
                     ))}
                   </select>
+                  <Link
+                    to="/sports"
+                    className={`flex items-center gap-2 w-full rounded-lg text-[10px] font-bold py-1.5 px-2 transition-colors ${location.pathname === '/sports' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                  >
+                    <Award size={12} /> Esportes
+                  </Link>
                 </div>
               )}
             </div>
