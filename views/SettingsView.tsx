@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Academy, User, Student, Instructor, Staff, AcademyPlan, Language, GraduationRules } from '../types';
+import { Academy, User, Student, Instructor, Staff, AcademyPlan, Language } from '../types';
 import { Settings, Bell, Shield, LogOut, ChevronRight, User as UserIcon, Palette, MapPin, Moon, Sun, X, CreditCard, Wallet, Loader2, Save, CheckCircle2, Crown, Zap, Star as StarIcon, Award, Trophy, Book, Users, Plus, Trash2, Globe, AlertTriangle, Smartphone, Check, Briefcase, Clock, ToggleLeft, ToggleRight, Copy, QrCode, Printer } from 'lucide-react';
 import { fetchAddressByCep, maskCEP, maskPhone } from '../services/cep';
 import { PrivacyValue } from '../components/PrivacyValue';
@@ -10,6 +10,8 @@ import { instructorService } from '@/features/instructors/services/instructorSer
 import { staffService } from '@/features/staff/services/staffService';
 import { academyService } from '@/features/settings/services/academyService';
 import { plansService } from '@/features/plans/services/plansService';
+import { beltRankService, AcademyBeltRank } from '@/features/settings/services/beltRankService';
+import type { Sport } from '@/types';
 import { useTranslation } from '../services/LanguageContext';
 import { DateSelectInput, ConfirmDialog } from '@/components/ui';
 import { QRCodeSVG } from 'qrcode.react';
@@ -94,7 +96,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   const [isEditingAcademy, setIsEditingAcademy] = React.useState(false);
   const [isEditingNotifications, setIsEditingNotifications] = React.useState(false);
   const [isSavingKimonoLoan, setIsSavingKimonoLoan] = React.useState(false);
-  const [isEditingGraduation, setIsEditingGraduation] = React.useState(false);
+  const [isEditingBeltSettings, setIsEditingBeltSettings] = React.useState(false);
   const [isEditingPayment, setIsEditingPayment] = React.useState(false);
   const [isEditingQrCode, setIsEditingQrCode] = useState(false);
   const [editQrCode, setEditQrCode] = useState(academy.qrCodePresenca === '__AUTO__' ? '' : (academy.qrCodePresenca || ''));
@@ -118,17 +120,33 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   const [isSavingAcademy, setIsSavingAcademy] = useState(false);
   const [editAcademy, setEditAcademy] = React.useState<Academy>(academy);
 
-  const defaultGraduationRules = (): GraduationRules => ({
-    mode: 'classes',
-    kids:         { stripeThreshold: 25 },
-    white:        { stripeThreshold: 20 },
-    intermediate: { stripeThreshold: 40 },
-    black:        { stripeThreshold: 300 },
-  });
+  // Faixas e Graduação (substitui os antigos "Critérios de Graduação" por balde —
+  // ver PLANO_GRADUACAO.md Fase 6). Meses/aulas por faixa individual do esporte da academia.
+  interface BeltSettingFormRow {
+    monthsRequired: number | null;
+    classesRequired: number | null;
+    warnBeforeMonths: number | null;
+    warnBeforeClasses: number | null;
+  }
+  const [beltSettingsSport, setBeltSettingsSport] = useState<Sport | null>(null);
+  const [beltRanks, setBeltRanks] = useState<AcademyBeltRank[]>([]);
+  const [isLoadingBeltSettings, setIsLoadingBeltSettings] = useState(false);
+  const [isSavingBeltSettings, setIsSavingBeltSettings] = useState(false);
+  const [editBeltSettings, setEditBeltSettings] = useState<Record<string, BeltSettingFormRow>>({});
 
-  const [editGraduationRules, setEditGraduationRules] = useState<GraduationRules>(
-    academy.graduationRules ?? defaultGraduationRules()
-  );
+  const loadBeltSettings = async () => {
+    setIsLoadingBeltSettings(true);
+    try {
+      const res = await beltRankService.getAcademyBeltSettings(academy.id);
+      setBeltSettingsSport(res.sport);
+      setBeltRanks(res.beltRanks);
+    } catch (err) {
+      console.error('Erro ao carregar faixas e graduação:', err);
+    } finally {
+      setIsLoadingBeltSettings(false);
+    }
+  };
+
   const logoInputRef = React.useRef<HTMLInputElement>(null);
 
   const isQrAutoMode = academy.qrCodePresenca === '__AUTO__';
@@ -156,6 +174,13 @@ const SettingsView: React.FC<SettingsViewProps> = ({
       }
     };
     load();
+  }, [academy.id, user.role]);
+
+  // Faixas e Graduação — carregado uma vez para alimentar o card-resumo; recarregado ao abrir o modal
+  useEffect(() => {
+    if (user.role !== 'admin' && user.role !== 'superuser') return;
+    loadBeltSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [academy.id, user.role]);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -296,18 +321,42 @@ const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
-  const handleSaveGraduation = async () => {
-    setIsSavingAcademy(true);
+  const openBeltSettingsModal = async () => {
+    setIsEditingBeltSettings(true);
+    await loadBeltSettings();
+  };
+
+  // Sincroniza o formulário de edição sempre que os dados carregados mudam (abertura do modal
+  // ou refresh) — feito num efeito em vez de inline no load para não duplicar a lógica de mapeamento.
+  useEffect(() => {
+    const next: Record<string, BeltSettingFormRow> = {};
+    for (const belt of beltRanks) {
+      next[belt.id] = {
+        monthsRequired: belt.monthsRequired ?? null,
+        classesRequired: belt.classesRequired ?? null,
+        warnBeforeMonths: belt.warnBeforeMonths ?? null,
+        warnBeforeClasses: belt.warnBeforeClasses ?? null,
+      };
+    }
+    setEditBeltSettings(next);
+  }, [beltRanks]);
+
+  const handleSaveBeltSettings = async () => {
+    setIsSavingBeltSettings(true);
     try {
-      const saved = await academyService.update(academy.id, { graduationRules: editGraduationRules });
-      onUpdateAcademy({ ...academy, ...saved });
-      setIsEditingGraduation(false);
-      showNotification('Critérios de graduação salvos!');
+      const settings = beltRanks.map(belt => ({
+        beltRankId: belt.id,
+        ...editBeltSettings[belt.id],
+      }));
+      const res = await beltRankService.updateAcademyBeltSettings(academy.id, settings);
+      setBeltRanks(res.beltRanks);
+      setIsEditingBeltSettings(false);
+      showNotification('Faixas e graduação salvas!');
     } catch (e) {
       console.error(e);
-      showNotification('Erro ao salvar critérios. Tente novamente.', 'error');
+      showNotification('Erro ao salvar. Tente novamente.', 'error');
     } finally {
-      setIsSavingAcademy(false);
+      setIsSavingBeltSettings(false);
     }
   };
 
@@ -948,131 +997,114 @@ const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       )}
 
-      {/* Modal de Critérios de Graduação */}
-      {isEditingGraduation && (
+      {/* Modal de Faixas e Graduação */}
+      {isEditingBeltSettings && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-md z-[200] flex items-center justify-center p-4 sm:p-6">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-[95vw] sm:max-w-lg rounded-[28px] md:rounded-[32px] p-5 md:p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-[95vw] sm:max-w-2xl rounded-[28px] md:rounded-[32px] p-5 md:p-8 animate-in zoom-in duration-300 shadow-2xl border border-slate-100 dark:border-slate-800 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-black text-slate-800 dark:text-white tracking-tight uppercase italic flex items-center gap-2">
-                <Trophy size={20} className="text-indigo-500" /> Critérios de Graduação
+                <Trophy size={20} className="text-indigo-500" /> Faixas e Graduação
               </h2>
-              <button onClick={() => setIsEditingGraduation(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              <button onClick={() => setIsEditingBeltSettings(false)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                 <X size={18} className="text-slate-500" />
               </button>
             </div>
 
-            {/* Modo */}
-            <div className="mb-6">
-              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Métrica de Avaliação</label>
-              <div className="grid grid-cols-2 gap-2">
-                {(['classes', 'months'] as const).map(m => (
-                  <button
-                    key={m}
-                    onClick={() => setEditGraduationRules(r => ({ ...r, mode: m }))}
-                    className={`py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${
-                      editGraduationRules.mode === m
-                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-600/20'
-                        : 'border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:border-indigo-300'
-                    }`}
-                  >
-                    {m === 'classes' ? 'Treinos' : 'Meses'}
-                  </button>
-                ))}
+            {isLoadingBeltSettings ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 size={24} className="animate-spin text-indigo-500" />
               </div>
-              <p className="text-[9px] text-slate-400 mt-2 ml-1 italic">
-                {editGraduationRules.mode === 'classes' && 'Critério baseado no número de presenças registradas.'}
-                {editGraduationRules.mode === 'months'  && 'Critério baseado nos meses desde a última graduação.'}
+            ) : !beltSettingsSport ? (
+              <p className="text-sm text-slate-400 text-center py-16">
+                Esporte ainda não definido para esta academia. Fale com o suporte.
               </p>
-            </div>
-
-            {/* Tabela de thresholds */}
-            {(() => {
-              const unit = editGraduationRules.mode === 'months' ? 'Meses' : editGraduationRules.mode === 'hours' ? 'Horas' : 'Treinos';
-              const warnUnit = editGraduationRules.mode === 'months' ? 'Dias' : editGraduationRules.mode === 'hours' ? 'Horas' : 'Treinos';
-              const groups: Array<{
-                key: 'kids' | 'white' | 'intermediate' | 'black';
-                label: string;
-                defaultStripe: number;
-              }> = [
-                { key: 'kids',         label: 'Infantil (< 16 anos)',              defaultStripe: 25  },
-                { key: 'white',        label: 'Branca (adulto)',                   defaultStripe: 20  },
-                { key: 'intermediate', label: 'Intermediárias (Azul/Roxa/Marrom)', defaultStripe: 40  },
-                { key: 'black',        label: 'Faixa Preta',                       defaultStripe: 300 },
-              ];
-              return (
-                <div className="space-y-5">
-                  {/* Seção 1: Treinos por grau */}
-                  <div className="space-y-3">
-                    <p className="text-[9px] text-slate-400 italic ml-1">
-                      Cada grau exige a mesma quantidade de {unit.toLowerCase()}. Ao atingir o 4º grau, a próxima graduação avança para a próxima faixa automaticamente.
-                    </p>
-                    <div className="grid grid-cols-2 gap-2 mb-1">
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Grupo</span>
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Por Grau ({unit})</span>
-                    </div>
-                    {groups.map(g => (
-                      <div key={g.key} className="grid grid-cols-2 gap-2 items-center">
-                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">{g.label}</span>
-                        <input
-                          type="number"
-                          min="1"
-                          value={(editGraduationRules[g.key] as any)?.stripeThreshold ?? g.defaultStripe}
-                          onChange={e => setEditGraduationRules(r => ({
-                            ...r,
-                            [g.key]: { ...(r[g.key] as any), stripeThreshold: parseInt(e.target.value) || 1 },
-                          }))}
-                          className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
-                        />
+            ) : (
+              <>
+                <p className="text-[9px] text-slate-400 italic mb-5 ml-1">
+                  Defina, por faixa, quantos meses e/ou quantas aulas o aluno precisa para ser promovido — vale o que ocorrer primeiro.
+                  Preencha só um dos dois campos se quiser usar um único critério. Aplica-se a cada grau dentro da faixa e à troca para a próxima faixa.
+                </p>
+                <div className="space-y-2.5">
+                  {beltRanks.map(belt => {
+                    const row = editBeltSettings[belt.id];
+                    if (!row) return null;
+                    const setRow = (patch: Partial<BeltSettingFormRow>) =>
+                      setEditBeltSettings(prev => ({ ...prev, [belt.id]: { ...prev[belt.id], ...patch } }));
+                    return (
+                      <div key={belt.id} className="p-3 sm:p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-tight">{belt.name}</span>
+                          <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{belt.degreeCount > 0 ? `${belt.degreeCount}º graus` : 'Honorária'}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Meses</label>
+                            <input
+                              type="number"
+                              min={0}
+                              value={row.monthsRequired ?? ''}
+                              onChange={e => setRow({ monthsRequired: e.target.value === '' ? null : parseInt(e.target.value) })}
+                              placeholder="—"
+                              className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Aulas</label>
+                            <input
+                              type="number"
+                              min={0}
+                              value={row.classesRequired ?? ''}
+                              onChange={e => setRow({ classesRequired: e.target.value === '' ? null : parseInt(e.target.value) })}
+                              placeholder="—"
+                              className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
+                            />
+                          </div>
+                        </div>
+                        <details className="group">
+                          <summary className="text-[8px] font-black text-indigo-500 uppercase tracking-widest cursor-pointer select-none">Aviso antecipado</summary>
+                          <div className="grid grid-cols-2 gap-2 mt-2">
+                            <div>
+                              <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Meses de antecedência</label>
+                              <input
+                                type="number"
+                                min={0}
+                                value={row.warnBeforeMonths ?? ''}
+                                onChange={e => setRow({ warnBeforeMonths: e.target.value === '' ? null : parseInt(e.target.value) })}
+                                placeholder="—"
+                                className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Aulas de antecedência</label>
+                              <input
+                                type="number"
+                                min={0}
+                                value={row.warnBeforeClasses ?? ''}
+                                onChange={e => setRow({ warnBeforeClasses: e.target.value === '' ? null : parseInt(e.target.value) })}
+                                placeholder="—"
+                                className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
+                              />
+                            </div>
+                          </div>
+                        </details>
                       </div>
-                    ))}
-                  </div>
-
-                  {/* Divisor */}
-                  <div className="border-t border-slate-200 dark:border-slate-700" />
-
-                  {/* Seção 2: Aviso antecipado */}
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">🔔 Avisar Aluno Antes da Graduação</p>
-                      <p className="text-[9px] text-slate-400 italic ml-1">
-                        Quando faltarem X {warnUnit.toLowerCase()} para graduar, um aviso aparece no dashboard do aluno. Use 0 para desativar.
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 mb-1">
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Grupo</span>
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Avisar com X {warnUnit} de antecedência</span>
-                    </div>
-                    {groups.map(g => (
-                      <div key={`warn-${g.key}`} className="grid grid-cols-2 gap-2 items-center">
-                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">{g.label}</span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={(editGraduationRules[g.key] as any)?.warnBefore ?? 0}
-                          onChange={e => setEditGraduationRules(r => ({
-                            ...r,
-                            [g.key]: { ...(r[g.key] as any), warnBefore: parseInt(e.target.value) || 0 },
-                          }))}
-                          className="bg-slate-50 dark:bg-slate-800 border-none rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
-                        />
-                      </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
-              );
-            })()}
+              </>
+            )}
 
-            <div className="flex flex-col gap-2 mt-8">
+            <div className="flex flex-col gap-2 mt-6">
               <button
-                onClick={handleSaveGraduation}
-                disabled={isSavingAcademy}
+                onClick={handleSaveBeltSettings}
+                disabled={isSavingBeltSettings || isLoadingBeltSettings || !beltSettingsSport}
                 className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-black py-4 rounded-2xl shadow-lg shadow-indigo-600/20 active:scale-95 transition-all text-sm uppercase tracking-widest"
               >
-                {isSavingAcademy ? 'Salvando...' : 'Salvar Critérios'}
+                {isSavingBeltSettings ? 'Salvando...' : 'Salvar'}
               </button>
               <button
-                onClick={() => setIsEditingGraduation(false)}
-                disabled={isSavingAcademy}
+                onClick={() => setIsEditingBeltSettings(false)}
+                disabled={isSavingBeltSettings}
                 className="w-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold py-4 rounded-2xl active:scale-95 transition-all text-sm disabled:opacity-50"
               >
                 Cancelar
@@ -2239,17 +2271,14 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             {['admin', 'superuser'].includes(user.role) && (
               <SettingItem
                 icon={<Trophy className="text-indigo-500" />}
-                title="Critérios de Graduação"
+                title="Faixas e Graduação"
                 subtitle={(() => {
-                  const r = academy.graduationRules;
-                  if (!r) return 'Padrão do sistema (treinos)';
-                  const modeLabel = r.mode === 'hours' ? 'horas' : r.mode === 'months' ? 'meses' : 'treinos';
-                  return `Por ${modeLabel} · Branca: ${r.white?.stripeThreshold ?? 20} · Intermediária: ${r.intermediate?.stripeThreshold ?? 40}`;
+                  if (isLoadingBeltSettings) return 'Carregando...';
+                  if (!beltSettingsSport) return 'Esporte não definido';
+                  const configured = beltRanks.filter(b => b.monthsRequired != null || b.classesRequired != null).length;
+                  return `${beltSettingsSport.name} · ${configured} de ${beltRanks.length} faixas configuradas`;
                 })()}
-                onClick={() => {
-                  setEditGraduationRules(academy.graduationRules ?? defaultGraduationRules());
-                  setIsEditingGraduation(true);
-                }}
+                onClick={openBeltSettingsModal}
               />
             )}
           </div>
