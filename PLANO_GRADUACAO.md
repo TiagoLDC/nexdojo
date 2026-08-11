@@ -151,7 +151,7 @@ Aplica-se uniformemente a cada "passo" dentro daquela faixa (cada troca de grau 
 - [x] **Fase 5 — Frontend** ✅ concluída (11/08/2026) — tela "Esportes" (superuser) criada e roteada
 - [x] **Fase 6 — Frontend** ✅ concluída (11/08/2026) — `SettingsView` com a nova seção "Faixas e Graduação" por academia
 - [x] **Fase 7 — Frontend** ✅ concluída (11/08/2026) — Central de Graduação (`StudentsView.tsx`) com elegibilidade combinada por faixa + seção "Quase Lá"
-- [ ] **Fase 8 — Frontend**: demais telas com exibição de faixa (filtros, modais, gráficos, dashboard) migradas para a fonte dinâmica
+- [x] **Fase 8 — Frontend** ✅ concluída (11/08/2026) — `DashboardView`, `ReportsView` e `StudentProfileView` migrados para a elegibilidade por faixa (mesmas funções da Fase 7)
 - [ ] **Fase 9 — Limpeza** (só após soak em QAS): remover campo `degree` morto; avaliar remoção de `students.belt` ENUM / `academies.graduation_rules` JSON; oportunidade de consolidar `types.ts` legado com `src/types/entities.ts` para as entidades tocadas
 - [ ] **Fase 10 — Testes manuais** (usuário testa na interface, conforme regra do projeto) **e Deploy QAS** — só quando solicitado explicitamente
 
@@ -229,6 +229,19 @@ Escopo desta fase: eliminar a duplicação real de código (arrays/switch de fai
 - **Fila de Promoção**: a métrica única por `mode` (`gradMode`) foi trocada por `getGraduationProgressByBeltRank`, que escolhe entre meses/aulas o que estiver **mais perto de bater** (maior proporção concluída) quando os dois estão configurados para a faixa — reflete a semântica "o que ocorrer primeiro" (D3) também na ordenação da fila (mais próximos de graduar aparecem primeiro).
 - **Nova seção "Quase Lá"**: usa `isCloseToGraduationByBeltRank` (aviso antecipado por faixa, D3) para listar alunos dentro da margem configurada mas ainda não elegíveis — funcionalidade nova, não existia na Central de Graduação antes (o aviso antecipado só existia no dashboard pessoal do aluno, que é uma tela diferente e continua com a lógica antiga até a Fase 8).
 - **Verificação**: `npx tsc --noEmit` comparado com a saída da Fase 6 — **idêntico** (68 erros, só um deles mudou de número de linha por causa do código adicionado acima dele no arquivo).
+
+### Detalhes do que foi feito na Fase 8 (11/08/2026)
+
+- **`src/features/settings/hooks/useAcademyBeltRanks.ts`** (novo): hook compartilhado (`sport`, `beltRanks`, `isLoading`, `getBeltConfig(beltName: string)`) — extraído para não repetir pela 3ª/4ª vez o mesmo par fetch+state já escrito em `SettingsView`/`StudentsView` (Fases 6/7). Usado pelos 3 arquivos desta fase.
+- **`views/ReportsView.tsx`**: os 4 pontos que liam `isReadyForGraduation(s, academy.graduationRules)` (stat de "prontos para graduar" no relatório) trocados para `isReadyForGraduationByBeltRank(s, getBeltConfig(s.belt))`.
+- **`views/StudentProfileView.tsx`**: card "Próxima Graduação" (tela `/profile`) trocado para `getGraduationProgressByBeltRank`. De brinde corrigido um bug pré-existente: para `mode === 'months'` o `current` estava **hardcoded em `0`** (nunca calculava os meses desde a última graduação) — o card sempre mostrava a contagem cheia como "faltante" para quem usava esse modo. A nova versão calcula corretamente via `monthsSince`.
+- **`views/DashboardView.tsx`** (maior escopo desta fase): 3 pontos migrados —
+  1. `graduationAlerts` (widget de alerta para admin/instrutor/staff, lista de até 10 alunos elegíveis).
+  2. Banner "Graduação Próxima" do próprio aluno (`graduationWarning`) — antes vinha de `getGraduationWarning` (baldes, unidade `'treinos'|'horas'|'dias'`), agora de `isCloseToGraduationByBeltRank` + `getGraduationProgressByBeltRank` (unidade `'aulas'|'meses'`); texto da mensagem (`Falta só 1 treino/hora/dia!`) ajustado para o novo vocabulário (`mês`/`aula`).
+  3. Card "Jornada de Graduação" (barra de progresso %, `current`/`target`/`unit`) — a lógica de `mode` (hours/months/classes) computada manualmente foi substituída por `getGraduationProgressByBeltRank`, mesma função das outras duas telas.
+  - Só a **computação de dados** mudou nos 3 pontos — nenhum JSX/animação/estilo foi alterado, para minimizar risco numa tela vista por todo usuário logado.
+- **Decisão consciente de não uniformizar 100%**: `views/StudentsView.tsx` (Fase 7) mantém sua própria implementação inline de `getBeltConfig` (que recebe o `Student` inteiro, não só o nome da faixa) em vez de adotar o hook novo — trocar os 14 pontos de chamada só por consistência cosmética não valia o risco de re-tocar código da Fase 7 já verificado. Fica registrado como candidato a unificação na Fase 9 (limpeza), não é um bug.
+- **Verificação**: `npx tsc --noEmit` comparado com a Fase 7 — **idêntico** (68 erros, só shifts de linha). Nenhuma tela testada no navegador (regra do projeto).
 
 ### Nota de risco identificada durante a implementação (Resolvida na Fase 3)
 

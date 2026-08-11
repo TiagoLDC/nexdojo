@@ -3,7 +3,8 @@ import { User, Student, Academy, Belt, StudentDocument, AcademyPlan } from '../t
 import { studentService } from '@/features/students/services/studentService';
 import { plansService } from '@/features/plans/services/plansService';
 import { useProfileStore, getActiveProfile } from '@/stores/profileStore';
-import { getGraduationThreshold } from '../services/graduation';
+import { getGraduationProgressByBeltRank } from '../services/graduation';
+import { useAcademyBeltRanks } from '@/features/settings/hooks/useAcademyBeltRanks';
 import {
   User as UserIcon,
   MapPin,
@@ -65,6 +66,7 @@ interface StudentProfileViewProps {
 }
 
 const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }) => {
+  const { getBeltConfig } = useAcademyBeltRanks(academy?.id);
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<Student | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -380,12 +382,12 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
               <div className="relative z-10">
                 <h4 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 mb-2">Próxima Graduação</h4>
                 {(() => {
-                  const rules = academy.graduationRules;
-                  const mode = rules?.mode ?? 'classes';
-                  const threshold = getGraduationThreshold(profile, rules);
-                  const current = mode === 'hours' ? (profile.hoursSinceGraduation ?? 0) : mode === 'months' ? 0 : (profile.classesSinceGraduation ?? 0);
-                  const unit = mode === 'hours' ? 'Horas' : mode === 'months' ? 'Meses' : 'Treinos';
-                  const remaining = Math.max(0, threshold - current);
+                  const progress = getGraduationProgressByBeltRank(profile, getBeltConfig(profile.belt));
+                  if (!progress) {
+                    return <p className="text-sm font-bold opacity-70">Critério não configurado</p>;
+                  }
+                  const remaining = Math.max(0, progress.target - progress.current);
+                  const unit = progress.unit === 'meses' ? 'Meses' : 'Aulas';
                   return (
                     <>
                       <p className="text-3xl font-black italic tracking-tighter">

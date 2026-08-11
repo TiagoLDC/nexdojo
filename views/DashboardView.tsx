@@ -15,7 +15,8 @@ import { calendarService } from '@/features/calendar/services/calendarService';
 import { chatService } from '@/features/chat/services/chatService';
 import { academyService } from '@/features/settings/services/academyService';
 import { PrivacyValue } from '../components/PrivacyValue';
-import { calculateAge, isReadyForGraduation, getGraduationThreshold, getGraduationWarning, getNextRank } from '../services/graduation';
+import { calculateAge, getNextRank, isReadyForGraduationByBeltRank, getGraduationProgressByBeltRank, isCloseToGraduationByBeltRank } from '../services/graduation';
+import { useAcademyBeltRanks } from '@/features/settings/hooks/useAcademyBeltRanks';
 import {
   Users,
   TrendingUp,
@@ -78,6 +79,7 @@ import { useProfileStore, getActiveProfile } from '@/stores/profileStore';
 
 const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAcademy?: (a: Academy) => void }> = ({ academy, user, onSwitchAcademy }) => {
   const { t, language, showNotification } = useTranslation();
+  const { getBeltConfig } = useAcademyBeltRanks(academy?.id);
   const [students, setStudents] = React.useState<Student[]>([]);
   const [instructors, setInstructors] = React.useState<Instructor[]>([]);
   const [staff, setStaff] = React.useState<Staff[]>([]);
@@ -601,17 +603,16 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   };
 
   const graduationAlerts = useMemo(() => {
-    const rules = academy?.graduationRules ?? undefined;
     return students.filter(s => {
-      const { readyForBelt, readyForStripe } = isReadyForGraduation(s, rules);
+      const { readyForBelt, readyForStripe } = isReadyForGraduationByBeltRank(s, getBeltConfig(s.belt));
       return readyForBelt || readyForStripe;
     }).map(s => {
-      const { readyForBelt } = isReadyForGraduation(s, rules);
+      const { readyForBelt } = isReadyForGraduationByBeltRank(s, getBeltConfig(s.belt));
       let type: 'STRIPE' | 'BELT' = readyForBelt ? 'BELT' : 'STRIPE';
       let message = readyForBelt ? 'Elegível para Próxima Faixa' : 'Elegível para Próximo Grau';
       return { ...s, alertType: type, alertMessage: message };
     }).sort((a, b) => a.name.localeCompare(b.name));
-  }, [students, academy]);
+  }, [students, getBeltConfig]);
 
   const currentMonthDay = useMemo(() => {
     const today = new Date();
@@ -881,7 +882,11 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       if (!((paymentPlan?.price ?? 0) > 0)) return null;
       return { diffDays, price: paymentPlan?.price as number | undefined, planName: paymentPlan?.name as string | undefined };
     })();
-    const graduationWarning = getGraduationWarning(profile, academy?.graduationRules);
+    const beltConfig = getBeltConfig(profile.belt);
+    const graduationProgress = getGraduationProgressByBeltRank(profile, beltConfig);
+    const graduationWarning = isCloseToGraduationByBeltRank(profile, beltConfig) && graduationProgress
+      ? { remaining: Math.max(0, graduationProgress.target - graduationProgress.current), unit: graduationProgress.unit }
+      : null;
     const studentNextRank = getNextRank(profile.belt, profile.stripes);
 
     return (
@@ -1099,7 +1104,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                   </div>
                   <h3 className="font-black text-xl sm:text-2xl uppercase italic tracking-tight leading-none">
                     {graduationWarning.remaining === 1
-                      ? `Falta só 1 ${graduationWarning.unit === 'treinos' ? 'treino' : graduationWarning.unit === 'horas' ? 'hora' : 'dia'}!`
+                      ? `Falta só 1 ${graduationWarning.unit === 'meses' ? 'mês' : 'aula'}!`
                       : `Faltam ${graduationWarning.remaining} ${graduationWarning.unit}!`}
                   </h3>
                   <p className="text-white/75 font-semibold text-sm mt-1">
@@ -1212,29 +1217,10 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
             <motion.div variants={itemVariants}>
               {(() => {
                 const theme = getBeltTheme(profile.belt);
-                const rules = academy?.graduationRules;
-                const mode = rules?.mode ?? 'classes';
-                const target = getGraduationThreshold(profile, rules);
-                const unit = mode === 'hours' ? 'Horas' : mode === 'months' ? 'Meses' : 'Treinos';
-
-                let current: number;
-                if (mode === 'hours') {
-                  current = profile.hoursSinceGraduation ?? 0;
-                } else if (mode === 'months') {
-                  const lastGrad = profile.lastGraduationDate;
-                  if (lastGrad) {
-                    const [y, mo, d] = lastGrad.split('-').map(Number);
-                    const past = new Date(y, mo - 1, d);
-                    const now = new Date();
-                    let months = (now.getFullYear() - past.getFullYear()) * 12 + (now.getMonth() - past.getMonth());
-                    if (now.getDate() < past.getDate()) months--;
-                    current = Math.max(0, months);
-                  } else {
-                    current = 0;
-                  }
-                } else {
-                  current = profile.classesSinceGraduation ?? 0;
-                }
+                const progressData = getGraduationProgressByBeltRank(profile, getBeltConfig(profile.belt));
+                const target = progressData?.target ?? 0;
+                const current = progressData?.current ?? 0;
+                const unit = progressData?.unit === 'meses' ? 'Meses' : 'Aulas';
 
                 const progress = target > 0 ? Math.min(100, Math.floor((current / target) * 100)) : 0;
                 const remaining = Math.max(0, target - current);
