@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
-import { BELT_COLORS } from '../constants';
+import { getBeltClassName } from '../constants';
 import { DateSelectInput } from '@/components/ui';
 
 const fmtDate = (d?: string | null) => {
@@ -740,7 +740,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
               <div className="space-y-6">
                 <div className="space-y-3">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Graus na Faixa</label>
-                  <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${BELT_COLORS[editData.belt || Belt.WHITE]}`}>
+                  <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${getBeltClassName(editData.belt || Belt.WHITE, getBeltConfig(editData.belt || Belt.WHITE)?.colorKey)}`}>
                     <button
                       type="button"
                       disabled={!isEditing}
@@ -803,7 +803,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
                       onClick={() => setEditData({...editData, belt})}
                       className={`py-3 px-2 rounded-2xl border-2 text-[8px] font-black uppercase tracking-widest transition-all ${
                         editData.belt === belt
-                          ? `${BELT_COLORS[belt]} shadow-lg shadow-indigo-500/10 scale-105 ring-4 ring-indigo-500/10`
+                          ? `${getBeltClassName(belt, getBeltConfig(belt)?.colorKey)} shadow-lg shadow-indigo-500/10 scale-105 ring-4 ring-indigo-500/10`
                           : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-400 opacity-60 hover:opacity-100'
                       }`}
                     >
@@ -865,11 +865,11 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
                 {[...(profile.graduationHistory)].reverse().map((item, idx) => (
                   <div key={item.id ?? idx} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl px-4 py-3 border border-slate-100 dark:border-slate-800">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase shrink-0 border ${BELT_COLORS[item.previousBelt] ?? 'bg-slate-400 text-white border-slate-500'}`}>
+                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase shrink-0 border ${getBeltClassName(item.previousBelt, getBeltConfig(item.previousBelt)?.colorKey) ?? 'bg-slate-400 text-white border-slate-500'}`}>
                         {item.previousBelt} {item.previousStripes > 0 ? `${item.previousStripes}°` : ''}
                       </span>
                       <ChevronRight size={14} className="text-slate-400 shrink-0" />
-                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase shrink-0 border ${BELT_COLORS[item.newBelt] ?? 'bg-slate-400 text-white border-slate-500'}`}>
+                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase shrink-0 border ${getBeltClassName(item.newBelt, getBeltConfig(item.newBelt)?.colorKey) ?? 'bg-slate-400 text-white border-slate-500'}`}>
                         {item.newBelt} {item.newStripes > 0 ? `${item.newStripes}°` : ''}
                       </span>
                       {item.notes && (
@@ -1021,7 +1021,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
                 </button>
               </div>
 
-              <div className={`w-28 h-28 rounded-[36px] border-4 border-white dark:border-slate-800 shadow-xl flex items-center justify-center overflow-hidden mb-6 ${BELT_COLORS[profile.belt]}`}>
+              <div className={`w-28 h-28 rounded-[36px] border-4 border-white dark:border-slate-800 shadow-xl flex items-center justify-center overflow-hidden mb-6 ${getBeltClassName(profile.belt, getBeltConfig(profile.belt)?.colorKey)}`}>
                 {profile.photo ? (
                   <img src={profile.photo} alt={profile.name} className="w-full h-full object-cover" />
                 ) : (

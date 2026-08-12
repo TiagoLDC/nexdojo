@@ -7,7 +7,8 @@ import { useTranslation } from '../services/LanguageContext';
 import { Shirt, Search, Plus, X, RotateCcw, Loader2, UserCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BeltBadge } from '../components/BeltBadge';
-import { BELT_COLORS } from '../constants';
+import { getBeltClassName } from '../constants';
+import { useAcademyBeltRanks } from '@/features/settings/hooks/useAcademyBeltRanks';
 
 const fmtDate = (d?: string | null) => {
   if (!d) return '—';
@@ -17,6 +18,7 @@ const fmtDate = (d?: string | null) => {
 };
 
 const KimonoLoanView: React.FC<{ academy: Academy; user: User }> = ({ academy }) => {
+  const { getBeltConfig } = useAcademyBeltRanks(academy?.id);
   const { showNotification } = useTranslation();
   const [loans, setLoans] = useState<KimonoLoan[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -137,7 +139,7 @@ const KimonoLoanView: React.FC<{ academy: Academy; user: User }> = ({ academy })
               {loan.personPhoto ? (
                 <img src={loan.personPhoto} className="w-16 h-16 rounded-2xl object-cover shrink-0 border border-slate-100 dark:border-slate-800" />
               ) : (
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center font-black text-2xl shrink-0 ${loan.personBelt ? BELT_COLORS[loan.personBelt] : 'bg-slate-100 text-slate-400'}`}>
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center font-black text-2xl shrink-0 ${loan.personBelt ? getBeltClassName(loan.personBelt, getBeltConfig(loan.personBelt)?.colorKey) : 'bg-slate-100 text-slate-400'}`}>
                   {loan.personName?.charAt(0) || '?'}
                 </div>
               )}
@@ -148,7 +150,7 @@ const KimonoLoanView: React.FC<{ academy: Academy; user: User }> = ({ academy })
                     {loan.personType === 'student' ? 'Aluno' : 'Instrutor'}
                   </span>
                 </div>
-                {loan.personBelt && <div className="mt-1"><BeltBadge belt={loan.personBelt} stripes={loan.personStripes || 0} /></div>}
+                {loan.personBelt && <div className="mt-1"><BeltBadge belt={loan.personBelt} stripes={loan.personStripes || 0} colorKey={getBeltConfig(loan.personBelt)?.colorKey} /></div>}
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">
                   Emprestado em {fmtDate(loan.borrowedAt)}
                 </p>
@@ -220,7 +222,7 @@ const KimonoLoanView: React.FC<{ academy: Academy; user: User }> = ({ academy })
                     {person.photo ? (
                       <img src={person.photo} className="w-10 h-10 rounded-xl object-cover shrink-0" />
                     ) : (
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 ${BELT_COLORS[person.belt]}`}>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 ${getBeltClassName(person.belt, getBeltConfig(person.belt)?.colorKey)}`}>
                         {person.name.charAt(0)}
                       </div>
                     )}

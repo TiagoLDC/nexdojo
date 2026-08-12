@@ -3,7 +3,7 @@ import { Plus, Pencil, Trash2, ShieldCheck, ArrowUp, ArrowDown } from 'lucide-re
 import { User } from '../types';
 import type { Sport, BeltRank, BeltCategory } from '@/types';
 import { sportService, BeltRankInput } from '@/features/sports/services/sportService';
-import { COLOR_PALETTES } from '@/utils/constants';
+import { BELT_VISUAL_CONFIG_BY_COLOR_KEY, DEFAULT_BELT_VISUAL_CONFIG } from '../constants';
 import { Modal } from '@/components/ui/Modal';
 import { useTranslation } from '../services/LanguageContext';
 
@@ -17,7 +17,9 @@ const CATEGORY_LABELS: Record<BeltCategory, string> = {
   both: 'Ambos',
 };
 
-const COLOR_KEYS = Object.keys(COLOR_PALETTES);
+// Mesmo vocabulário de cor usado pelo BeltBadge (constants.ts) — escolher uma cor aqui
+// tem efeito real na exibição, em vez de uma paleta genérica desconectada do render.
+const COLOR_KEYS = Object.keys(BELT_VISUAL_CONFIG_BY_COLOR_KEY);
 
 const emptyBeltForm = (nextOrderIndex: number): BeltRankInput => ({
   name: '',
@@ -248,8 +250,7 @@ const SportsView: React.FC<SportsViewProps> = ({ user }) => {
                 className="flex items-center gap-3 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50"
               >
                 <span
-                  className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-700 shrink-0"
-                  style={{ background: COLOR_PALETTES[belt.colorKey]?.base ?? '#94a3b8' }}
+                  className={`w-8 h-8 rounded-full border shrink-0 ${(BELT_VISUAL_CONFIG_BY_COLOR_KEY[belt.colorKey] ?? DEFAULT_BELT_VISUAL_CONFIG).bg} ${(BELT_VISUAL_CONFIG_BY_COLOR_KEY[belt.colorKey] ?? DEFAULT_BELT_VISUAL_CONFIG).border}`}
                 />
                 <div className="flex-1 min-w-0">
                   <p className="font-black text-slate-800 dark:text-white text-xs uppercase truncate">{belt.name}</p>
@@ -350,8 +351,9 @@ const SportsView: React.FC<SportsViewProps> = ({ user }) => {
                   key={key}
                   type="button"
                   onClick={() => setBeltForm(f => ({ ...f, colorKey: key }))}
-                  className={`w-8 h-8 rounded-full border-2 transition-all ${beltForm.colorKey === key ? 'border-indigo-500 scale-110' : 'border-transparent'}`}
-                  style={{ background: COLOR_PALETTES[key].base }}
+                  className={`w-8 h-8 rounded-full transition-all ${BELT_VISUAL_CONFIG_BY_COLOR_KEY[key].bg} ${
+                    beltForm.colorKey === key ? 'ring-2 ring-offset-2 ring-indigo-500 scale-110' : `border-2 ${BELT_VISUAL_CONFIG_BY_COLOR_KEY[key].border}`
+                  }`}
                   title={key}
                 />
               ))}

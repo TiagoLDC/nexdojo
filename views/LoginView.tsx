@@ -36,7 +36,8 @@ import {
   Upload,
   CreditCard
 } from 'lucide-react';
-import { BELT_COLORS } from '../constants';
+import { getBeltClassName } from '../constants';
+import { beltRankService, PublicBeltRank } from '@/features/settings/services/beltRankService';
 
 const calculateAge = (birthDate: string) => {
   if (!birthDate) return 0;
@@ -120,6 +121,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [_isFromSharedLink, setIsFromSharedLink] = useState(false);
   const [linkedAcademy, setLinkedAcademy] = useState<Academy | null>(null);
+  const [publicBeltRanks, setPublicBeltRanks] = useState<PublicBeltRank[]>([]);
+  const getColorKey = (beltName: string) => publicBeltRanks.find(b => b.name === beltName)?.colorKey;
   const [academyPlans, setAcademyPlans] = useState<AcademyPlan[]>([]);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
@@ -172,6 +175,10 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
         api.get<{ data: AcademyPlan[] }>(`/plans/public?academyId=${found.id}`)
           .then(pr => setAcademyPlans(pr.data.data ?? []))
           .catch(() => setAcademyPlans([]));
+
+        beltRankService.getPublicBeltRanks(found.id)
+          .then(setPublicBeltRanks)
+          .catch(() => setPublicBeltRanks([]));
       })
       .catch(() => {
         // alias não encontrado — sem branding
@@ -1055,13 +1062,13 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                       Belt.GREEN_WHITE, Belt.GREEN, Belt.GREEN_BLACK,
                       Belt.BLUE, Belt.PURPLE, Belt.BROWN, Belt.BLACK,
                     ].map(b => (
-                      <button key={b} onClick={() => setStudentData({...studentData, belt: b, stripes: 0})} className={`py-4 rounded-2xl border-2 font-black text-[10px] uppercase transition-all ${studentData.belt === b ? `${BELT_COLORS[b]} scale-105 shadow-lg` : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-400'}`}>{b}</button>
+                      <button key={b} onClick={() => setStudentData({...studentData, belt: b, stripes: 0})} className={`py-4 rounded-2xl border-2 font-black text-[10px] uppercase transition-all ${studentData.belt === b ? `${getBeltClassName(b, getColorKey(b))} scale-105 shadow-lg` : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-400'}`}>{b}</button>
                     ))}
                   </div>
 
                   <div className="bg-slate-50 dark:bg-slate-800/50 p-4 md:p-6 rounded-3xl border border-slate-100 dark:border-slate-800">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Graus na Faixa</label>
-                    <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${BELT_COLORS[studentData.belt || Belt.WHITE]}`}>
+                    <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${getBeltClassName(studentData.belt || Belt.WHITE, getColorKey(studentData.belt || Belt.WHITE))}`}>
                       <button type="button" onClick={() => setStudentData({...studentData, stripes: Math.max(0, (studentData.stripes || 0) - 1)})} className="bg-black/30 hover:bg-black/50 border border-white/20 text-white rounded-xl p-2 transition-all outline-none"><Minus size={20} /></button>
                       <div className={`flex gap-1.5 p-1 rounded-md px-3 bg-opacity-90 ${studentData.belt === Belt.BLACK ? 'bg-red-600' : 'bg-zinc-900 shadow-lg'}`}>
                         {[...Array(studentData.belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
@@ -1316,13 +1323,13 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2">Selecione sua Graduação</label>
                     <div className="grid grid-cols-2 gap-2">
                       {[Belt.BLUE, Belt.PURPLE, Belt.BROWN, Belt.BLACK].map(b => (
-                        <button key={b} onClick={() => setInstructorData({...instructorData, belt: b, stripes: 0})} className={`py-4 rounded-2xl border-2 font-black text-[10px] uppercase transition-all ${instructorData.belt === b ? `${BELT_COLORS[b]} scale-105 shadow-lg` : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-400'}`}>{b}</button>
+                        <button key={b} onClick={() => setInstructorData({...instructorData, belt: b, stripes: 0})} className={`py-4 rounded-2xl border-2 font-black text-[10px] uppercase transition-all ${instructorData.belt === b ? `${getBeltClassName(b, getColorKey(b))} scale-105 shadow-lg` : 'bg-slate-50 dark:bg-slate-800 border-transparent text-slate-400'}`}>{b}</button>
                       ))}
                     </div>
 
                     <div className="bg-slate-50 dark:bg-slate-800/50 p-4 md:p-6 rounded-3xl border border-slate-100 dark:border-slate-800 mt-4">
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Graus na Faixa</label>
-                    <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${BELT_COLORS[instructorData.belt || Belt.BLACK]}`}>
+                    <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${getBeltClassName(instructorData.belt || Belt.BLACK, getColorKey(instructorData.belt || Belt.BLACK))}`}>
                         <button type="button" onClick={() => setInstructorData({...instructorData, stripes: Math.max(0, (instructorData.stripes || 0) - 1)})} className="text-white/50 hover:scale-125 transition-all outline-none"><Minus size={20} /></button>
                         <div className={`flex gap-1.5 p-1 rounded-md px-3 bg-opacity-90 ${instructorData.belt === Belt.BLACK ? 'bg-red-600' : 'bg-zinc-900 shadow-lg'}`}>
                           {[...Array(instructorData.belt === Belt.BLACK ? 6 : 4)].map((_, i) => (

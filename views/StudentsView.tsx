@@ -66,7 +66,7 @@ import {
   Clock
 } from 'lucide-react';
 import { BeltBadge } from '../components/BeltBadge';
-import { BELT_COLORS } from '../constants';
+import { getBeltClassName } from '../constants';
 import { DateSelectInput, ConfirmDialog } from '@/components/ui';
 import { kimonoLoanService } from '@/features/kimonoLoans/services/kimonoLoanService';
 
@@ -857,7 +857,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       {student.photo ? (
                         <img src={student.photo} className="w-24 h-24 rounded-[32px] object-cover border-2 border-white dark:border-slate-800 shadow-md" />
                       ) : (
-                        <div className={`w-24 h-24 rounded-[32px] flex items-center justify-center font-black text-4xl shadow-md ${BELT_COLORS[student.belt]}`}>
+                        <div className={`w-24 h-24 rounded-[32px] flex items-center justify-center font-black text-4xl shadow-md ${getBeltClassName(student.belt, getBeltConfig(student)?.colorKey)}`}>
                           {student.name.charAt(0)}
                         </div>
                       )}
@@ -866,7 +866,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     <div className="flex-1 min-w-0 pr-10">
                       <h3 className="font-black text-slate-800 dark:text-white text-lg truncate leading-tight uppercase italic">{student.name}</h3>
                       <div className="flex flex-wrap items-center gap-2 mt-1">
-                        <BeltBadge belt={student.belt} stripes={student.stripes} />
+                        <BeltBadge belt={student.belt} stripes={student.stripes} colorKey={getBeltConfig(student)?.colorKey} />
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter ${
                           student.status === 'Active' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
                           student.status === 'Pending' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 animate-pulse' :
@@ -1014,7 +1014,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                               className="w-12 h-12 rounded-xl object-cover border-2 border-white shadow-sm transition-all duration-300 transform hover:scale-[2.5] hover:shadow-2xl hover:rounded-lg cursor-zoom-in relative"
                             />
                           ) : (
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl shadow-sm transition-all duration-300 transform hover:scale-[2.5] hover:shadow-2xl hover:rounded-lg cursor-zoom-in relative ${BELT_COLORS[student.belt]}`}>
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-xl shadow-sm transition-all duration-300 transform hover:scale-[2.5] hover:shadow-2xl hover:rounded-lg cursor-zoom-in relative ${getBeltClassName(student.belt, getBeltConfig(student)?.colorKey)}`}>
                               {student.name.charAt(0)}
                             </div>
                           )}
@@ -1037,7 +1037,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                             })()}
                           </div>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <BeltBadge belt={student.belt} stripes={student.stripes} />
+                            <BeltBadge belt={student.belt} stripes={student.stripes} colorKey={getBeltConfig(student)?.colorKey} />
                             {student.planId && (
                               <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md flex items-center gap-1">
                                 <Book size={8} className="text-indigo-500" />
@@ -1157,7 +1157,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                 </button>
               </div>
 
-              <div className={`w-20 h-20 rounded-full border-4 border-white shadow-xl flex items-center justify-center overflow-hidden mb-4 ${BELT_COLORS[qrStudent.belt]}`}>
+              <div className={`w-20 h-20 rounded-full border-4 border-white shadow-xl flex items-center justify-center overflow-hidden mb-4 ${getBeltClassName(qrStudent.belt, getBeltConfig(qrStudent)?.colorKey)}`}>
                 {qrStudent.photo ? (
                   <img src={qrStudent.photo} alt={qrStudent.name} className="w-full h-full object-cover" />
                 ) : (
@@ -1698,7 +1698,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   <div className="space-y-6">
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase ml-1 mb-2">Graus na Faixa</label>
-                      <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${BELT_COLORS[editingStudent.belt || Belt.WHITE]}`}>
+                      <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${getBeltClassName(editingStudent.belt || Belt.WHITE, getBeltConfig(editingStudent)?.colorKey)}`}>
                         <button type="button" onClick={() => setEditingStudent({...editingStudent, stripes: Math.max(0, (editingStudent.stripes || 0) - 1)})} className="bg-black/30 hover:bg-black/50 border border-white/20 text-white rounded-xl p-2 transition-all outline-none"><Minus size={20} /></button>
                         <div className={`flex gap-1.5 p-1 rounded-md px-3 bg-opacity-90 ${editingStudent.belt === Belt.BLACK ? 'bg-red-600' : 'bg-zinc-900 shadow-lg'}`}>
                           {[...Array(editingStudent.belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
@@ -1804,7 +1804,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                           onClick={() => setEditingStudent({...editingStudent, belt})}
                           className={`px-2 py-3 rounded-2xl border-2 text-[8px] font-black uppercase tracking-widest transition-all ${
                             editingStudent.belt === belt
-                              ? `${BELT_COLORS[belt]} shadow-lg shadow-indigo-500/10 scale-105 ring-4 ring-indigo-500/10`
+                              ? `${getBeltClassName(belt, beltRanksConfig.find(b => b.name === belt)?.colorKey)} shadow-lg shadow-indigo-500/10 scale-105 ring-4 ring-indigo-500/10`
                               : 'bg-white dark:bg-slate-900 text-slate-400 border-slate-100 dark:border-slate-800 opacity-60 hover:opacity-100'
                           }`}
                         >
@@ -2114,7 +2114,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                               {student.photo ? (
                                 <img src={student.photo} className="w-16 h-16 md:w-20 md:h-20 rounded-2xl object-cover" />
                               ) : (
-                                <div className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center font-black text-2xl md:text-3xl ${BELT_COLORS[student.belt]}`}>
+                                <div className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center font-black text-2xl md:text-3xl ${getBeltClassName(student.belt, getBeltConfig(student)?.colorKey)}`}>
                                   {student.name.charAt(0)}
                                 </div>
                               )}
@@ -2139,9 +2139,9 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                                 </button>
                               </div>
                               <div className="flex flex-wrap items-center gap-y-1.5 gap-x-2 mb-3">
-                                <BeltBadge belt={student.belt} stripes={student.stripes} />
+                                <BeltBadge belt={student.belt} stripes={student.stripes} colorKey={getBeltConfig(student)?.colorKey} />
                                 <ChevronRight size={14} className="text-slate-500 shrink-0" />
-                                <BeltBadge belt={nextBelt} stripes={nextStripes} />
+                                <BeltBadge belt={nextBelt} stripes={nextStripes} colorKey={beltRanksConfig.find(b => b.name === nextBelt)?.colorKey} />
                               </div>
                               <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
                                 <div className="shrink-0">
@@ -2193,7 +2193,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                           const progress = getGraduationProgressByBeltRank(student, getBeltConfig(student));
                           return (
                             <div key={student.id} className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-3">
-                              <BeltBadge belt={student.belt} stripes={student.stripes} showText={false} />
+                              <BeltBadge belt={student.belt} stripes={student.stripes} colorKey={getBeltConfig(student)?.colorKey} showText={false} />
                               <div className="min-w-0">
                                 <p className="text-xs font-bold text-white truncate">{student.name}</p>
                                 {progress && (

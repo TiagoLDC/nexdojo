@@ -15,7 +15,7 @@ import { calendarService } from '@/features/calendar/services/calendarService';
 import { chatService } from '@/features/chat/services/chatService';
 import { academyService } from '@/features/settings/services/academyService';
 import { PrivacyValue } from '../components/PrivacyValue';
-import { calculateAge, getNextRank, isReadyForGraduationByBeltRank, getGraduationProgressByBeltRank, isCloseToGraduationByBeltRank } from '../services/graduation';
+import { calculateAge, getNextRank, isReadyForGraduationByBeltRank, getGraduationProgressByBeltRank, isCloseToGraduationByBeltRank, BELT_LIST } from '../services/graduation';
 import { useAcademyBeltRanks } from '@/features/settings/hooks/useAcademyBeltRanks';
 import {
   Users,
@@ -71,7 +71,7 @@ import {
   CartesianGrid
 } from 'recharts';
 import { BeltBadge } from '../components/BeltBadge';
-import { BELT_COLORS } from '../constants';
+import { getBeltClassName } from '../constants';
 import { DateSelectInput, ConfirmDialog, Spinner } from '@/components/ui';
 import { QRCodeSVG } from 'qrcode.react';
 import { useProfileStore, getActiveProfile } from '@/stores/profileStore';
@@ -1120,7 +1120,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
               <div className="relative z-10 mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3 bg-white/10 rounded-2xl p-4">
                 <div className="flex flex-col items-center gap-2">
                   <span className="text-[8px] font-black text-white/60 uppercase tracking-widest">Sua faixa</span>
-                  <BeltBadge belt={profile.belt} stripes={profile.stripes} showText={false} />
+                  <BeltBadge belt={profile.belt} stripes={profile.stripes} colorKey={getBeltConfig(profile.belt)?.colorKey} showText={false} />
                   <span className="text-[9px] font-bold text-white/80 uppercase">{profile.belt}</span>
                 </div>
                 <div className="flex flex-col items-center gap-1">
@@ -1128,7 +1128,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                 </div>
                 <div className="flex flex-col items-center gap-2">
                   <span className="text-[8px] font-black text-yellow-300 uppercase tracking-widest">Próximo rank</span>
-                  <BeltBadge belt={studentNextRank.nextBelt} stripes={studentNextRank.nextStripes} showText={false} />
+                  <BeltBadge belt={studentNextRank.nextBelt} stripes={studentNextRank.nextStripes} colorKey={getBeltConfig(studentNextRank.nextBelt)?.colorKey} showText={false} />
                   <span className="text-[9px] font-bold text-white/80 uppercase">{studentNextRank.nextBelt}</span>
                 </div>
               </div>
@@ -1157,7 +1157,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">{t.students.slice(0, -1)}</p>
                    <h3 className="text-lg font-black uppercase italic tracking-tight leading-none">{profile.name}</h3>
                    <div className="mt-2 flex items-center gap-2 flex-wrap">
-                     <BeltBadge belt={profile.belt} stripes={profile.stripes} />
+                     <BeltBadge belt={profile.belt} stripes={profile.stripes} colorKey={getBeltConfig(profile.belt)?.colorKey} />
                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Status: {profile.status === 'Active' ? (language === 'pt' ? 'Ativo' : 'Active') : (language === 'pt' ? 'Pendente' : 'Pending')}</span>
                    </div>
                  </div>
@@ -1482,7 +1482,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{t.profile}</p>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold text-slate-800 dark:text-white uppercase">{user.role === 'instructor' ? t.instructors.slice(0, -1) : 'Staff'}</span>
-                  {instructorProfile && <BeltBadge belt={instructorProfile.belt} stripes={instructorProfile.stripes} />}
+                  {instructorProfile && <BeltBadge belt={instructorProfile.belt} stripes={instructorProfile.stripes} colorKey={getBeltConfig(instructorProfile.belt)?.colorKey} />}
                 </div>
               </div>
             </div>
@@ -1556,7 +1556,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                     {s.photo ? (
                       <img src={s.photo} className="w-8 h-8 rounded-lg object-cover" />
                     ) : (
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${BELT_COLORS[s.belt]}`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${getBeltClassName(s.belt, getBeltConfig(s.belt)?.colorKey)}`}>
                         {s.name.charAt(0)}
                       </div>
                     )}
@@ -1794,7 +1794,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-10 h-10 rounded-2xl shrink-0 flex items-center justify-center font-black text-base overflow-hidden ${(BELT_COLORS as Record<string, string>)[student.belt] || 'bg-slate-200 text-slate-700'}`}>
+                    <div className={`w-10 h-10 rounded-2xl shrink-0 flex items-center justify-center font-black text-base overflow-hidden ${getBeltClassName(student.belt, getBeltConfig(student.belt)?.colorKey) || 'bg-slate-200 text-slate-700'}`}>
                       {student.photo
                         ? <img src={student.photo} className="w-full h-full object-cover" />
                         : student.name.charAt(0)}
@@ -2464,7 +2464,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                         {att.studentPhoto ? (
                           <img src={att.studentPhoto} className="w-12 h-12 rounded-2xl object-cover" />
                         ) : (
-                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg border ${(BELT_COLORS as Record<string, string>)[att.studentBelt] ?? 'bg-slate-400 text-white border-slate-500'}`}>
+                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg border ${getBeltClassName(att.studentBelt, getBeltConfig(att.studentBelt)?.colorKey) ?? 'bg-slate-400 text-white border-slate-500'}`}>
                             {att.studentName.charAt(0)}
                           </div>
                         )}
@@ -2473,7 +2473,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                       <div className="min-w-0">
                         <h4 className="font-black text-slate-800 dark:text-white text-sm leading-tight uppercase italic truncate">{att.studentName}</h4>
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <BeltBadge belt={att.studentBelt} stripes={att.studentStripes} />
+                          <BeltBadge belt={att.studentBelt} stripes={att.studentStripes} colorKey={getBeltConfig(att.studentBelt)?.colorKey} />
                           <span className="text-[10px] font-bold text-slate-400 capitalize">
                             {new Date(att.date).toLocaleDateString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                           </span>
@@ -2505,11 +2505,11 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                 graduationAlerts.slice(0, 4).map(student => (
                   <div key={student.id} className="bg-white dark:bg-slate-900 p-5 rounded-[32px] border border-slate-100 dark:border-slate-800 flex items-center justify-between group hover:shadow-md transition-all">
                     <div className="flex items-center gap-3">
-                      {student.photo ? <img src={student.photo} className="w-12 h-12 rounded-2xl object-cover" alt="" /> : <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg border ${BELT_COLORS[student.belt]}`}>{student.name.charAt(0)}</div>}
+                      {student.photo ? <img src={student.photo} className="w-12 h-12 rounded-2xl object-cover" alt="" /> : <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg border ${getBeltClassName(student.belt, getBeltConfig(student.belt)?.colorKey)}`}>{student.name.charAt(0)}</div>}
                       <div>
                         <h4 className="font-black text-slate-800 dark:text-slate-100 text-sm leading-tight uppercase italic">{student.name}</h4>
                         <div className="flex items-center gap-2 mt-1">
-                          <BeltBadge belt={student.belt} stripes={student.stripes} />
+                          <BeltBadge belt={student.belt} stripes={student.stripes} colorKey={getBeltConfig(student.belt)?.colorKey} />
                           <p className={`text-[10px] font-black uppercase tracking-wider ${student.alertType === 'BELT' ? 'text-indigo-600' : 'text-amber-600'}`}>
                             {student.alertMessage}
                           </p>
@@ -2667,11 +2667,11 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                 absenceAlerts.slice(0, 4).map(student => (
                   <div key={student.id} className="bg-white dark:bg-slate-900 p-5 rounded-[32px] border border-slate-100 dark:border-slate-800 flex items-center justify-between group hover:shadow-md transition-all shadow-sm">
                     <div className="flex items-center gap-3">
-                      {student.photo ? <img src={student.photo} className="w-12 h-12 rounded-2xl object-cover" alt="" /> : <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg border ${BELT_COLORS[student.belt]}`}>{student.name.charAt(0)}</div>}
+                      {student.photo ? <img src={student.photo} className="w-12 h-12 rounded-2xl object-cover" alt="" /> : <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg border ${getBeltClassName(student.belt, getBeltConfig(student.belt)?.colorKey)}`}>{student.name.charAt(0)}</div>}
                       <div>
                         <h4 className="font-black text-slate-800 dark:text-slate-100 text-sm leading-tight uppercase italic">{student.name}</h4>
                         <div className="flex items-center gap-2">
-                          <BeltBadge belt={student.belt} stripes={student.stripes} />
+                          <BeltBadge belt={student.belt} stripes={student.stripes} colorKey={getBeltConfig(student.belt)?.colorKey} />
                           <span className={`text-[10px] font-black uppercase ${student.absentCount >= student.effectiveLimit ? 'text-red-600' : 'text-amber-600'}`}>
                             {student.absentCount} Faltas
                           </span>
@@ -2705,19 +2705,12 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
           <div className="md:col-span-2 bg-white dark:bg-slate-900 p-6 md:p-8 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col">
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Atletas por Graduação</p>
             <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-4 overflow-y-auto max-h-[300px] md:max-h-none pr-1 custom-scrollbar">
-              {[
-                Belt.WHITE,
-                Belt.GREY_WHITE, Belt.GREY, Belt.GREY_BLACK,
-                Belt.YELLOW_WHITE, Belt.YELLOW, Belt.YELLOW_BLACK,
-                Belt.ORANGE_WHITE, Belt.ORANGE, Belt.ORANGE_BLACK,
-                Belt.GREEN_WHITE, Belt.GREEN, Belt.GREEN_BLACK,
-                Belt.BLUE, Belt.PURPLE, Belt.BROWN, Belt.BLACK,
-              ].map(belt => {
+              {BELT_LIST.map(belt => {
                 const count = (students || []).filter(s => s.belt === belt && s.status === 'Active').length;
                 if (count === 0) return null;
                 const isLightBelt = [Belt.WHITE, Belt.YELLOW, Belt.GREY_WHITE, Belt.YELLOW_WHITE, Belt.ORANGE_WHITE, Belt.GREEN_WHITE].includes(belt);
                 return (
-                  <div key={belt} className={`flex flex-col md:flex-row items-center justify-between px-3 md:px-4 py-3 rounded-2xl border ${BELT_COLORS[belt]} shadow-sm transition-transform hover:scale-[1.02] cursor-default gap-2`}>
+                  <div key={belt} className={`flex flex-col md:flex-row items-center justify-between px-3 md:px-4 py-3 rounded-2xl border ${getBeltClassName(belt, getBeltConfig(belt)?.colorKey)} shadow-sm transition-transform hover:scale-[1.02] cursor-default gap-2`}>
                     <span className={`text-[9px] md:text-[10px] font-black uppercase tracking-tight ${isLightBelt ? 'text-slate-900' : 'text-white'} truncate w-full md:w-auto text-center md:text-left`}>{belt}</span>
                     <span className={`px-2 py-0.5 rounded-lg text-[9px] md:text-[10px] font-black ${isLightBelt ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'}`}>{count}</span>
                   </div>

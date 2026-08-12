@@ -4,6 +4,7 @@ import { Student, User, Belt, Academy, AttendanceRecord } from '../types';
 import { useTranslation } from '../services/LanguageContext';
 import { attendanceService } from '@/features/attendance/services/attendanceService';
 import { studentService } from '@/features/students/services/studentService';
+import { useAcademyBeltRanks } from '@/features/settings/hooks/useAcademyBeltRanks';
 import {
   Search,
   CheckCircle,
@@ -24,7 +25,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { BeltBadge } from '../components/BeltBadge';
-import { BELT_COLORS } from '../constants';
+import { getBeltClassName } from '../constants';
 import { ConfirmDialog } from '@/components/ui';
 import { getTodayBrasilia } from '@/utils/date';
 
@@ -65,6 +66,7 @@ const getGraduationMilestone = (student: Student, t: any) => {
 type AttendanceRecordWithName = AttendanceRecord & { studentName?: string };
 
 const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, user: _user }) => {
+  const { getBeltConfig } = useAcademyBeltRanks(academy?.id);
   const { t, language } = useTranslation();
 
   // Data
@@ -549,7 +551,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                       {student?.photo ? (
                         <img src={student.photo} className="w-10 h-10 rounded-xl object-cover" />
                       ) : (
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${student ? BELT_COLORS[student.belt] : 'bg-slate-100'}`}>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${student ? getBeltClassName(student.belt, getBeltConfig(student.belt)?.colorKey) : 'bg-slate-100'}`}>
                           <UserIcon size={18} className="opacity-40" />
                         </div>
                       )}
@@ -566,7 +568,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                           </span>
                         )}
                       </div>
-                      {student && <BeltBadge belt={student.belt} stripes={student.stripes} />}
+                      {student && <BeltBadge belt={student.belt} stripes={student.stripes} colorKey={getBeltConfig(student.belt)?.colorKey} />}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -651,7 +653,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                           {student.photo ? (
                             <img src={student.photo} className="w-10 h-10 rounded-xl object-cover" />
                           ) : (
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${BELT_COLORS[student.belt]}`}>
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${getBeltClassName(student.belt, getBeltConfig(student.belt)?.colorKey)}`}>
                               <UserIcon size={18} className="opacity-40" />
                             </div>
                           )}
@@ -661,7 +663,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                             {student.name}
                           </p>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <BeltBadge belt={student.belt} stripes={student.stripes} />
+                            <BeltBadge belt={student.belt} stripes={student.stripes} colorKey={getBeltConfig(student.belt)?.colorKey} />
                             <span className="text-[9px] text-slate-400 font-bold">
                               {calculateAge(student.birthDate)} anos
                             </span>
@@ -690,7 +692,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
       {confirmingStudent && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[40px] p-8 animate-in zoom-in duration-300 shadow-2xl text-center">
-            <div className={`w-20 h-20 rounded-[28px] flex items-center justify-center mx-auto mb-6 ${BELT_COLORS[confirmingStudent.belt]}`}>
+            <div className={`w-20 h-20 rounded-[28px] flex items-center justify-center mx-auto mb-6 ${getBeltClassName(confirmingStudent.belt, getBeltConfig(confirmingStudent.belt)?.colorKey)}`}>
               {confirmingStudent.photo ? (
                 <img src={confirmingStudent.photo} className="w-full h-full rounded-[28px] object-cover" />
               ) : (
@@ -699,7 +701,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
             </div>
             <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-1 tracking-tight">Confirmar Presença?</h2>
             <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400 mb-2">{confirmingStudent.name}</p>
-            <BeltBadge belt={confirmingStudent.belt} stripes={confirmingStudent.stripes} />
+            <BeltBadge belt={confirmingStudent.belt} stripes={confirmingStudent.stripes} colorKey={getBeltConfig(confirmingStudent.belt)?.colorKey} />
             {isRetroactive && (
               <div className="mt-4 flex items-center justify-center gap-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-300 px-4 py-2.5 rounded-2xl">
                 <AlertCircle size={14} className="shrink-0 text-amber-500" />
@@ -804,7 +806,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                   return (
                     <div key={record.id} className="bg-slate-50 dark:bg-slate-800 flex items-center justify-between p-4 rounded-[20px]">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${student ? BELT_COLORS[student.belt] : 'bg-slate-200 dark:bg-slate-700'}`}>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${student ? getBeltClassName(student.belt, getBeltConfig(student.belt)?.colorKey) : 'bg-slate-200 dark:bg-slate-700'}`}>
                           {student?.photo ? (
                             <img src={student.photo} className="w-full h-full rounded-xl object-cover" />
                           ) : (
@@ -918,7 +920,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                       {lastScannedStudent.photo ? (
                         <img src={lastScannedStudent.photo} className="w-10 h-10 rounded-xl object-cover border-2 border-white/30" />
                       ) : (
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center border-2 border-white/30 ${BELT_COLORS[lastScannedStudent.belt]}`}>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center border-2 border-white/30 ${getBeltClassName(lastScannedStudent.belt, getBeltConfig(lastScannedStudent.belt)?.colorKey)}`}>
                           <UserIcon size={18} className="opacity-60" />
                         </div>
                       )}
@@ -929,7 +931,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                     <div className="flex-1 min-w-0">
                       <p className="text-white font-black text-sm leading-tight truncate">{lastScannedStudent.name}</p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <BeltBadge belt={lastScannedStudent.belt} stripes={lastScannedStudent.stripes} />
+                        <BeltBadge belt={lastScannedStudent.belt} stripes={lastScannedStudent.stripes} colorKey={getBeltConfig(lastScannedStudent.belt)?.colorKey} />
                         {graduationMilestone && (
                           <span className="text-white/90 text-[10px] font-black flex items-center gap-1">
                             <Star size={10} fill="currentColor" /> {graduationMilestone}
@@ -961,13 +963,13 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                   {s.photo ? (
                     <img src={s.photo} className="w-10 h-10 md:w-12 md:h-12 rounded-2xl object-cover" />
                   ) : (
-                    <div className={`w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center ${BELT_COLORS[s.belt]}`}>
+                    <div className={`w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center ${getBeltClassName(s.belt, getBeltConfig(s.belt)?.colorKey)}`}>
                       <UserIcon size={20} className="opacity-40" />
                     </div>
                   )}
                   <div className="overflow-hidden text-left flex-1">
                     <p className="text-white font-bold leading-tight truncate text-sm">{s.name}</p>
-                    <BeltBadge belt={s.belt} stripes={s.stripes} />
+                    <BeltBadge belt={s.belt} stripes={s.stripes} colorKey={getBeltConfig(s.belt)?.colorKey} />
                   </div>
                   <div className="bg-green-500/20 text-green-500 p-2 rounded-full"><CheckCircle size={14} /></div>
                 </div>

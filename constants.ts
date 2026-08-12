@@ -1,28 +1,9 @@
 
 import { Belt } from './types';
 
-// Regras baseadas no Sistema de Graduação CBJJ
-export const BELT_COLORS: Record<Belt, string> = {
-  [Belt.WHITE]: 'bg-white text-slate-800 border-slate-300',
-  [Belt.GREY_WHITE]:   '[background:linear-gradient(to_bottom,#94a3b8_35%,#fff_35%,#fff_65%,#94a3b8_65%)] text-slate-800 border-slate-400',
-  [Belt.GREY]:         'bg-slate-400 text-white border-slate-500',
-  [Belt.GREY_BLACK]:   '[background:linear-gradient(to_bottom,#94a3b8_35%,#18181b_35%,#18181b_65%,#94a3b8_65%)] text-white border-slate-500',
-  [Belt.YELLOW_WHITE]: '[background:linear-gradient(to_bottom,#facc15_35%,#fff_35%,#fff_65%,#facc15_65%)] text-slate-900 border-yellow-400',
-  [Belt.YELLOW]:       'bg-yellow-400 text-slate-900 border-yellow-500',
-  [Belt.YELLOW_BLACK]: '[background:linear-gradient(to_bottom,#facc15_35%,#18181b_35%,#18181b_65%,#facc15_65%)] text-white [text-shadow:1px_1px_0_#000,-1px_-1px_0_#000,1px_-1px_0_#000,-1px_1px_0_#000] border-yellow-500',
-  [Belt.ORANGE_WHITE]: '[background:linear-gradient(to_bottom,#f97316_35%,#fff_35%,#fff_65%,#f97316_65%)] text-slate-800 border-orange-500',
-  [Belt.ORANGE]:       'bg-orange-500 text-white border-orange-600',
-  [Belt.ORANGE_BLACK]: '[background:linear-gradient(to_bottom,#f97316_35%,#18181b_35%,#18181b_65%,#f97316_65%)] text-white border-orange-600',
-  [Belt.GREEN_WHITE]:  '[background:linear-gradient(to_bottom,#16a34a_35%,#fff_35%,#fff_65%,#16a34a_65%)] text-slate-800 border-green-600',
-  [Belt.GREEN]:        'bg-green-600 text-white border-green-700',
-  [Belt.GREEN_BLACK]:  '[background:linear-gradient(to_bottom,#16a34a_35%,#18181b_35%,#18181b_65%,#16a34a_65%)] text-white border-green-700',
-  [Belt.BLUE]: 'bg-blue-600 text-white border-blue-700',
-  [Belt.PURPLE]: 'bg-purple-700 text-white border-purple-800',
-  [Belt.BROWN]: 'bg-amber-800 text-white border-amber-900',
-  [Belt.BLACK]: 'bg-zinc-900 text-white border-zinc-950',
-  [Belt.CORAL]: 'bg-gradient-to-r from-red-600 to-zinc-900 text-white border-red-700',
-  [Belt.RED]: 'bg-red-700 text-white border-red-800',
-};
+// BELT_COLORS (tabela estática antiga, indexada só pelo enum Belt) foi removida em
+// 12/08/2026 — zero consumidores restantes depois que todo lugar que exibe faixa passou
+// a usar getBeltClassName (dinâmico, lê o cadastro de Esporte) mais abaixo neste arquivo.
 
 export const MIN_AGE_FOR_BELT: Partial<Record<Belt, number>> = {
   [Belt.BLUE]: 16,
@@ -67,3 +48,41 @@ export const BELT_VISUAL_CONFIG: Record<Belt, BeltVisualConfig> = {
 };
 
 export const DEFAULT_BELT_VISUAL_CONFIG: BeltVisualConfig = { bg: 'bg-slate-200', border: 'border-slate-300', text: 'text-slate-600', bar: 'bg-slate-900' };
+
+// Mesmo conteúdo de BELT_VISUAL_CONFIG acima, mas indexado pela string `color_key` que fica
+// salva em belt_ranks.color_key (ex: "GREY_WHITE") — é o nome do membro do enum Belt, não o
+// valor em português. É o vocabulário canônico de cor usado pelo cadastro de Esporte (Fase 5)
+// e pela exibição dinâmica de faixa (Fase 8+): editar a cor de uma faixa no cadastro passa a
+// ter efeito real porque tanto o seletor quanto o BeltBadge leem deste mesmo mapa.
+export const BELT_VISUAL_CONFIG_BY_COLOR_KEY: Record<string, BeltVisualConfig> = {
+  WHITE: BELT_VISUAL_CONFIG[Belt.WHITE],
+  GREY_WHITE: BELT_VISUAL_CONFIG[Belt.GREY_WHITE],
+  GREY: BELT_VISUAL_CONFIG[Belt.GREY],
+  GREY_BLACK: BELT_VISUAL_CONFIG[Belt.GREY_BLACK],
+  YELLOW_WHITE: BELT_VISUAL_CONFIG[Belt.YELLOW_WHITE],
+  YELLOW: BELT_VISUAL_CONFIG[Belt.YELLOW],
+  YELLOW_BLACK: BELT_VISUAL_CONFIG[Belt.YELLOW_BLACK],
+  ORANGE_WHITE: BELT_VISUAL_CONFIG[Belt.ORANGE_WHITE],
+  ORANGE: BELT_VISUAL_CONFIG[Belt.ORANGE],
+  ORANGE_BLACK: BELT_VISUAL_CONFIG[Belt.ORANGE_BLACK],
+  GREEN_WHITE: BELT_VISUAL_CONFIG[Belt.GREEN_WHITE],
+  GREEN: BELT_VISUAL_CONFIG[Belt.GREEN],
+  GREEN_BLACK: BELT_VISUAL_CONFIG[Belt.GREEN_BLACK],
+  BLUE: BELT_VISUAL_CONFIG[Belt.BLUE],
+  PURPLE: BELT_VISUAL_CONFIG[Belt.PURPLE],
+  BROWN: BELT_VISUAL_CONFIG[Belt.BROWN],
+  BLACK: BELT_VISUAL_CONFIG[Belt.BLACK],
+  CORAL: BELT_VISUAL_CONFIG[Belt.CORAL],
+  RED: BELT_VISUAL_CONFIG[Belt.RED],
+};
+
+// Substituto dinâmico de `BELT_COLORS[belt]`: mesma string combinada "bg text border"
+// (mesma ordem, então `.split(' ')[0]` nos call sites antigos continua pegando o bg),
+// mas resolvendo primeiro pelo color_key do cadastro de Esporte quando disponível.
+// Passe `getBeltConfig(belt)?.colorKey` (hook useAcademyBeltRanks) como segundo argumento.
+export function getBeltClassName(belt: Belt, colorKey?: string): string {
+  const c = (colorKey ? BELT_VISUAL_CONFIG_BY_COLOR_KEY[colorKey] : undefined)
+    ?? BELT_VISUAL_CONFIG[belt]
+    ?? DEFAULT_BELT_VISUAL_CONFIG;
+  return `${c.bg} ${c.text} ${c.border}`;
+}

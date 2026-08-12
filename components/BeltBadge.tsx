@@ -1,17 +1,26 @@
 
 import React from 'react';
 import { Belt } from '../types';
-import { BELT_VISUAL_CONFIG, DEFAULT_BELT_VISUAL_CONFIG } from '../constants';
+import { BELT_VISUAL_CONFIG, BELT_VISUAL_CONFIG_BY_COLOR_KEY, DEFAULT_BELT_VISUAL_CONFIG } from '../constants';
 
 interface BeltBadgeProps {
   belt: Belt;
   stripes: number;
   className?: string;
   showText?: boolean;
+  /**
+   * color_key da faixa no cadastro de Esporte (belt_ranks.colorKey), quando disponível —
+   * faz o badge refletir uma cor editada pelo superuser em vez do padrão estático do
+   * enum Belt. Passe via getBeltConfig(belt)?.colorKey nas telas que já carregam a
+   * config de faixas da academia. Sem isso, cai no padrão de sempre (zero mudança).
+   */
+  colorKey?: string;
 }
 
-export const BeltBadge: React.FC<BeltBadgeProps> = ({ belt, stripes, className = '', showText = true }) => {
-  const colors = BELT_VISUAL_CONFIG[belt] ?? DEFAULT_BELT_VISUAL_CONFIG;
+export const BeltBadge: React.FC<BeltBadgeProps> = ({ belt, stripes, className = '', showText = true, colorKey }) => {
+  const colors = (colorKey ? BELT_VISUAL_CONFIG_BY_COLOR_KEY[colorKey] : undefined)
+    ?? BELT_VISUAL_CONFIG[belt]
+    ?? DEFAULT_BELT_VISUAL_CONFIG;
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>

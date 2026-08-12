@@ -6,6 +6,7 @@ import { usersService } from '@/features/users/services/usersService';
 import { useTranslation } from '../services/LanguageContext';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
 import { getTodayBrasilia } from '@/utils/date';
+import { useAcademyBeltRanks } from '@/features/settings/hooks/useAcademyBeltRanks';
 import {
   UserPlus,
   Search,
@@ -40,7 +41,7 @@ import {
   ShieldCheck as ShieldCheckIcon
 } from 'lucide-react';
 import { BeltBadge } from '../components/BeltBadge';
-import { BELT_COLORS } from '../constants';
+import { getBeltClassName } from '../constants';
 import { DateSelectInput, ConfirmDialog } from '@/components/ui';
 
 // Funções utilitárias removidas e unificadas em services/cep.ts
@@ -63,6 +64,7 @@ const compressImage = (base64Str: string, maxWidth = 400, maxHeight = 400): Prom
 };
 
 const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
+  const { getBeltConfig } = useAcademyBeltRanks(academy?.id);
   const { t, showNotification } = useTranslation();
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -369,13 +371,13 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                     {instructor.photo ? (
                       <img src={instructor.photo} className="w-12 h-12 rounded-xl object-cover border-2 border-white shadow-sm" />
                     ) : (
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-xl ${BELT_COLORS[instructor.belt].split(' ')[0]}`}>{instructor.name.charAt(0)}</div>
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-xl ${getBeltClassName(instructor.belt, getBeltConfig(instructor.belt)?.colorKey).split(' ')[0]}`}>{instructor.name.charAt(0)}</div>
                     )}
                   </div>
                   <div>
                     <div className="font-bold text-slate-800 dark:text-slate-100 text-sm">{instructor.name || t.noName}</div>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <BeltBadge belt={instructor.belt} stripes={instructor.stripes} />
+                      <BeltBadge belt={instructor.belt} stripes={instructor.stripes} colorKey={getBeltConfig(instructor.belt)?.colorKey} />
                       <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-black uppercase ${instructor.status === 'Active' ? 'bg-green-100 text-green-700' : instructor.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200'}`}>
                         {instructor.status === 'Active' ? t.activeTitle : instructor.status === 'Pending' ? t.pendingTitle : t.inactiveTitle}
                       </span>
@@ -448,13 +450,13 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                           {instructor.photo ? (
                             <img src={instructor.photo} className="w-12 h-12 rounded-xl object-cover border-2 border-white shadow-sm transition-all duration-300 transform hover:scale-[2.5] hover:shadow-2xl hover:rounded-lg cursor-zoom-in" />
                           ) : (
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-xl transition-all duration-300 transform hover:scale-[2.5] hover:shadow-2xl hover:rounded-lg ${BELT_COLORS[instructor.belt].split(' ')[0]}`}>{instructor.name.charAt(0)}</div>
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-xl transition-all duration-300 transform hover:scale-[2.5] hover:shadow-2xl hover:rounded-lg ${getBeltClassName(instructor.belt, getBeltConfig(instructor.belt)?.colorKey).split(' ')[0]}`}>{instructor.name.charAt(0)}</div>
                           )}
                         </div>
                         <div>
                           <div className="font-bold text-slate-800 dark:text-slate-100">{instructor.name || t.noName}</div>
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <BeltBadge belt={instructor.belt} stripes={instructor.stripes} />
+                            <BeltBadge belt={instructor.belt} stripes={instructor.stripes} colorKey={getBeltConfig(instructor.belt)?.colorKey} />
                             {instructor.userId
                               ? <span title="Tem conta de acesso"><LockKeyhole size={11} className="text-green-500" /></span>
                               : <span className="text-[9px] px-1.5 py-0.5 rounded-full font-black uppercase bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">Sem usuário</span>
@@ -758,7 +760,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                   <div className="space-y-6">
                     <div>
                       <label className="block text-[10px] font-bold text-slate-400 uppercase ml-1 mb-2">{t.stripesOnCurrentBelt}</label>
-                      <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${BELT_COLORS[editingInstructor.belt || Belt.WHITE]}`}>
+                      <div className={`flex items-center justify-between border-2 transition-all rounded-2xl px-5 py-4 shadow-inner ${getBeltClassName(editingInstructor.belt || Belt.WHITE, getBeltConfig(editingInstructor.belt || Belt.WHITE)?.colorKey)}`}>
                         <button type="button" onClick={() => setEditingInstructor({...editingInstructor, stripes: Math.max(0, (editingInstructor.stripes || 0) - 1)})} className="text-white/50 hover:scale-125 transition-all outline-none md:p-2"><Minus size={20} /></button>
                         <div className={`flex gap-1.5 p-1 rounded-md px-3 bg-opacity-90 ${editingInstructor.belt === Belt.BLACK ? 'bg-red-600' : 'bg-zinc-900 shadow-lg'}`}>
                           {[...Array(editingInstructor.belt === Belt.BLACK ? 6 : 4)].map((_, i) => (
@@ -797,7 +799,7 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                           onClick={() => setEditingInstructor({...editingInstructor, belt})}
                           className={`px-2 py-2 rounded-lg border text-[9px] font-black transition-all ${
                             editingInstructor.belt === belt
-                              ? `${BELT_COLORS[belt]} shadow-md transform scale-105 ring-2 ring-offset-1 ring-slate-100`
+                              ? `${getBeltClassName(belt, getBeltConfig(belt)?.colorKey)} shadow-md transform scale-105 ring-2 ring-offset-1 ring-slate-100`
                               : 'bg-white dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-400'
                           }`}
                         >

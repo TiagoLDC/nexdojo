@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { Belt, Academy, User, Student } from '../types';
 import { isReadyForGraduationByBeltRank, calculateAge, BELT_LIST } from '../services/graduation';
-import { BELT_COLORS } from '../constants';
+import { getBeltClassName } from '../constants';
 import { useAcademyBeltRanks } from '@/features/settings/hooks/useAcademyBeltRanks';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -762,7 +762,7 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =>
                         {student.photo ? (
                           <img src={student.photo} className="w-8 h-8 rounded-lg object-cover" />
                         ) : (
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black ${BELT_COLORS[student.belt]}`}>
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black ${getBeltClassName(student.belt, getBeltConfig(student.belt)?.colorKey)}`}>
                             {student.name.charAt(0)}
                           </div>
                         )}
@@ -782,7 +782,7 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full ${BELT_COLORS[student.belt]}`} />
+                        <div className={`w-3 h-3 rounded-full ${getBeltClassName(student.belt, getBeltConfig(student.belt)?.colorKey)}`} />
                         <span className="text-[10px] font-bold text-slate-500 uppercase">{student.belt} ({student.stripes}º)</span>
                       </div>
                     </td>

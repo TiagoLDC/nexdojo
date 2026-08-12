@@ -8,6 +8,7 @@ import { templateService } from '@/features/schedules/services/templateService';
 import { ConfirmDialog } from '@/components/ui';
 import { studentService } from '@/features/students/services/studentService';
 import { chatService } from '@/features/chat/services/chatService';
+import { useAcademyBeltRanks } from '@/features/settings/hooks/useAcademyBeltRanks';
 import {
   Plus,
   Users,
@@ -25,6 +26,7 @@ import {
 } from 'lucide-react';
 
 const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
+  const { getBeltConfig } = useAcademyBeltRanks(academy?.id);
   const { language, showNotification } = useTranslation();
   const [templates, setTemplates] = useState<ClassTemplate[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -549,7 +551,7 @@ const TemplateView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
                               </span>
                             </div>
                             <div className="scale-90 origin-left">
-                              <BeltBadge belt={s.belt} stripes={s.stripes} />
+                              <BeltBadge belt={s.belt} stripes={s.stripes} colorKey={getBeltConfig(s.belt)?.colorKey} />
                             </div>
                           </div>
                         </div>

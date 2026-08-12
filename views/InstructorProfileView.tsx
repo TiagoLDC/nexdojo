@@ -25,7 +25,8 @@ import {
   MapPin
 } from 'lucide-react';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
-import { BELT_COLORS } from '../constants';
+import { getBeltClassName } from '../constants';
+import { useAcademyBeltRanks } from '@/features/settings/hooks/useAcademyBeltRanks';
 import { useTranslation } from '../services/LanguageContext';
 import { DateSelectInput } from '@/components/ui';
 
@@ -41,6 +42,7 @@ interface InstructorProfileViewProps {
 }
 
 const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, academy }) => {
+  const { getBeltConfig } = useAcademyBeltRanks(academy?.id);
   const { t, showNotification } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<Instructor | Staff | null>(null);
@@ -513,7 +515,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
               <div className="space-y-6">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-3">Graus na Faixa Atual</label>
-                  <div className={`flex items-center justify-between border-2 transition-all rounded-[32px] px-6 py-4 shadow-inner ${(editData as Instructor).belt ? BELT_COLORS[(editData as Instructor).belt] : 'bg-slate-900 border-slate-800'}`}>
+                  <div className={`flex items-center justify-between border-2 transition-all rounded-[32px] px-6 py-4 shadow-inner ${(editData as Instructor).belt ? getBeltClassName((editData as Instructor).belt, getBeltConfig((editData as Instructor).belt)?.colorKey) : 'bg-slate-900 border-slate-800'}`}>
                     <button
                       disabled={!isEditing}
                       onClick={() => setEditData({ ...editData, stripes: Math.max(0, ((editData as Instructor).stripes || 0) - 1) } as Instructor)}
@@ -562,7 +564,7 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
                       onClick={() => setEditData({...editData, belt} as Instructor)}
                       className={`py-3 px-1 rounded-2xl border-2 text-[8px] font-black uppercase tracking-tighter transition-all ${
                         (editData as Instructor).belt === belt
-                          ? `${BELT_COLORS[belt]} shadow-lg scale-105 ring-4 ring-indigo-500/10`
+                          ? `${getBeltClassName(belt, getBeltConfig(belt)?.colorKey)} shadow-lg scale-105 ring-4 ring-indigo-500/10`
                           : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-400 opacity-60 hover:opacity-100'
                       }`}
                     >

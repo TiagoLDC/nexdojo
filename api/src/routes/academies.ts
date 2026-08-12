@@ -53,6 +53,27 @@ router.get('/by-alias/:alias', async (req: Request, res: Response, next: NextFun
   }
 });
 
+// GET /api/academies/:id/belt-ranks/public — público (sem auth): nome/cor/ordem das faixas
+// do esporte da academia, para o formulário de auto-cadastro (LoginView) colorir o seletor
+// de faixa antes de o usuário ter sessão. Sem meses/aulas/graus — não é dado sensível.
+router.get('/:id/belt-ranks/public', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const [academyRows] = await pool.execute<any[]>('SELECT sport_id FROM academies WHERE id = ?', [req.params.id]);
+    if (!academyRows[0]) { res.status(404).json({ error: 'Academia não encontrada' }); return; }
+
+    const sportId = academyRows[0].sport_id;
+    if (!sportId) { res.json({ data: [] }); return; }
+
+    const [rows] = await pool.execute<any[]>(
+      'SELECT id, name, color_key, order_index FROM belt_ranks WHERE sport_id = ? ORDER BY order_index ASC',
+      [sportId]
+    );
+    res.json({ data: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/academies/:id
 router.get('/:id', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { role, academyId: tokenAcademyId } = req.user!;
