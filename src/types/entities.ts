@@ -23,24 +23,11 @@ export interface ClassSchedule {
   endTime: string;
 }
 
-// ── Graduation Rules ─────────────────────────────────────────────────────
-
-export interface GraduationGroupRules {
-  beltThreshold?: number;
-  stripeThreshold: number;
-  warnBefore?: number;
-}
-
-export interface GraduationRules {
-  mode: 'classes' | 'hours' | 'months';
-  kids?: GraduationGroupRules;
-  white?: GraduationGroupRules;
-  intermediate?: GraduationGroupRules;
-  black?: Pick<GraduationGroupRules, 'stripeThreshold' | 'warnBefore'>;
-}
-
-// ── Sports & Belt Ranks (novo modelo — ver PLANO_GRADUACAO.md) ─────────────
-// Substitui gradualmente o `Belt` enum fixo e o `GraduationRules` por balde acima.
+// ── Sports & Belt Ranks (ver PLANO_GRADUACAO.md) ───────────────────────────
+// GraduationRules/GraduationGroupRules (baldes fixos kids/white/intermediate/black,
+// 1 métrica por academia) foram removidos em 12/08/2026 — substituídos por
+// academy_belt_settings (meses/aulas por faixa individual). Zero consumidores
+// restantes depois da migração das Fases 6-8.
 
 export type BeltCategory = 'kids' | 'adult' | 'both';
 
@@ -142,7 +129,6 @@ export interface Student {
   nextPaymentDate?: string;
   planId?: string;
   createdAt?: string;
-  degree?: number;
   addressCep?: string;
   addressCity?: string;
   addressState?: string;
@@ -325,7 +311,6 @@ export interface Academy {
   planStatus?: PlanStatus;
   planExpirationDate?: string;
   paymentWarningDays?: number;
-  graduationRules?: GraduationRules;
   /** Definido só na criação da academia — imutável depois (ver PLANO_GRADUACAO.md D6). */
   sportId?: string;
   qrCodePresenca?: string;

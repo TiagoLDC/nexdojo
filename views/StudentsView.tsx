@@ -307,7 +307,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
       s.email,
       s.phone || '',
       s.belt,
-      s.degree || 0,
+      s.stripes || 0,
       s.status,
       s.birthDate || '',
       s.cpf || '',

@@ -152,7 +152,7 @@ Aplica-se uniformemente a cada "passo" dentro daquela faixa (cada troca de grau 
 - [x] **Fase 6 — Frontend** ✅ concluída (11/08/2026) — `SettingsView` com a nova seção "Faixas e Graduação" por academia
 - [x] **Fase 7 — Frontend** ✅ concluída (11/08/2026) — Central de Graduação (`StudentsView.tsx`) com elegibilidade combinada por faixa + seção "Quase Lá"
 - [x] **Fase 8 — Frontend** ✅ concluída (11/08/2026) — `DashboardView`, `ReportsView` e `StudentProfileView` migrados para a elegibilidade por faixa (mesmas funções da Fase 7)
-- [ ] **Fase 9 — Limpeza** (só após soak em QAS): remover campo `degree` morto; avaliar remoção de `students.belt` ENUM / `academies.graduation_rules` JSON; oportunidade de consolidar `types.ts` legado com `src/types/entities.ts` para as entidades tocadas
+- [x] **Fase 9 — Limpeza** ✅ concluída (12/08/2026) — ver detalhes abaixo (o que foi removido e o que foi deliberadamente mantido, com justificativa)
 - [ ] **Fase 10 — Testes manuais** (usuário testa na interface, conforme regra do projeto) **e Deploy QAS** — só quando solicitado explicitamente
 
 ---
@@ -263,6 +263,21 @@ Escopo desta fase: eliminar a duplicação real de código (arrays/switch de fai
 
 > **PENDÊNCIA PARA REVISAR DEPOIS** (anotado 12/08/2026, a pedido do usuário): decidir se o gráfico de distribuição de faixas (`views/ReportsView.tsx`, `colorMap` hex) também deve virar dinâmico a partir do cadastro de Esporte. Hoje ele é a única exibição de faixa que ainda não lê `belt_ranks` — todo o resto do sistema já foi migrado (ver correção de 11-12/08/2026 acima). Se sim, precisa adicionar um campo de cor em hex a `belt_ranks` (hoje só tem `color_key`, um nome de classe Tailwind, não serve para `fill` de SVG).
 - **Verificação**: `npx tsc --noEmit` (frontend e backend) idêntico ao estado anterior — 68 erros pré-existentes, zero novos. `noUnusedLocals`/`noUnusedParameters` estão ativos no `tsconfig.json`, então a ausência de erros novos também confirma que nenhum import ficou órfão depois da remoção de `BELT_COLORS`.
+
+### Detalhes do que foi feito na Fase 9 (12/08/2026)
+
+**Removido (código morto confirmado, zero consumidores):**
+- **Campo `degree` do `Student`** (`types.ts` e `src/types/entities.ts`) — nunca era escrito em lugar nenhum (não é coluna no banco), só lido como fallback num export CSV. **Bug real corrigido no caminho**: a coluna "Graus" do CSV exportado em `StudentsView.tsx` usava `s.degree || 0` (sempre 0, campo morto) em vez de `s.stripes` (o campo real que todo o resto do sistema usa) — o CSV exportado sempre mostrou 0 graus para todo aluno, agora mostra o valor certo.
+- **`GraduationRules`/`GraduationGroupRules`** (tipos, em `types.ts`, `src/types/entities.ts`, `src/types/api.ts`) e o campo `graduationRules` do `Academy` — confirmado zero uso em código de execução (só sobravam nas declarações de tipo) depois da migração das Fases 6-8.
+- **`isReadyForGraduation`, `getGraduationThreshold`, `getWarnBefore`, `getGraduationWarning`, `getMetric`, `KIDS_MIXED_BELTS`** (`services/graduation.ts`) — as funções por balde fixo, confirmado zero consumidores restantes em todo o repositório (a busca alcançou até comentários, não só imports). O arquivo ficou só com o que continua em uso: `BELT_LIST`, `calculateAge`, `monthsSince`, `getNextRank`, e as 3 funções por faixa individual da Fase 7.
+- **`graduation_rules` removido do contrato da API** (`api/src/routes/academies.ts`): não faz mais parte do `ALLOWED` do `PUT /academies/:id`, e a resposta de `GET`/`PUT` explicitamente remove esse campo (`delete academy.graduation_rules`) antes de responder.
+
+**Mantido de propósito, com justificativa (não é código morto, é decisão de risco):**
+- **Coluna `academies.graduation_rules` no banco** — não foi dropada. É o único registro histórico de como cada academia configurava graduação antes da Fase 3; custo de manter é zero, custo de dropar e precisar depois é alto (irreversível). Só sai do contrato da API, continua existindo na tabela.
+- **`students.belt` / `instructors.belt` (ENUM) e o campo `belt` nos tipos** — **não é seguro remover ainda**. É o campo que continua sendo lido para nome/identidade/filtro/comparação em toda a aplicação (`s.belt === X`, filtros, CSV, etc.) — o `belt_rank_id` (Fase 3) e o cadastro de faixas (Fase 5-8) hoje só alimentam a **cor** exibida (via `getBeltConfig` casando por **nome**, não por FK). Trocar `belt` pelo `belt_rank_id` como fonte de nome/identidade em toda a aplicação é um projeto bem maior, fora do escopo de uma "limpeza" — não foi tentado.
+- **`getNextRank` (`services/graduation.ts`)** — continua com o teto de graus hardcoded (4, ou 6 para Preta) em vez de ler `belt_ranks.degreeCount`. Coincide exatamente com os valores reais hoje (só existe Jiu-Jitsu), risco de divergência é zero no cenário atual; già registrado como simplificação consciente desde a Fase 8.
+- **Consolidação de `types.ts` (legado) com `src/types/entities.ts` (novo)** — **recomendo não fazer agora**. É uma dívida técnica pré-existente e não criada por esta feature (68 erros de `tsc` já documentados desde a Fase 1, todos da mesma causa: os dois sistemas de tipo têm formas incompatíveis para `Instructor.status`, `Academy.currentPlan`, etc.). Unificar os dois tocaria a maioria das views do sistema, é um projeto de risco e escopo próprios — não uma limpeza pontual. Sugiro tratar como projeto separado, se e quando o usuário quiser.
+- **Verificação final**: `npx tsc --noEmit` (frontend e backend) — mesmos 68 erros pré-existentes de sempre (confirmado por diff), zero novos, zero mascarados.
 
 ### Nota de risco identificada durante a implementação (Resolvida na Fase 3)
 

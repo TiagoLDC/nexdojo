@@ -87,9 +87,9 @@ router.get('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
     const [rows] = await pool.execute<any[]>('SELECT * FROM academies WHERE id = ?', [req.params.id]);
     if (!rows[0]) { res.status(404).json({ error: 'Academia não encontrada' }); return; }
     const academy = rows[0];
-    if (academy.graduation_rules && typeof academy.graduation_rules === 'string') {
-      try { academy.graduation_rules = JSON.parse(academy.graduation_rules); } catch {}
-    }
+    // graduation_rules descontinuado (ver PLANO_GRADUACAO.md Fase 9) — coluna mantida no
+    // banco como histórico, mas fora do contrato da API desde 12/08/2026.
+    delete academy.graduation_rules;
     const [planRows] = await pool.execute<any[]>(
       'SELECT * FROM academy_plans WHERE academy_id = ? ORDER BY price ASC',
       [req.params.id]
@@ -127,18 +127,11 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
     'cep', 'address', 'address_number', 'absence_limit',
     'pix_key', 'pix_type', 'bank_name', 'bank_agency', 'bank_account',
     'current_plan', 'plan_status', 'plan_expiration_date', 'payment_warning_days',
-    'graduation_rules', 'qr_code_presenca', 'kimono_loan_enabled',
+    'qr_code_presenca', 'kimono_loan_enabled',
   ];
 
   if (req.body.kimono_loan_enabled !== undefined) {
     req.body.kimono_loan_enabled = req.body.kimono_loan_enabled ? 1 : 0;
-  }
-
-  // Serializar graduation_rules como JSON string para o MySQL
-  if (req.body.graduation_rules !== undefined) {
-    req.body.graduation_rules = req.body.graduation_rules === null
-      ? null
-      : JSON.stringify(req.body.graduation_rules);
   }
 
   const fields = Object.keys(req.body).filter(k => ALLOWED.includes(k));
@@ -195,9 +188,7 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
 
     const [rows] = await pool.execute<any[]>('SELECT * FROM academies WHERE id = ?', [req.params.id]);
     const academy = rows[0];
-    if (academy.graduation_rules && typeof academy.graduation_rules === 'string') {
-      try { academy.graduation_rules = JSON.parse(academy.graduation_rules); } catch {}
-    }
+    delete academy.graduation_rules;
     const [planRows] = await pool.execute<any[]>(
       'SELECT * FROM academy_plans WHERE academy_id = ? ORDER BY price ASC',
       [req.params.id]

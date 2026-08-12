@@ -34,20 +34,6 @@ export interface StudentDocument {
   uploadedAt: string;
 }
 
-export interface GraduationGroupRules {
-  beltThreshold?: number;
-  stripeThreshold: number;
-  warnBefore?: number;
-}
-
-export interface GraduationRules {
-  mode: 'classes' | 'hours' | 'months';
-  kids?: GraduationGroupRules;
-  white?: GraduationGroupRules;
-  intermediate?: GraduationGroupRules;
-  black?: Pick<GraduationGroupRules, 'stripeThreshold' | 'warnBefore'>;
-}
-
 export interface GraduationHistoryItem {
   id: string;
   previousBelt: Belt;
@@ -104,7 +90,6 @@ export interface Student {
   nextPaymentDate?: string;
   planId?: string;
   createdAt?: string;
-  degree?: number;
   addressCep?: string;
   addressCity?: string;
   addressState?: string;
@@ -289,7 +274,6 @@ export interface Academy {
   planStatus?: 'Active' | 'Expired' | 'Trial' | 'Suspended' | 'Canceled';
   planExpirationDate?: string;
   paymentWarningDays?: number;
-  graduationRules?: GraduationRules;
   plans?: AcademyPlan[];
   kimonoLoanEnabled?: boolean;
 }
