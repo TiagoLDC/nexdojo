@@ -41,6 +41,7 @@ import { StorageService } from './services/storage';
 import { getTranslation } from './services/translations';
 import { useTranslation } from './services/LanguageContext';
 import { MOCK_ACADEMY } from './services/mockData';
+import { academyService } from '@/features/settings/services/academyService';
 import DashboardView from './views/DashboardView';
 import AttendanceView from './views/AttendanceView';
 import StudentsView from './views/StudentsView';
@@ -112,6 +113,22 @@ const App: React.FC = () => {
   const { language, setLanguage, t } = useTranslation();
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    // Ao abrir/recarregar a página com sessão já ativa, o objeto "academy" vem do
+    // cache local (localStorage), que pode estar desatualizado em relação ao banco
+    // (ex: plano/vencimento alterado direto no banco ou por outro dispositivo).
+    // Rebusca a academia ativa no backend para manter esses dados sempre em dia.
+    const academyIdToRefresh = user?.role === 'superuser' ? academy?.id : user?.academyId;
+    if (!academyIdToRefresh) return;
+    academyService.get(academyIdToRefresh)
+      .then(fresh => {
+        setAcademy(fresh);
+        StorageService.saveAcademy(fresh);
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   useEffect(() => {
     if (user?.id && (user?.role === 'admin' || user?.role === 'superuser')) {
