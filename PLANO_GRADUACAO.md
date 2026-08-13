@@ -273,6 +273,17 @@ Escopo desta fase: eliminar a duplicação real de código (arrays/switch de fai
 
 Confirmado que a comparação de datas é segura (`dateStrings: ['DATE']` já configurado em `api/src/db.ts` — a coluna volta do MySQL como string `'YYYY-MM-DD'`, mesmo formato que o frontend envia, sem risco de comparar tipos diferentes). `npx tsc --noEmit` (backend) limpo.
 
+### Correção pós-plano (13/08/2026) — Dashboard não mostrava "pronto" pro aluno nem "quase lá" pro admin/instrutor
+
+**Divergência reportada pelo usuário**: no dashboard do próprio aluno só aparecia o aviso de "prestes a graduar" (aviso antecipado), nunca um aviso de "já pode graduar" quando ele de fato atingia o critério. Já no dashboard do admin/instrutor, só aparecia a lista de alunos **aptos** a graduar — a lista de alunos **prestes a graduar** (mesma lógica de aviso antecipado por faixa) não existia.
+
+**Causa**: a Fase 8 já tinha migrado a lógica para o sistema por faixa (`isReadyForGraduationByBeltRank`, `isCloseToGraduationByBeltRank`, `getGraduationProgressByBeltRank`), mas só uma combinação de estado por público foi implementada — faltava a outra metade dos dois lados.
+
+**Correção em `views/DashboardView.tsx`**:
+- **Dashboard do aluno**: novo banner "Você já pode graduar!" (dourado/âmbar, distinto do banner azul/violeta de aviso antecipado), calculado via `isReadyForGraduationByBeltRank(profile, beltConfig)`. Os dois banners são mutuamente exclusivos por construção (`isCloseToGraduationByBeltRank` já retorna `false` quando o aluno está pronto), então nunca aparecem os dois ao mesmo tempo.
+- **Dashboard do admin/instrutor**: novo `closeToGraduationAlerts` (mesma forma de `graduationAlerts`, usando `isCloseToGraduationByBeltRank` + `getGraduationProgressByBeltRank` para mostrar o progresso). Adicionado em dois lugares, espelhando onde `graduationAlerts` (prontos) já aparecia: (1) um novo banner "Quase Lá" (azul/índigo, lista horizontal, mesmo padrão do banner "prontos" em âmbar) logo abaixo dele; (2) uma subseção "Quase Lá" dentro do card "Maturação de Atletas" no corpo do dashboard.
+- **Verificação**: `npx tsc --noEmit` — mesmos 68 erros pré-existentes de sempre, zero novos (confirmado comparando a saída normalizada, sem números de linha/coluna).
+
 > **PENDÊNCIA PARA REVISAR DEPOIS** (anotado 12/08/2026, a pedido do usuário): decidir se o gráfico de distribuição de faixas (`views/ReportsView.tsx`, `colorMap` hex) também deve virar dinâmico a partir do cadastro de Esporte. Hoje ele é a única exibição de faixa que ainda não lê `belt_ranks` — todo o resto do sistema já foi migrado (ver correção de 11-12/08/2026 acima). Se sim, precisa adicionar um campo de cor em hex a `belt_ranks` (hoje só tem `color_key`, um nome de classe Tailwind, não serve para `fill` de SVG).
 - **Verificação**: `npx tsc --noEmit` (frontend e backend) idêntico ao estado anterior — 68 erros pré-existentes, zero novos. `noUnusedLocals`/`noUnusedParameters` estão ativos no `tsconfig.json`, então a ausência de erros novos também confirma que nenhum import ficou órfão depois da remoção de `BELT_COLORS`.
 

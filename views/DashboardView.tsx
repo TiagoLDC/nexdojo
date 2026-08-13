@@ -614,6 +614,15 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     }).sort((a, b) => a.name.localeCompare(b.name));
   }, [students, getBeltConfig]);
 
+  // Alunos "quase lá" (dentro da margem de aviso antecipado configurada por faixa),
+  // mas ainda não elegíveis — ver PLANO_GRADUACAO.md. Complementa graduationAlerts (prontos).
+  const closeToGraduationAlerts = useMemo(() => {
+    return students
+      .filter(s => isCloseToGraduationByBeltRank(s, getBeltConfig(s.belt)))
+      .map(s => ({ ...s, progress: getGraduationProgressByBeltRank(s, getBeltConfig(s.belt)) }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [students, getBeltConfig]);
+
   const currentMonthDay = useMemo(() => {
     const today = new Date();
     return `${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -884,6 +893,8 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     })();
     const beltConfig = getBeltConfig(profile.belt);
     const graduationProgress = getGraduationProgressByBeltRank(profile, beltConfig);
+    const { readyForBelt: profileReadyForBelt, readyForStripe: profileReadyForStripe } = isReadyForGraduationByBeltRank(profile, beltConfig);
+    const isReadyToGraduate = profileReadyForBelt || profileReadyForStripe;
     const graduationWarning = isCloseToGraduationByBeltRank(profile, beltConfig) && graduationProgress
       ? { remaining: Math.max(0, graduationProgress.target - graduationProgress.current), unit: graduationProgress.unit }
       : null;
@@ -1083,7 +1094,57 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
           </motion.div>
         )}
 
-        {/* AVISO DE GRADUAÇÃO PRÓXIMA */}
+        {/* PRONTO PARA GRADUAR */}
+        {isReadyToGraduate && (
+          <motion.div variants={itemVariants} className="px-2">
+            <div className="bg-gradient-to-br from-amber-500 to-amber-600 p-6 rounded-[32px] text-white shadow-2xl shadow-amber-500/30 relative overflow-hidden">
+              <div className="relative z-10 flex items-start gap-4">
+                <div className="relative shrink-0">
+                  <div className="bg-white/20 p-4 rounded-2xl">
+                    <Trophy size={32} className="text-white" />
+                  </div>
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-white" />
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Zap size={11} className="text-white shrink-0" />
+                    <span className="text-[9px] font-black uppercase tracking-widest text-white/70">
+                      {profileReadyForBelt ? 'Pronto para a Próxima Faixa!' : 'Pronto para o Próximo Grau!'}
+                    </span>
+                  </div>
+                  <h3 className="font-black text-xl sm:text-2xl uppercase italic tracking-tight leading-none">
+                    Você já pode graduar!
+                  </h3>
+                  <p className="text-white/85 font-semibold text-sm mt-1">
+                    Fale com seu professor para marcar sua promoção — OSS!
+                  </p>
+                </div>
+              </div>
+              <div className="relative z-10 mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3 bg-white/10 rounded-2xl p-4">
+                <div className="flex flex-col items-center gap-2">
+                  <span className="text-[8px] font-black text-white/60 uppercase tracking-widest">Sua faixa</span>
+                  <BeltBadge belt={profile.belt} stripes={profile.stripes} colorKey={getBeltConfig(profile.belt)?.colorKey} showText={false} />
+                  <span className="text-[9px] font-bold text-white/80 uppercase">{profile.belt}</span>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <ChevronRight size={22} className="text-white" />
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <span className="text-[8px] font-black text-white uppercase tracking-widest">Próximo rank</span>
+                  <BeltBadge belt={studentNextRank.nextBelt} stripes={studentNextRank.nextStripes} colorKey={getBeltConfig(studentNextRank.nextBelt)?.colorKey} showText={false} />
+                  <span className="text-[9px] font-bold text-white/80 uppercase">{studentNextRank.nextBelt}</span>
+                </div>
+              </div>
+              <Star size={180} className="absolute -right-14 -bottom-14 text-white/10 pointer-events-none" />
+              <Award size={80} className="absolute -left-6 -top-6 text-white/10 pointer-events-none" />
+            </div>
+          </motion.div>
+        )}
+
+        {/* AVISO DE GRADUAÇÃO PRÓXIMA (só quando ainda não está pronto) */}
         {graduationWarning && (
           <motion.div variants={itemVariants} className="px-2">
             <div className="bg-gradient-to-br from-violet-600 via-indigo-600 to-blue-700 p-6 rounded-[32px] text-white shadow-2xl shadow-indigo-500/30 relative overflow-hidden">
@@ -1564,6 +1625,59 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                   <div>
                     <p className="text-[10px] font-black uppercase truncate max-w-[100px] leading-tight">{s.name.split(' ')[0]}</p>
                     <p className="text-[8px] font-bold text-amber-100 uppercase tracking-widest">{s.alertType === 'BELT' ? 'Próx. Faixa' : 'Próx. Grau'}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32" />
+          </div>
+        </motion.div>
+      )}
+
+      {/* ALUNOS QUASE LÁ (ADMIN/INSTRUCTOR) — aviso antecipado por faixa, ainda não elegíveis */}
+      {(user.role === 'admin' || user.role === 'superuser' || user.role === 'instructor') && closeToGraduationAlerts.length > 0 && (
+        <motion.div variants={itemVariants} className="px-2">
+          <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-[40px] p-8 text-white shadow-2xl relative overflow-hidden group">
+            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+              <div className="flex items-center gap-6">
+                <div className="bg-white/20 p-5 rounded-3xl backdrop-blur-sm group-hover:scale-110 transition-transform">
+                  <Zap size={40} className="text-yellow-300" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black italic tracking-tighter uppercase leading-none">Quase Lá</h2>
+                  <p className="text-[11px] font-bold text-indigo-100 uppercase tracking-[0.2em] mt-2">
+                    {closeToGraduationAlerts.length} {closeToGraduationAlerts.length === 1 ? 'atleta prestes a graduar' : 'atletas prestes a graduar'}
+                  </p>
+                </div>
+              </div>
+              <Link
+                to="/students"
+                state={{ openGraduationCenter: true }}
+                className="w-full md:w-auto bg-white dark:bg-slate-800 text-indigo-600 px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.1em] shadow-xl hover:scale-105 active:scale-95 transition-all text-center"
+              >
+                {t.manageGraduations}
+              </Link>
+            </div>
+
+            {/* Atalho Rápido - Lista Horizontal */}
+            <div className="relative z-10 mt-8 flex gap-3 overflow-x-auto no-scrollbar pb-2">
+              {closeToGraduationAlerts.slice(0, 10).map(s => (
+                <div key={s.id} className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10 flex items-center gap-3 shrink-0">
+                  <div className="relative">
+                    {s.photo ? (
+                      <img src={s.photo} className="w-8 h-8 rounded-lg object-cover" />
+                    ) : (
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${getBeltClassName(s.belt, getBeltConfig(s.belt)?.colorKey)}`}>
+                        {s.name.charAt(0)}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase truncate max-w-[100px] leading-tight">{s.name.split(' ')[0]}</p>
+                    <p className="text-[8px] font-bold text-indigo-100 uppercase tracking-widest">
+                      {s.progress ? `${s.progress.current}/${s.progress.target} ${s.progress.unit}` : 'Quase lá'}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -2527,6 +2641,25 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                 </div>
               )}
             </div>
+
+            {closeToGraduationAlerts.length > 0 && (
+              <div className="space-y-2 pt-2">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Quase Lá</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {closeToGraduationAlerts.slice(0, 4).map(student => (
+                    <div key={student.id} className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center gap-3">
+                      {student.photo ? <img src={student.photo} className="w-9 h-9 rounded-xl object-cover" alt="" /> : <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm border ${getBeltClassName(student.belt, getBeltConfig(student.belt)?.colorKey)}`}>{student.name.charAt(0)}</div>}
+                      <div className="min-w-0">
+                        <h4 className="font-black text-slate-700 dark:text-slate-200 text-xs leading-tight uppercase italic truncate">{student.name}</h4>
+                        <p className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                          {student.progress ? `${student.progress.current}/${student.progress.target} ${student.progress.unit}` : 'Quase lá'}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
