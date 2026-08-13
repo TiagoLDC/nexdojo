@@ -296,7 +296,7 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
 
   try {
     const [existing] = await pool.execute<any[]>(
-      'SELECT id, user_id, name, email, belt, belt_rank_id, stripes FROM students WHERE id = ? AND academy_id = ?',
+      'SELECT id, user_id, name, email, belt, belt_rank_id, stripes, last_graduation_date FROM students WHERE id = ? AND academy_id = ?',
       [req.params.id, academyId]
     );
     if (!existing[0]) { res.status(404).json({ error: 'Aluno não encontrado' }); return; }
@@ -366,8 +366,15 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
         const beltChanged    = req.body.belt    !== undefined && req.body.belt    !== existing[0].belt;
         const stripesChanged = req.body.stripes !== undefined && Number(req.body.stripes) !== Number(existing[0].stripes);
         if (beltChanged || stripesChanged) {
-          const gradDate = req.body.last_graduation_date
-            ?? getTodayBrasilia();
+          // O formulário de edição reenvia o cadastro inteiro, então last_graduation_date quase
+          // sempre vem preenchido no payload com o valor ANTIGO (não é uma escolha deliberada do
+          // admin) — só respeita o valor recebido se ele realmente difere do que já estava salvo
+          // (aí sim o admin editou a data de propósito, ex: corrigindo um registro histórico).
+          // Caso contrário, uma promoção pelo cadastro reinicia a contagem de tempo para hoje,
+          // igual à promoção pelo módulo dedicado (POST /:id/graduate).
+          const dateExplicitlyChanged = req.body.last_graduation_date !== undefined
+            && req.body.last_graduation_date !== existing[0].last_graduation_date;
+          const gradDate = dateExplicitlyChanged ? req.body.last_graduation_date : getTodayBrasilia();
 
           // Dual-write: resolve belt_rank_id do novo belt (ENUM) antes de gravar o histórico —
           // ver PLANO_GRADUACAO.md Fase 3. Não bloqueia se não resolver.
@@ -389,10 +396,11 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
               'Atualização manual',
             ]
           );
-          // Zera o contador de aulas do ciclo atual para o novo grau/faixa
+          // Zera o contador de aulas/tempo do ciclo atual e atualiza a data de graduação —
+          // sem isso, a contagem por meses não reiniciava (ficava usando a data antiga).
           await pool.execute(
-            `UPDATE students SET classes_since_graduation = 0, hours_since_graduation = 0 WHERE id = ?`,
-            [req.params.id]
+            `UPDATE students SET classes_since_graduation = 0, hours_since_graduation = 0, last_graduation_date = ? WHERE id = ?`,
+            [gradDate, req.params.id]
           );
 
           if (resolvedNewRank) {
