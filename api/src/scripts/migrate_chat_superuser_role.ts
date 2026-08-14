@@ -7,20 +7,9 @@
  * Executar UMA VEZ no banco de dados existente:
  *   npx ts-node src/scripts/migrate_chat_superuser_role.ts
  */
-import mysql from 'mysql2/promise';
-import dotenv from 'dotenv';
-
-dotenv.config({ path: `${__dirname}/../../.env` });
+import pool from '../db';
 
 async function main() {
-  const pool = await mysql.createConnection({
-    host:     process.env.DB_HOST     ?? 'localhost',
-    port:     Number(process.env.DB_PORT ?? 3306),
-    user:     process.env.DB_USER     ?? 'root',
-    password: process.env.DB_PASSWORD ?? '',
-    database: process.env.DB_NAME     ?? 'nexdojo',
-  });
-
   console.log('Conectando ao banco...');
 
   await pool.execute(
