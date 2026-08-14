@@ -67,7 +67,7 @@ const ChatView: React.FC<ChatViewProps> = ({ academy, user }) => {
         content,
         senderId: user.id,
         senderName: user.name,
-        senderRole: user.role as 'admin' | 'instructor' | 'staff',
+        senderRole: user.role as 'superuser' | 'admin' | 'instructor' | 'staff',
       });
 
       setMessages(prev => [...prev, message]);
@@ -152,13 +152,13 @@ const ChatView: React.FC<ChatViewProps> = ({ academy, user }) => {
               >
                 <div className={`flex items-center gap-2 mb-1 px-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
                   <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${
-                    msg.senderRole === 'admin'
+                    msg.senderRole === 'superuser' || msg.senderRole === 'admin'
                       ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
                       : msg.senderRole === 'instructor'
                         ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
                         : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400'
                   }`}>
-                    {msg.senderRole === 'admin' ? 'Administrador' : msg.senderRole === 'instructor' ? 'Instrutor' : 'Equipe'}
+                    {msg.senderRole === 'superuser' ? 'Super Usuário' : msg.senderRole === 'admin' ? 'Administrador' : msg.senderRole === 'instructor' ? 'Instrutor' : 'Equipe'}
                   </span>
                   <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tighter">
                     {msg.senderName}
@@ -190,13 +190,19 @@ const ChatView: React.FC<ChatViewProps> = ({ academy, user }) => {
           {sendError && (
             <p className="text-xs font-bold text-red-500 mb-2 px-2">{sendError}</p>
           )}
-          <form onSubmit={handleSendMessage} className="flex items-center gap-2 md:gap-3 bg-slate-50 dark:bg-slate-800 rounded-3xl p-1.5 border border-slate-100 dark:border-slate-700 focus-within:ring-4 focus-within:ring-indigo-500/10 focus-within:border-indigo-500 transition-all">
-            <input
-              type="text"
+          <form onSubmit={handleSendMessage} className="flex items-end gap-2 md:gap-3 bg-slate-50 dark:bg-slate-800 rounded-3xl p-1.5 border border-slate-100 dark:border-slate-700 focus-within:ring-4 focus-within:ring-indigo-500/10 focus-within:border-indigo-500 transition-all">
+            <textarea
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage(e);
+                }
+              }}
               placeholder="Digite um aviso..."
-              className="flex-1 bg-transparent border-none px-4 py-2 outline-none font-medium text-sm text-slate-700 dark:text-white placeholder:text-slate-400"
+              rows={2}
+              className="flex-1 bg-transparent border-none px-4 py-3 outline-none resize-none font-medium text-sm text-slate-700 dark:text-white placeholder:text-slate-400 max-h-40 custom-scrollbar"
             />
             <button
               type="submit"

@@ -295,7 +295,7 @@ const CREATE_STATEMENTS = [
     academy_id VARCHAR(36) NOT NULL,
     sender_id VARCHAR(36) NOT NULL,
     sender_name VARCHAR(255),
-    sender_role ENUM('admin','instructor','staff') NOT NULL,
+    sender_role ENUM('superuser','admin','instructor','staff') NOT NULL,
     content TEXT NOT NULL,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE
