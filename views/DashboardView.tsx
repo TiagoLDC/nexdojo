@@ -26,6 +26,7 @@ import {
   Search,
   ShieldAlert,
   GraduationCap,
+  Activity,
   Trophy,
   Medal,
   Award,
@@ -1259,19 +1260,11 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                 value={profile.absentCount} 
                 highlight={profile.absentCount >= (academy.absenceLimit || 3)}
               />
-              <motion.button 
-                whileHover={{ scale: 1.05 }}
-                onClick={() => window.location.hash = '#/calendar'}
-                className="bg-white dark:bg-slate-900 p-5 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm transition-all text-left flex flex-col justify-between group h-full cursor-pointer"
-              >
-                <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 group-hover:rotate-12 transition-transform">
-                  <Calendar size={20} />
-                </div>
-                <div className="mt-4">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{t.calendar}</p>
-                  <p className="text-xs font-black text-slate-800 dark:text-white uppercase italic leading-tight">{language === 'pt' ? 'Eventos & Recessos' : 'Events & Recess'}</p>
-                </div>
-              </motion.button>
+              <StatCard
+                icon={<Activity className="text-purple-500" />}
+                label={language === 'pt' ? 'Aulas Nessa Faixa' : 'Classes on This Belt'}
+                value={profile.classesSinceGraduation ?? 0}
+              />
             </motion.div>
 
             {/* PROGRESSO DE GRADUAÇÃO */}
