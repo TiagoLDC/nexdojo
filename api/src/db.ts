@@ -33,6 +33,17 @@ const pool = mysql.createPool({
   enableKeepAlive: true,
   keepAliveInitialDelay: 30000,
   dateStrings: ['DATE'],
+  // Colunas TINYINT(1) (flags booleanas: kimono_loan_enabled, active, requires_password_change, etc.)
+  // chegam do driver como número (0/1), não boolean. Isso fazia `flag && <JSX/>` renderizar um "0"
+  // solto na tela quando a flag estava desligada (React não suprime números falsy como suprime false).
+  // Convertendo aqui, na origem, o valor chega como boolean de verdade em toda a aplicação.
+  typeCast: (field, next) => {
+    if (field.type === 'TINY' && field.length === 1) {
+      const value = field.string();
+      return value === null ? null : value === '1';
+    }
+    return next();
+  },
 });
 
 export default pool;
