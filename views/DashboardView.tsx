@@ -53,7 +53,8 @@ import {
   Lock,
   Loader2,
   KeyRound,
-  Shirt
+  Shirt,
+  MessageCircle
 } from 'lucide-react';
 import { authService } from '@/features/auth/services/authService';
 import { StorageService } from '../services/storage';
@@ -362,6 +363,29 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       .filter(({ diffDays, price }) => diffDays <= 30 && (price ?? 0) > 0)
       .sort((a, b) => a.diffDays - b.diffDays);
   }, [students, user.role, academy?.plans]);
+
+  const getPaymentWhatsappUrl = (student: Student, diffDays: number, price?: number) => {
+    const contactPhone = student.phone || student.guardianPhone;
+    if (!contactPhone) return null;
+
+    const statusText = diffDays < 0
+      ? `sua mensalidade está *vencida há ${Math.abs(diffDays)} dia${Math.abs(diffDays) !== 1 ? 's' : ''}*`
+      : diffDays === 0
+      ? 'sua mensalidade *vence hoje*'
+      : `sua mensalidade *vence em ${diffDays} dia${diffDays !== 1 ? 's' : ''}*`;
+
+    let text = `Olá ${student.name}! Tudo bem?\n\nPassando para avisar que ${statusText}${academy ? ` na ${academy.name}` : ''}.`;
+
+    if (price != null) {
+      text += `\n\nValor: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}`;
+    }
+
+    if (academy?.pixKey) {
+      text += `\n\nPara realizar o pagamento, utilize a chave PIX (${academy.pixType}): ${academy.pixKey}\n\nApós o pagamento, por favor envie o comprovante por aqui pelo WhatsApp. Obrigado!`;
+    }
+
+    return `https://wa.me/55${contactPhone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
+  };
 
   const [markingPaymentId, setMarkingPaymentId] = React.useState<string | null>(null);
 
@@ -1889,7 +1913,9 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
             </div>
 
             <div className="space-y-2">
-              {upcomingPayments.map(({ student, diffDays, price }) => (
+              {upcomingPayments.map(({ student, diffDays, price }) => {
+                const whatsappUrl = getPaymentWhatsappUrl(student, diffDays, price);
+                return (
                 <div
                   key={student.id}
                   className={`flex items-center justify-between p-3 sm:p-4 rounded-3xl border transition-all ${
@@ -1926,18 +1952,32 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                       </div>
                     </div>
                   </div>
-                  <button
-                    disabled={markingPaymentId === student.id}
-                    onClick={() => markPaymentAsPaid(student)}
-                    className="shrink-0 ml-3 flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 px-3 sm:px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-60 border border-emerald-100 dark:border-emerald-900/30 cursor-pointer"
-                  >
-                    {markingPaymentId === student.id
-                      ? <Loader2 size={14} className="animate-spin" />
-                      : <CheckCircle2 size={14} />}
-                    <span className="hidden sm:inline">Marcar Pago</span>
-                  </button>
+                  <div className="shrink-0 ml-3 flex items-center gap-2">
+                    {whatsappUrl && (
+                      <a
+                        href={whatsappUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Cobrar pelo WhatsApp"
+                        className="flex items-center justify-center bg-[#25D366] hover:bg-[#128C7E] text-white p-2.5 rounded-2xl transition-all active:scale-95 shadow-lg shadow-green-500/20"
+                      >
+                        <MessageCircle size={14} fill="currentColor" />
+                      </a>
+                    )}
+                    <button
+                      disabled={markingPaymentId === student.id}
+                      onClick={() => markPaymentAsPaid(student)}
+                      className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 px-3 sm:px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-60 border border-emerald-100 dark:border-emerald-900/30 cursor-pointer"
+                    >
+                      {markingPaymentId === student.id
+                        ? <Loader2 size={14} className="animate-spin" />
+                        : <CheckCircle2 size={14} />}
+                      <span className="hidden sm:inline">Marcar Pago</span>
+                    </button>
+                  </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </motion.div>
