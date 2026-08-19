@@ -2275,7 +2275,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                 subtitle={(() => {
                   if (isLoadingBeltSettings) return 'Carregando...';
                   if (!beltSettingsSport) return 'Esporte não definido';
-                  const configured = beltRanks.filter(b => b.monthsRequired != null || b.classesRequired != null).length;
+                  const configured = beltRanks.filter(b => (b.monthsRequired ?? 0) > 0 || (b.classesRequired ?? 0) > 0).length;
                   return `${beltSettingsSport.name} · ${configured} de ${beltRanks.length} faixas configuradas`;
                 })()}
                 onClick={openBeltSettingsModal}

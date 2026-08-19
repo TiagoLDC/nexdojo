@@ -2025,7 +2025,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     <div>
                       <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Faixas Configuradas</p>
                       <p className="text-sm font-black text-white">
-                        {beltRanksConfig.filter(b => b.monthsRequired != null || b.classesRequired != null).length} de {beltRanksConfig.length}
+                        {beltRanksConfig.filter(b => (b.monthsRequired ?? 0) > 0 || (b.classesRequired ?? 0) > 0).length} de {beltRanksConfig.length}
                       </p>
                     </div>
                     <Link to="/settings" className="text-[9px] font-black text-indigo-300 hover:text-white uppercase tracking-widest underline underline-offset-2">

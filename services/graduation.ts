@@ -69,10 +69,15 @@ export interface BeltRankConfig {
   warnBeforeClasses?: number | null;
 }
 
+// 0 e null tem o mesmo significado aqui: "critério não usado" (nenhuma faixa exige
+// "0 meses"/"0 aulas" de verdade — 0 é o valor que sobra quando o admin deixa vazio
+// e o input trata como zero, então precisa ser ignorado igual a null).
+const hasThreshold = (value?: number | null): value is number => value != null && value > 0;
+
 export const isReadyForGraduationByBeltRank = (student: Student, config?: BeltRankConfig) => {
   if (!config) return { readyForBelt: false, readyForStripe: false };
-  const classesReady = config.classesRequired != null && (student.classesSinceGraduation ?? 0) >= config.classesRequired;
-  const monthsReady = config.monthsRequired != null && monthsSince(student.lastGraduationDate) >= config.monthsRequired;
+  const classesReady = hasThreshold(config.classesRequired) && (student.classesSinceGraduation ?? 0) >= config.classesRequired;
+  const monthsReady = hasThreshold(config.monthsRequired) && monthsSince(student.lastGraduationDate) >= config.monthsRequired;
   const ready = classesReady || monthsReady;
   return {
     readyForBelt: ready && student.stripes >= config.degreeCount,
@@ -87,10 +92,10 @@ export const getGraduationProgressByBeltRank = (
   config?: BeltRankConfig,
 ): { current: number; target: number; unit: 'aulas' | 'meses' } | null => {
   if (!config) return null;
-  const classes = config.classesRequired != null
+  const classes = hasThreshold(config.classesRequired)
     ? { current: student.classesSinceGraduation ?? 0, target: config.classesRequired, unit: 'aulas' as const }
     : null;
-  const months = config.monthsRequired != null
+  const months = hasThreshold(config.monthsRequired)
     ? { current: monthsSince(student.lastGraduationDate), target: config.monthsRequired, unit: 'meses' as const }
     : null;
   if (classes && months) {
@@ -104,9 +109,9 @@ export const isCloseToGraduationByBeltRank = (student: Student, config?: BeltRan
   if (!config) return false;
   const { readyForBelt, readyForStripe } = isReadyForGraduationByBeltRank(student, config);
   if (readyForBelt || readyForStripe) return false;
-  const classesRemaining = config.classesRequired != null ? config.classesRequired - (student.classesSinceGraduation ?? 0) : null;
-  const monthsRemaining = config.monthsRequired != null ? config.monthsRequired - monthsSince(student.lastGraduationDate) : null;
-  const classesClose = classesRemaining != null && config.warnBeforeClasses != null && classesRemaining > 0 && classesRemaining <= config.warnBeforeClasses;
-  const monthsClose = monthsRemaining != null && config.warnBeforeMonths != null && monthsRemaining > 0 && monthsRemaining <= config.warnBeforeMonths;
+  const classesRemaining = hasThreshold(config.classesRequired) ? config.classesRequired - (student.classesSinceGraduation ?? 0) : null;
+  const monthsRemaining = hasThreshold(config.monthsRequired) ? config.monthsRequired - monthsSince(student.lastGraduationDate) : null;
+  const classesClose = classesRemaining != null && hasThreshold(config.warnBeforeClasses) && classesRemaining > 0 && classesRemaining <= config.warnBeforeClasses;
+  const monthsClose = monthsRemaining != null && hasThreshold(config.warnBeforeMonths) && monthsRemaining > 0 && monthsRemaining <= config.warnBeforeMonths;
   return classesClose || monthsClose;
 };
