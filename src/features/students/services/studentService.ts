@@ -12,7 +12,7 @@ import type {
 export const studentService = {
   getAll: (academyId: string, params?: GetStudentsParams) =>
     api
-      .get<PaginatedResponse<Student>>('/students', { params: { academyId, ...params } })
+      .get<PaginatedResponse<Student>>('/students', { params: { academyId, ...params }, timeout: 300000 })
       .then((r) => r.data),
 
   getById: (id: string) =>

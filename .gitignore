@@ -39,3 +39,4 @@ dist-ssr
 /LEGADO GUERREIROS/
 /backups/
 api/src/scripts/migrate_guerreiros_qas_to_prd.ts
+_photo_backup_prd/
