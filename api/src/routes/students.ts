@@ -99,7 +99,48 @@ router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunct
       params
     );
 
-    res.json({ data: rows, total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) });
+    // Listagens (ex: dashboard) muitas vezes não precisam da foto de todo mundo — a coluna é
+    // um LONGTEXT com o base64 completo, então incluí-la em listas de até 1000 registros infla
+    // o payload e derruba o tempo de carregamento à toa. Quem pedir explicitamente continua
+    // recebendo como sempre (comportamento padrão inalterado).
+    const data = req.query.includePhoto === 'false'
+      ? (rows as any[]).map(({ photo, ...rest }) => rest)
+      : rows;
+
+    res.json({ data, total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/students/photos?ids=id1,id2,... — busca em lote só a foto de ids específicos,
+// usado por telas que renderizam foto pra pouca gente de uma lista grande (ex: dashboard).
+// Precisa vir ANTES de "/:id" — senão o Express casaria "/photos" como se fosse um :id.
+router.get('/photos', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const academyId = getAcademyId(req, res);
+  if (!academyId) return;
+
+  const ids = String(req.query.ids || '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean)
+    .slice(0, 200);
+
+  if (!ids.length) {
+    res.json({});
+    return;
+  }
+
+  try {
+    const [rows] = await pool.execute<any[]>(
+      `SELECT id, photo FROM students WHERE academy_id = ? AND id IN (${ids.map(() => '?').join(',')})`,
+      [academyId, ...ids]
+    );
+    const result: Record<string, string> = {};
+    for (const row of rows as any[]) {
+      if (row.photo) result[row.id] = row.photo;
+    }
+    res.json(result);
   } catch (err) {
     next(err);
   }

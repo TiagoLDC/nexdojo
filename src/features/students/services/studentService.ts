@@ -18,6 +18,11 @@ export const studentService = {
   getById: (id: string) =>
     api.get<Student>(`/students/${id}`).then((r) => r.data),
 
+  // Busca em lote só a foto de ids específicos — usado por telas que listam muitos alunos
+  // (com includePhoto: false) mas só precisam exibir avatar de alguns poucos.
+  getPhotos: (ids: string[]) =>
+    api.get<Record<string, string>>('/students/photos', { params: { ids: ids.join(',') } }).then((r) => r.data),
+
   create: (academyId: string, data: CreateStudentDTO) =>
     api.post<Student>('/students', { ...data, academyId }).then((r) => r.data),
 

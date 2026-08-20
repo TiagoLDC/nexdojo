@@ -54,6 +54,8 @@ export interface GetStudentsParams extends SearchParams {
   status?: StudentStatus;
   email?: string;
   userId?: string;
+  /** false = a API não inclui o campo `photo` nos registros (payload menor). Padrão: inclui. */
+  includePhoto?: boolean;
 }
 
 export interface CreateStudentDTO {
@@ -104,6 +106,8 @@ export interface GraduateStudentDTO {
 
 export interface GetInstructorsParams extends SearchParams {
   status?: MemberStatus;
+  /** false = a API não inclui o campo `photo` nos registros (payload menor). Padrão: inclui. */
+  includePhoto?: boolean;
 }
 
 export interface CreateInstructorDTO {
@@ -133,6 +137,8 @@ export type UpdateInstructorDTO = Partial<CreateInstructorDTO>;
 
 export interface GetStaffParams extends SearchParams {
   status?: MemberStatus;
+  /** false = a API não inclui o campo `photo` nos registros (payload menor). Padrão: inclui. */
+  includePhoto?: boolean;
 }
 
 export interface CreateStaffDTO {

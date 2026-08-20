@@ -5,6 +5,7 @@ import { plansService } from '@/features/plans/services/plansService';
 import { useProfileStore, getActiveProfile } from '@/stores/profileStore';
 import { getGraduationProgressByBeltRank } from '../services/graduation';
 import { useAcademyBeltRanks } from '@/features/settings/hooks/useAcademyBeltRanks';
+import { compressImage } from '@/utils/imageCompression';
 import {
   User as UserIcon,
   MapPin,
@@ -176,9 +177,12 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
     if (!file || !editData) return;
 
     const reader = new FileReader();
-    reader.onloadend = () => {
+    reader.onloadend = async () => {
       const base64String = reader.result as string;
-      setEditData({ ...editData, photo: base64String });
+      // Fotos tiradas direto do celular podem chegar em vários MB — comprime antes de guardar,
+      // igual ao cadastro feito pelo admin (StudentsView/InstructorsView/StaffView).
+      const compressed = await compressImage(base64String);
+      setEditData((prev) => prev ? { ...prev, photo: compressed } : prev);
     };
     reader.readAsDataURL(file);
   };

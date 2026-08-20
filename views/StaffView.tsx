@@ -4,6 +4,7 @@ import { Staff, Academy, User } from '../types';
 import { staffService } from '@/features/staff/services/staffService';
 import { useTranslation } from '../services/LanguageContext';
 import { fetchAddressByCep, maskCEP, maskPhone } from '../services/cep';
+import { compressImage } from '@/utils/imageCompression';
 import { DateSelectInput, ConfirmDialog } from '@/components/ui';
 import {
   UserPlus,
@@ -21,23 +22,6 @@ import {
   Link2,
   CheckCircle2,
 } from 'lucide-react';
-
-const compressImage = (base64Str: string, maxWidth = 400, maxHeight = 400): Promise<string> => {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.src = base64Str;
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      let width = img.width, height = img.height;
-      if (width > height) { if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; } }
-      else { if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; } }
-      canvas.width = width; canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx?.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', 0.7));
-    };
-  });
-};
 
 const statusLabel: Record<string, { label: string; cls: string }> = {
   Active:      { label: 'Ativo',        cls: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },

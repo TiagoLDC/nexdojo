@@ -80,7 +80,12 @@ router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunct
       params
     );
 
-    res.json({ data: rows, total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) });
+    // Ver comentário equivalente em students.ts — mesma otimização de payload.
+    const data = req.query.includePhoto === 'false'
+      ? (rows as any[]).map(({ photo, ...rest }) => rest)
+      : rows;
+
+    res.json({ data, total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) });
   } catch (err) {
     next(err);
   }

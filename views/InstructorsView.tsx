@@ -6,6 +6,7 @@ import { usersService } from '@/features/users/services/usersService';
 import { useTranslation } from '../services/LanguageContext';
 import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../services/cep';
 import { getTodayBrasilia } from '@/utils/date';
+import { compressImage } from '@/utils/imageCompression';
 import { useAcademyBeltRanks } from '@/features/settings/hooks/useAcademyBeltRanks';
 import {
   UserPlus,
@@ -45,23 +46,6 @@ import { getBeltClassName } from '../constants';
 import { DateSelectInput, ConfirmDialog } from '@/components/ui';
 
 // Funções utilitárias removidas e unificadas em services/cep.ts
-
-const compressImage = (base64Str: string, maxWidth = 400, maxHeight = 400): Promise<string> => {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.src = base64Str;
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      let width = img.width, height = img.height;
-      if (width > height) { if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; } }
-      else { if (height > maxHeight) { width *= maxHeight / height; height = maxHeight; } }
-      canvas.width = width; canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx?.drawImage(img, 0, 0, width, height);
-      resolve(canvas.toDataURL('image/jpeg', 0.7));
-    };
-  });
-};
 
 const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, user }) => {
   const { getBeltConfig } = useAcademyBeltRanks(academy?.id);

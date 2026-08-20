@@ -58,10 +58,14 @@ router.get('/', requireAuth, async (req: Request, res: Response, next: NextFunct
       params
     );
 
-    const data = (rows as any[]).map(r => ({
-      ...r,
-      invite_link: r.invite_token ? buildInviteLink(r.academy_alias, r.invite_token) : null,
-    }));
+    // Ver comentário equivalente em students.ts — mesma otimização de payload.
+    const data = (rows as any[]).map(r => {
+      const { photo, ...rest } = r;
+      return {
+        ...(req.query.includePhoto === 'false' ? rest : r),
+        invite_link: r.invite_token ? buildInviteLink(r.academy_alias, r.invite_token) : null,
+      };
+    });
 
     res.json({ data, total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) });
   } catch (err) {

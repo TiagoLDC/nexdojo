@@ -17,6 +17,7 @@ import { academyService } from '@/features/settings/services/academyService';
 import { PrivacyValue } from '../components/PrivacyValue';
 import { calculateAge, getNextRank, isReadyForGraduationByBeltRank, getGraduationProgressByBeltRank, isCloseToGraduationByBeltRank, BELT_LIST } from '../services/graduation';
 import { useAcademyBeltRanks } from '@/features/settings/hooks/useAcademyBeltRanks';
+import { useStudentPhotos } from '@/features/students/hooks/useStudentPhotos';
 import {
   Users,
   TrendingUp,
@@ -129,9 +130,12 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
             chatRes,
             sessionsRes,
           ] = await Promise.all([
-            studentService.getAll(academy.id, { limit: 1000 }),
-            instructorService.getAll(academy.id, { limit: 1000 }),
-            staffService.getAll(academy.id, { limit: 1000 }),
+            // includePhoto: false — o dashboard só mostra foto de um punho de gente (alertas de
+            // graduação, mensalidades, atividade recente etc.), não de todo mundo. Essas telas
+            // buscam a foto à parte, sob demanda, via useStudentPhotos (ver mais abaixo).
+            studentService.getAll(academy.id, { limit: 1000, includePhoto: false }),
+            instructorService.getAll(academy.id, { limit: 1000, includePhoto: false }),
+            staffService.getAll(academy.id, { limit: 1000, includePhoto: false }),
             templateService.getAll(academy.id, { limit: 1000 }),
             attendanceService.getRecords(academy.id, { limit: 1000 }),
             isGuardian ? Promise.resolve({ data: [] }) : financeService.getAll(academy.id, { limit: 1000 }),
@@ -694,12 +698,26 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
         return {
           ...att,
           studentName: student?.name || 'Desconhecido',
-          studentPhoto: student?.photo,
           studentBelt: student?.belt || Belt.WHITE,
           studentStripes: student?.stripes || 0
         };
       });
   }, [attendance, students]);
+
+  // students vem sem `photo` (includePhoto: false, ver Promise.all acima) — a lista completa é
+  // grande demais pra trazer foto de todo mundo. Aqui buscamos só a foto de quem realmente
+  // aparece em algum widget do dashboard, via useStudentPhotos (busca em lote, sob demanda).
+  const neededStudentPhotoIds = useMemo(() => {
+    const ids = new Set<string>();
+    graduationAlerts.forEach(s => ids.add(s.id));
+    closeToGraduationAlerts.forEach(s => ids.add(s.id));
+    upcomingPayments.forEach(({ student }) => ids.add(student.id));
+    recentActivity.forEach(a => { if (a.studentId) ids.add(a.studentId); });
+    absenceAlerts.slice(0, 4).forEach(s => ids.add(s.id));
+    return Array.from(ids);
+  }, [graduationAlerts, closeToGraduationAlerts, upcomingPayments, recentActivity, absenceAlerts]);
+
+  const studentPhotos = useStudentPhotos(neededStudentPhotoIds);
 
   const studentProfile = useMemo(() => {
     // Segue o dependente selecionado no "Alternar Perfil"; sem seleção, resolve por userId
@@ -1636,8 +1654,8 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
               {graduationAlerts.slice(0, 10).map(s => (
                 <div key={s.id} className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10 flex items-center gap-3 shrink-0">
                   <div className="relative">
-                    {s.photo ? (
-                      <img src={s.photo} className="w-8 h-8 rounded-lg object-cover" />
+                    {studentPhotos[s.id] ? (
+                      <img src={studentPhotos[s.id]} className="w-8 h-8 rounded-lg object-cover" />
                     ) : (
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${getBeltClassName(s.belt, getBeltConfig(s.belt)?.colorKey)}`}>
                         {s.name.charAt(0)}
@@ -1687,8 +1705,8 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
               {closeToGraduationAlerts.slice(0, 10).map(s => (
                 <div key={s.id} className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10 flex items-center gap-3 shrink-0">
                   <div className="relative">
-                    {s.photo ? (
-                      <img src={s.photo} className="w-8 h-8 rounded-lg object-cover" />
+                    {studentPhotos[s.id] ? (
+                      <img src={studentPhotos[s.id]} className="w-8 h-8 rounded-lg object-cover" />
                     ) : (
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${getBeltClassName(s.belt, getBeltConfig(s.belt)?.colorKey)}`}>
                         {s.name.charAt(0)}
@@ -1933,8 +1951,8 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className={`w-10 h-10 rounded-2xl shrink-0 flex items-center justify-center font-black text-base overflow-hidden ${getBeltClassName(student.belt, getBeltConfig(student.belt)?.colorKey) || 'bg-slate-200 text-slate-700'}`}>
-                      {student.photo
-                        ? <img src={student.photo} className="w-full h-full object-cover" />
+                      {studentPhotos[student.id]
+                        ? <img src={studentPhotos[student.id]} className="w-full h-full object-cover" />
                         : student.name.charAt(0)}
                     </div>
                     <div className="min-w-0">
@@ -2613,8 +2631,8 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                   <div key={att.id} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800 group hover:shadow-md transition-all gap-2">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="relative shrink-0">
-                        {att.studentPhoto ? (
-                          <img src={att.studentPhoto} className="w-12 h-12 rounded-2xl object-cover" />
+                        {studentPhotos[att.studentId] ? (
+                          <img src={studentPhotos[att.studentId]} className="w-12 h-12 rounded-2xl object-cover" />
                         ) : (
                           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg border ${getBeltClassName(att.studentBelt, getBeltConfig(att.studentBelt)?.colorKey) ?? 'bg-slate-400 text-white border-slate-500'}`}>
                             {att.studentName.charAt(0)}
@@ -2657,7 +2675,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                 graduationAlerts.slice(0, 4).map(student => (
                   <div key={student.id} className="bg-white dark:bg-slate-900 p-5 rounded-[32px] border border-slate-100 dark:border-slate-800 flex items-center justify-between group hover:shadow-md transition-all">
                     <div className="flex items-center gap-3">
-                      {student.photo ? <img src={student.photo} className="w-12 h-12 rounded-2xl object-cover" alt="" /> : <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg border ${getBeltClassName(student.belt, getBeltConfig(student.belt)?.colorKey)}`}>{student.name.charAt(0)}</div>}
+                      {studentPhotos[student.id] ? <img src={studentPhotos[student.id]} className="w-12 h-12 rounded-2xl object-cover" alt="" /> : <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg border ${getBeltClassName(student.belt, getBeltConfig(student.belt)?.colorKey)}`}>{student.name.charAt(0)}</div>}
                       <div>
                         <h4 className="font-black text-slate-800 dark:text-slate-100 text-sm leading-tight uppercase italic">{student.name}</h4>
                         <div className="flex items-center gap-2 mt-1">
@@ -2686,7 +2704,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {closeToGraduationAlerts.slice(0, 4).map(student => (
                     <div key={student.id} className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center gap-3">
-                      {student.photo ? <img src={student.photo} className="w-9 h-9 rounded-xl object-cover" alt="" /> : <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm border ${getBeltClassName(student.belt, getBeltConfig(student.belt)?.colorKey)}`}>{student.name.charAt(0)}</div>}
+                      {studentPhotos[student.id] ? <img src={studentPhotos[student.id]} className="w-9 h-9 rounded-xl object-cover" alt="" /> : <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm border ${getBeltClassName(student.belt, getBeltConfig(student.belt)?.colorKey)}`}>{student.name.charAt(0)}</div>}
                       <div className="min-w-0">
                         <h4 className="font-black text-slate-700 dark:text-slate-200 text-xs leading-tight uppercase italic truncate">{student.name}</h4>
                         <p className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
@@ -2838,7 +2856,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                 absenceAlerts.slice(0, 4).map(student => (
                   <div key={student.id} className="bg-white dark:bg-slate-900 p-5 rounded-[32px] border border-slate-100 dark:border-slate-800 flex items-center justify-between group hover:shadow-md transition-all shadow-sm">
                     <div className="flex items-center gap-3">
-                      {student.photo ? <img src={student.photo} className="w-12 h-12 rounded-2xl object-cover" alt="" /> : <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg border ${getBeltClassName(student.belt, getBeltConfig(student.belt)?.colorKey)}`}>{student.name.charAt(0)}</div>}
+                      {studentPhotos[student.id] ? <img src={studentPhotos[student.id]} className="w-12 h-12 rounded-2xl object-cover" alt="" /> : <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg border ${getBeltClassName(student.belt, getBeltConfig(student.belt)?.colorKey)}`}>{student.name.charAt(0)}</div>}
                       <div>
                         <h4 className="font-black text-slate-800 dark:text-slate-100 text-sm leading-tight uppercase italic">{student.name}</h4>
                         <div className="flex items-center gap-2">

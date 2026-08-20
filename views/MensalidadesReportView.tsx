@@ -15,6 +15,7 @@ import { Academy, Student, User } from '../types';
 import { studentService } from '@/features/students/services/studentService';
 import { financeService } from '@/features/finances/services/financeService';
 import { useAcademyBeltRanks } from '@/features/settings/hooks/useAcademyBeltRanks';
+import { useStudentPhotos } from '@/features/students/hooks/useStudentPhotos';
 import { getBeltClassName } from '../constants';
 import { advancePaymentDate } from '@/utils/paymentUtils';
 import { getTodayBrasilia } from '@/utils/date';
@@ -42,7 +43,9 @@ const MensalidadesReportView: React.FC<{ academy: Academy; user: User }> = ({ ac
   useEffect(() => {
     if (!academy?.id) return;
     setIsLoading(true);
-    studentService.getAll(academy.id, { limit: 1000 })
+    // includePhoto: false — a lista pode ter dezenas de alunos; a foto de cada um é buscada à
+    // parte, sob demanda, via useStudentPhotos (só para quem está na página atual).
+    studentService.getAll(academy.id, { limit: 1000, includePhoto: false })
       .then(res => setStudents(res.data))
       .catch(console.error)
       .finally(() => setIsLoading(false));
@@ -63,6 +66,8 @@ const MensalidadesReportView: React.FC<{ academy: Academy; user: User }> = ({ ac
       .filter(({ diffDays, price }) => diffDays <= 30 && (price ?? 0) > 0)
       .sort((a, b) => a.diffDays - b.diffDays);
   }, [students, academy?.plans]);
+
+  const studentPhotos = useStudentPhotos(useMemo(() => payments.map(p => p.student.id), [payments]));
 
   const summary = useMemo(() => ({
     overdue: payments.filter(p => p.diffDays < 0).length,
@@ -255,8 +260,8 @@ const MensalidadesReportView: React.FC<{ academy: Academy; user: User }> = ({ ac
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className={`w-10 h-10 rounded-2xl shrink-0 flex items-center justify-center font-black text-base overflow-hidden ${getBeltClassName(student.belt, getBeltConfig(student.belt)?.colorKey) || 'bg-slate-200 text-slate-700'}`}>
-                      {student.photo
-                        ? <img src={student.photo} className="w-full h-full object-cover" />
+                      {studentPhotos[student.id]
+                        ? <img src={studentPhotos[student.id]} className="w-full h-full object-cover" />
                         : student.name.charAt(0)}
                     </div>
                     <div className="min-w-0">
