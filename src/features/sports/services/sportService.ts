@@ -17,10 +17,10 @@ export const sportService = {
   getAll: () =>
     api.get<{ data: Sport[]; total: number }>('/sports').then((r) => r.data.data),
 
-  create: (data: { name: string; slug?: string; active?: boolean }) =>
+  create: (data: { name: string; slug?: string; active?: boolean; youthMaxAge?: number | null }) =>
     api.post<Sport>('/sports', data).then((r) => r.data),
 
-  update: (id: string, data: Partial<Pick<Sport, 'name' | 'active'>>) =>
+  update: (id: string, data: Partial<Pick<Sport, 'name' | 'active' | 'youthMaxAge'>>) =>
     api.put<Sport>(`/sports/${id}`, data).then((r) => r.data),
 
   getBeltRanks: (sportId: string) =>

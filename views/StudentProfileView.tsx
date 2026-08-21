@@ -386,7 +386,7 @@ const StudentProfileView: React.FC<StudentProfileViewProps> = ({ user, academy }
               <div className="relative z-10">
                 <h4 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 mb-2">Próxima Graduação</h4>
                 {(() => {
-                  const progress = getGraduationProgressByBeltRank(profile, getBeltConfig(profile.belt));
+                  const progress = getGraduationProgressByBeltRank(profile, getBeltConfig(profile));
                   if (!progress) {
                     return <p className="text-sm font-bold opacity-70">Critério não configurado</p>;
                   }

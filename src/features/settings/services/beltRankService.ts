@@ -1,20 +1,22 @@
 import { api } from '@/lib/api';
-import type { Sport, BeltRank, AcademyBeltSetting } from '@/types';
-
-export type AcademyBeltRank = BeltRank &
-  Pick<AcademyBeltSetting, 'monthsRequired' | 'classesRequired' | 'warnBeforeMonths' | 'warnBeforeClasses'>;
+import type { Sport, BeltRank, AcademyBeltSetting, BeltAgeSegment } from '@/types';
 
 export interface AcademyBeltSettingsResponse {
   sport: Sport | null;
-  beltRanks: AcademyBeltRank[];
+  beltRanks: BeltRank[];
+  beltSettings: AcademyBeltSetting[];
 }
 
 export interface AcademyBeltSettingInput {
   beltRankId: string;
   monthsRequired?: number | null;
+  monthsRequiredDays?: number | null;
   classesRequired?: number | null;
   warnBeforeMonths?: number | null;
   warnBeforeClasses?: number | null;
+  ageSegment?: BeltAgeSegment | null;
+  degreeSegmentMin?: number | null;
+  degreeSegmentMax?: number | null;
 }
 
 export type PublicBeltRank = Pick<BeltRank, 'id' | 'name' | 'colorKey' | 'orderIndex'>;

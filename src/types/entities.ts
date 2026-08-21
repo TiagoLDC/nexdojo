@@ -36,6 +36,7 @@ export interface Sport {
   name: string;
   slug: string;
   active: boolean;
+  youthMaxAge?: number | null;
 }
 
 export interface BeltRank {
@@ -50,14 +51,22 @@ export interface BeltRank {
   maxAge?: number;
 }
 
+// Segmento de idade de uma linha de critério ('under_limit' = idade <= sport.youthMaxAge).
+// Ausente/null = linha não segmentada por idade (comportamento original, 1 linha por faixa).
+export type BeltAgeSegment = 'under_limit' | 'over_limit';
+
 export interface AcademyBeltSetting {
   id: string;
   academyId: string;
   beltRankId: string;
-  monthsRequired?: number;
-  classesRequired?: number;
-  warnBeforeMonths?: number;
-  warnBeforeClasses?: number;
+  monthsRequired?: number | null;
+  monthsRequiredDays?: number | null;
+  classesRequired?: number | null;
+  warnBeforeMonths?: number | null;
+  warnBeforeClasses?: number | null;
+  ageSegment?: BeltAgeSegment | null;
+  degreeSegmentMin?: number | null;
+  degreeSegmentMax?: number | null;
 }
 
 // ── Documents & Graduation ────────────────────────────────────────────────

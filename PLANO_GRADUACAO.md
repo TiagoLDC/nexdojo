@@ -157,6 +157,33 @@ Aplica-se uniformemente a cada "passo" dentro daquela faixa (cada troca de grau 
 
 ---
 
+## Extensão (21/08/2026) — Segmentação de Critério por Idade e por Grau + Meses Fracionados
+
+> Pedido real do usuário: Faixa Branca precisa de 2 critérios por idade (até 15 anos: 16 aulas; 16+: 25 aulas); Faixa Preta precisa de 2 critérios por grupo de grau (1º-3º: 290 aulas; 4º-6º: 490 aulas); e o campo "Meses necessários" precisa aceitar dias fracionados (ex: 3 meses e 15 dias).
+
+**Decisões fechadas com o usuário antes da implementação:**
+- A Branca continua **uma única faixa** em `belt_ranks` (mesmo nome/cor/posição) — a segmentação por idade é um recurso da configuração por academia (`academy_belt_settings` ganha suporte a múltiplas linhas por faixa), não do template. Preserva 100% a resolução por nome (`student.belt === belt_ranks.name`) usada em Dashboard/Central de Graduação/Relatórios/Perfil do Aluno.
+- Segmentação por **grau** fica disponível na UI só para faixas com `degreeCount > 4` (hoje só a Preta) — condição estrutural, sem `if (belt.name === 'Preta')` no código.
+- Dias fracionados entram só no critério principal (`months_required`/`months_required_days`) — o aviso antecipado ("Quase Lá") continua só em meses inteiros.
+- Idade limite "infanto-juvenil" é uma configuração do **esporte** (`sports.youth_max_age`, superuser, em `SportsView.tsx`), não por academia.
+
+**Schema**: `sports.youth_max_age` (novo); `academy_belt_settings` ganha `months_required_days`, `age_segment ENUM('under_limit','over_limit')`, `degree_segment_min`/`degree_segment_max` (todos nullable — aditivo). O `UNIQUE(academy_id, belt_rank_id)` foi removido (uma faixa agora pode ter 1, 2 por idade, ou 2+ por grau) e substituído por um índice não-único `idx_academy_belt`; a garantia de "no máximo 1 linha por segmento" passou para validação de aplicação no `PUT`. `api/src/scripts/migrate.ts` atualizado (banco novo) + novo script incremental idempotente `api/src/scripts/migrate_belt_ranks_segmentation.ts` (banco QAS já existente — ainda não executado no QAS, rodar antes do deploy).
+
+**Backend**: `api/src/routes/sports.ts` (`youth_max_age` no `POST`/`PUT`); `api/src/routes/academies.ts` — `GET /:id/belt-settings` agora retorna `{ sport, belt_ranks, belt_settings }` (template puro + linhas cruas, sem o `LEFT JOIN` 1:1 antigo); `PUT /:id/belt-settings` valida a "forma" de cada grupo de linhas por faixa (única / 2 por idade com `youth_max_age` exigido / 2+ por grau com `degree_count > 4` exigido, sem sobreposição) e trocou o upsert por `DELETE` + `INSERT` transacional (via `withTransaction`, já existente em `api/src/utils/withTransaction.ts`) já que o `ON DUPLICATE KEY UPDATE` antigo dependia do unique removido.
+
+**Frontend**:
+- `services/graduation.ts`: nova `resolveBeltRankConfig(beltRanks, beltSettings, youthMaxAge, student)` escolhe a linha certa (idade via `calculateAge` + `sport.youthMaxAge`; grau via `stripes+1`) dentre 0..N linhas por faixa — 1 linha (caso comum, 19/19 faixas hoje) continua funcionando exatamente como antes. Nova `isMonthsRequirementMet` calcula a data-alvo (última graduação + meses + dias) em vez de "meses inteiros + resto", matematicamente equivalente ao `monthsSince(...) >= N` atual quando não há dias configurados.
+- `src/features/settings/hooks/useAcademyBeltRanks.ts`: `getBeltConfig` virou uma função sobrecarregada — `(beltName: string)` (path legado, só cor, ~30 pontos de uso inalterados) e `(student: {belt, birthDate, stripes})` (delega para `resolveBeltRankConfig`, usado pelos poucos pontos que calculam elegibilidade real: `DashboardView.tsx`, `ReportsView.tsx`, `StudentProfileView.tsx` — trocados de `getBeltConfig(x.belt)` para `getBeltConfig(x)` só nesses pontos).
+- `views/StudentsView.tsx`: implementação própria de `getBeltConfig(student)` (Fase 7/9) agora delega para `resolveBeltRankConfig` em vez de fazer `find` direto — estado dividido em `beltRanks: BeltRank[]` + `beltSettings: AcademyBeltSetting[]` (antes um único array pré-"joinado" `AcademyBeltRank[]`, tipo removido de `beltRankService.ts`).
+- `views/SportsView.tsx`: campo "Idade limite infanto-juvenil" no modal de Esporte.
+- `views/SettingsView.tsx`: cada faixa no modal "Faixas e Graduação" ganhou um seletor Único/Segmentar por idade/Segmentar por grau (grau só visível se `degreeCount > 4`); trocar de Único para segmentado clona o valor existente pro sub-card "mais velho"/"grau mais alto"; trocar de volta pra Único exige confirmação (`ConfirmDialog`, já existente em `@/components/ui`). Campo "Meses" ganhou um input pequeno de "+ dias" (0-29) ao lado, em qualquer modo.
+
+**Verificação**: `npx tsc --noEmit` no frontend deu exatamente os mesmos **68 erros pré-existentes** documentados desde a Fase 4 (dívida `types.ts`/`entities.ts`, não relacionada a esta feature) — zero novos, confirmado por arquivo/linha. Backend (`api/tsc --noEmit`) limpo. Não testado no navegador nem no QAS ainda (regra do projeto — só o usuário testa via interface); script de migração incremental **ainda não executado no QAS**.
+
+- [ ] **Fase 11 — Deploy QAS** (executar `migrate_belt_ranks_segmentation.ts` no QAS + testes manuais) — só quando solicitado explicitamente
+
+---
+
 ### Detalhes do que foi feito na Fase 1 (07/08/2026)
 
 - **`api/src/scripts/migrate.ts`** (recriação completa do schema, usado em QAS/ambiente do zero): adicionadas as tabelas `sports`, `belt_ranks`, `academy_belt_settings`; coluna `sport_id` em `academies`; coluna `belt_rank_id` em `students`/`instructors`; colunas `belt_rank_id`/`previous_belt_rank_id` em `graduation_history`. Incluído o `INSERT` de seed do template Jiu-Jitsu (19 faixas, usando `SET @sport_jiujitsu = UUID()` + `UUID()` por linha, executado na mesma conexão do restante do DDL).

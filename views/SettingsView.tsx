@@ -10,8 +10,8 @@ import { instructorService } from '@/features/instructors/services/instructorSer
 import { staffService } from '@/features/staff/services/staffService';
 import { academyService } from '@/features/settings/services/academyService';
 import { plansService } from '@/features/plans/services/plansService';
-import { beltRankService, AcademyBeltRank } from '@/features/settings/services/beltRankService';
-import type { Sport } from '@/types';
+import { beltRankService, AcademyBeltSettingInput } from '@/features/settings/services/beltRankService';
+import type { Sport, BeltRank, AcademyBeltSetting } from '@/types';
 import { useTranslation } from '../services/LanguageContext';
 import { DateSelectInput, ConfirmDialog } from '@/components/ui';
 import { QRCodeSVG } from 'qrcode.react';
@@ -121,18 +121,32 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   const [editAcademy, setEditAcademy] = React.useState<Academy>(academy);
 
   // Faixas e Graduação (substitui os antigos "Critérios de Graduação" por balde —
-  // ver PLANO_GRADUACAO.md Fase 6). Meses/aulas por faixa individual do esporte da academia.
+  // ver PLANO_GRADUACAO.md Fase 6). Meses/aulas por faixa individual do esporte da academia,
+  // com suporte a segmentação por idade (ex: Branca infantil vs adulto) ou por grupo de grau
+  // (ex: Preta 1º-3º vs 4º-6º) — ver seção "Segmentação de Critério de Graduação por Idade e
+  // por Grau" do plano.
   interface BeltSettingFormRow {
     monthsRequired: number | null;
+    monthsRequiredDays: number | null;
     classesRequired: number | null;
     warnBeforeMonths: number | null;
     warnBeforeClasses: number | null;
   }
+  type BeltSettingsMode = 'single' | 'age' | 'degree';
+  interface BeltSettingFormGroup {
+    mode: BeltSettingsMode;
+    rows: BeltSettingFormRow[]; // length 1 (single) ou 2 (age/degree)
+  }
+  const emptyBeltSettingRow = (): BeltSettingFormRow => ({
+    monthsRequired: null, monthsRequiredDays: null, classesRequired: null, warnBeforeMonths: null, warnBeforeClasses: null,
+  });
   const [beltSettingsSport, setBeltSettingsSport] = useState<Sport | null>(null);
-  const [beltRanks, setBeltRanks] = useState<AcademyBeltRank[]>([]);
+  const [beltRanks, setBeltRanks] = useState<BeltRank[]>([]);
+  const [beltSettings, setBeltSettings] = useState<AcademyBeltSetting[]>([]);
   const [isLoadingBeltSettings, setIsLoadingBeltSettings] = useState(false);
   const [isSavingBeltSettings, setIsSavingBeltSettings] = useState(false);
-  const [editBeltSettings, setEditBeltSettings] = useState<Record<string, BeltSettingFormRow>>({});
+  const [editBeltSettings, setEditBeltSettings] = useState<Record<string, BeltSettingFormGroup>>({});
+  const [collapseBeltConfirm, setCollapseBeltConfirm] = useState<{ beltId: string; kept: BeltSettingFormRow } | null>(null);
 
   const loadBeltSettings = async () => {
     setIsLoadingBeltSettings(true);
@@ -140,6 +154,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
       const res = await beltRankService.getAcademyBeltSettings(academy.id);
       setBeltSettingsSport(res.sport);
       setBeltRanks(res.beltRanks);
+      setBeltSettings(res.beltSettings);
     } catch (err) {
       console.error('Erro ao carregar faixas e graduação:', err);
     } finally {
@@ -329,36 +344,165 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   // Sincroniza o formulário de edição sempre que os dados carregados mudam (abertura do modal
   // ou refresh) — feito num efeito em vez de inline no load para não duplicar a lógica de mapeamento.
   useEffect(() => {
-    const next: Record<string, BeltSettingFormRow> = {};
+    const toRow = (r?: AcademyBeltSetting): BeltSettingFormRow => ({
+      monthsRequired: r?.monthsRequired ?? null,
+      monthsRequiredDays: r?.monthsRequiredDays ?? null,
+      classesRequired: r?.classesRequired ?? null,
+      warnBeforeMonths: r?.warnBeforeMonths ?? null,
+      warnBeforeClasses: r?.warnBeforeClasses ?? null,
+    });
+    const next: Record<string, BeltSettingFormGroup> = {};
     for (const belt of beltRanks) {
-      next[belt.id] = {
-        monthsRequired: belt.monthsRequired ?? null,
-        classesRequired: belt.classesRequired ?? null,
-        warnBeforeMonths: belt.warnBeforeMonths ?? null,
-        warnBeforeClasses: belt.warnBeforeClasses ?? null,
-      };
+      const rows = beltSettings.filter(s => s.beltRankId === belt.id);
+      if (rows.some(r => r.ageSegment != null)) {
+        const under = rows.find(r => r.ageSegment === 'under_limit');
+        const over = rows.find(r => r.ageSegment === 'over_limit');
+        next[belt.id] = { mode: 'age', rows: [toRow(under), toRow(over)] };
+      } else if (rows.some(r => r.degreeSegmentMin != null)) {
+        const sorted = [...rows].sort((a, b) => (a.degreeSegmentMin ?? 0) - (b.degreeSegmentMin ?? 0));
+        next[belt.id] = { mode: 'degree', rows: sorted.map(toRow) };
+      } else {
+        next[belt.id] = { mode: 'single', rows: [toRow(rows[0])] };
+      }
     }
     setEditBeltSettings(next);
-  }, [beltRanks]);
+  }, [beltRanks, beltSettings]);
+
+  // Troca de modo de um card de faixa (Único/Idade/Grau). Único → segmentado: clona o valor
+  // único existente para o sub-card "mais velho"/"grau mais alto", deixa o outro em branco.
+  // Segmentado → Único exige confirmação (ver collapseBeltConfirm) — muda o payload salvo.
+  const setBeltSettingsMode = (belt: BeltRank, mode: BeltSettingsMode) => {
+    setEditBeltSettings(prev => {
+      const group = prev[belt.id];
+      if (!group || group.mode === mode) return prev;
+      const kept = group.rows[group.rows.length - 1] ?? emptyBeltSettingRow();
+      if (mode === 'single') return prev; // tratado via confirmação, ver handleCollapseToSingle
+      return { ...prev, [belt.id]: { mode, rows: [emptyBeltSettingRow(), kept] } };
+    });
+  };
+
+  const requestCollapseToSingle = (belt: BeltRank) => {
+    const group = editBeltSettings[belt.id];
+    if (!group || group.mode === 'single') return;
+    setCollapseBeltConfirm({ beltId: belt.id, kept: group.rows[group.rows.length - 1] ?? emptyBeltSettingRow() });
+  };
+
+  const confirmCollapseToSingle = () => {
+    if (!collapseBeltConfirm) return;
+    const { beltId, kept } = collapseBeltConfirm;
+    setEditBeltSettings(prev => ({ ...prev, [beltId]: { mode: 'single', rows: [kept] } }));
+    setCollapseBeltConfirm(null);
+  };
+
+  const setBeltSettingsRow = (belt: BeltRank, rowIndex: number, patch: Partial<BeltSettingFormRow>) => {
+    setEditBeltSettings(prev => {
+      const group = prev[belt.id];
+      if (!group) return prev;
+      const rows = group.rows.map((r, i) => (i === rowIndex ? { ...r, ...patch } : r));
+      return { ...prev, [belt.id]: { ...group, rows } };
+    });
+  };
 
   const handleSaveBeltSettings = async () => {
     setIsSavingBeltSettings(true);
     try {
-      const settings = beltRanks.map(belt => ({
-        beltRankId: belt.id,
-        ...editBeltSettings[belt.id],
-      }));
+      const settings: AcademyBeltSettingInput[] = [];
+      for (const belt of beltRanks) {
+        const group = editBeltSettings[belt.id];
+        if (!group) continue;
+        if (group.mode === 'single') {
+          settings.push({ beltRankId: belt.id, ...group.rows[0] });
+        } else if (group.mode === 'age') {
+          settings.push({ beltRankId: belt.id, ageSegment: 'under_limit', ...group.rows[0] });
+          settings.push({ beltRankId: belt.id, ageSegment: 'over_limit', ...group.rows[1] });
+        } else {
+          const half = Math.ceil(belt.degreeCount / 2);
+          settings.push({ beltRankId: belt.id, degreeSegmentMin: 1, degreeSegmentMax: half, ...group.rows[0] });
+          settings.push({ beltRankId: belt.id, degreeSegmentMin: half + 1, degreeSegmentMax: belt.degreeCount, ...group.rows[1] });
+        }
+      }
       const res = await beltRankService.updateAcademyBeltSettings(academy.id, settings);
       setBeltRanks(res.beltRanks);
+      setBeltSettings(res.beltSettings);
       setIsEditingBeltSettings(false);
       showNotification('Faixas e graduação salvas!');
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      showNotification('Erro ao salvar. Tente novamente.', 'error');
+      showNotification(e?.response?.data?.error || 'Erro ao salvar. Tente novamente.', 'error');
     } finally {
       setIsSavingBeltSettings(false);
     }
   };
+
+  // Campos de um critério (meses+dias, aulas, aviso antecipado colapsável) — reaproveitado
+  // pelo modo Único (1x) e pelos modos Idade/Grau (2x, um por sub-card).
+  const renderBeltCriteriaFields = (row: BeltSettingFormRow, onChange: (patch: Partial<BeltSettingFormRow>) => void) => (
+    <>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Meses</label>
+          <div className="flex gap-1">
+            <input
+              type="number"
+              min={0}
+              value={row.monthsRequired ?? ''}
+              onChange={e => onChange({ monthsRequired: e.target.value === '' ? null : parseInt(e.target.value) })}
+              placeholder="—"
+              className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
+            />
+            <input
+              type="number"
+              min={0}
+              max={29}
+              value={row.monthsRequiredDays ?? ''}
+              onChange={e => onChange({ monthsRequiredDays: e.target.value === '' ? null : parseInt(e.target.value) })}
+              placeholder="+dias"
+              title="Dias adicionais (0-29), para períodos fracionados (ex: 3 meses e 15 dias)"
+              className="w-16 shrink-0 bg-white dark:bg-slate-900 border-none rounded-xl px-2 py-2 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Aulas</label>
+          <input
+            type="number"
+            min={0}
+            value={row.classesRequired ?? ''}
+            onChange={e => onChange({ classesRequired: e.target.value === '' ? null : parseInt(e.target.value) })}
+            placeholder="—"
+            className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
+          />
+        </div>
+      </div>
+      <details className="group">
+        <summary className="text-[8px] font-black text-indigo-500 uppercase tracking-widest cursor-pointer select-none">Aviso antecipado</summary>
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          <div>
+            <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Meses de antecedência</label>
+            <input
+              type="number"
+              min={0}
+              value={row.warnBeforeMonths ?? ''}
+              onChange={e => onChange({ warnBeforeMonths: e.target.value === '' ? null : parseInt(e.target.value) })}
+              placeholder="—"
+              className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
+            />
+          </div>
+          <div>
+            <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Aulas de antecedência</label>
+            <input
+              type="number"
+              min={0}
+              value={row.warnBeforeClasses ?? ''}
+              onChange={e => onChange({ warnBeforeClasses: e.target.value === '' ? null : parseInt(e.target.value) })}
+              placeholder="—"
+              className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
+            />
+          </div>
+        </div>
+      </details>
+    </>
+  );
 
   const printQrCode = () => {
     const container = document.getElementById('qr-presenca-print');
@@ -1021,72 +1165,77 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             ) : (
               <>
                 <p className="text-[9px] text-slate-400 italic mb-5 ml-1">
-                  Defina, por faixa, quantos meses e/ou quantas aulas o aluno precisa para ser promovido — vale o que ocorrer primeiro.
+                  Defina, por faixa, quantos meses (com dias opcionais) e/ou quantas aulas o aluno precisa para ser promovido — vale o que ocorrer primeiro.
                   Preencha só um dos dois campos se quiser usar um único critério. Aplica-se a cada grau dentro da faixa e à troca para a próxima faixa.
+                  Faixas com critério muito diferente por idade (ex: Branca) ou por grupo de grau (ex: Preta) podem ser segmentadas.
                 </p>
                 <div className="space-y-2.5">
                   {beltRanks.map(belt => {
-                    const row = editBeltSettings[belt.id];
-                    if (!row) return null;
-                    const setRow = (patch: Partial<BeltSettingFormRow>) =>
-                      setEditBeltSettings(prev => ({ ...prev, [belt.id]: { ...prev[belt.id], ...patch } }));
+                    const group = editBeltSettings[belt.id];
+                    if (!group) return null;
+                    const youthMaxAge = beltSettingsSport?.youthMaxAge;
+                    const half = Math.ceil(belt.degreeCount / 2);
                     return (
                       <div key={belt.id} className="p-3 sm:p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 space-y-3">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-2">
                           <span className="text-[11px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-tight">{belt.name}</span>
                           <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{belt.degreeCount > 0 ? `${belt.degreeCount}º graus` : 'Honorária'}</span>
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Meses</label>
-                            <input
-                              type="number"
-                              min={0}
-                              value={row.monthsRequired ?? ''}
-                              onChange={e => setRow({ monthsRequired: e.target.value === '' ? null : parseInt(e.target.value) })}
-                              placeholder="—"
-                              className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Aulas</label>
-                            <input
-                              type="number"
-                              min={0}
-                              value={row.classesRequired ?? ''}
-                              onChange={e => setRow({ classesRequired: e.target.value === '' ? null : parseInt(e.target.value) })}
-                              placeholder="—"
-                              className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
-                            />
-                          </div>
+
+                        <div className="flex items-center gap-2">
+                          <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest shrink-0">Critério</label>
+                          <select
+                            value={group.mode}
+                            onChange={e => {
+                              const mode = e.target.value as BeltSettingsMode;
+                              if (mode === 'single') requestCollapseToSingle(belt);
+                              else setBeltSettingsMode(belt, mode);
+                            }}
+                            className="bg-white dark:bg-slate-900 border-none rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                          >
+                            <option value="single">Único</option>
+                            <option value="age">Segmentar por idade</option>
+                            {belt.degreeCount > 4 && <option value="degree">Segmentar por grau</option>}
+                          </select>
                         </div>
-                        <details className="group">
-                          <summary className="text-[8px] font-black text-indigo-500 uppercase tracking-widest cursor-pointer select-none">Aviso antecipado</summary>
-                          <div className="grid grid-cols-2 gap-2 mt-2">
-                            <div>
-                              <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Meses de antecedência</label>
-                              <input
-                                type="number"
-                                min={0}
-                                value={row.warnBeforeMonths ?? ''}
-                                onChange={e => setRow({ warnBeforeMonths: e.target.value === '' ? null : parseInt(e.target.value) })}
-                                placeholder="—"
-                                className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
-                              />
+
+                        {group.mode === 'single' && (
+                          <div className="space-y-3">
+                            {renderBeltCriteriaFields(group.rows[0], patch => setBeltSettingsRow(belt, 0, patch))}
+                          </div>
+                        )}
+
+                        {group.mode === 'age' && (
+                          youthMaxAge == null ? (
+                            <p className="text-[9px] text-amber-500 font-bold italic">
+                              Defina a idade limite infanto-juvenil do esporte em Esportes → editar esporte antes de segmentar esta faixa por idade.
+                            </p>
+                          ) : (
+                            <div className="space-y-3">
+                              <div className="p-2.5 rounded-xl bg-white/60 dark:bg-slate-900/40 space-y-3">
+                                <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Até {youthMaxAge} anos</p>
+                                {renderBeltCriteriaFields(group.rows[0], patch => setBeltSettingsRow(belt, 0, patch))}
+                              </div>
+                              <div className="p-2.5 rounded-xl bg-white/60 dark:bg-slate-900/40 space-y-3">
+                                <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">A partir de {youthMaxAge + 1} anos</p>
+                                {renderBeltCriteriaFields(group.rows[1], patch => setBeltSettingsRow(belt, 1, patch))}
+                              </div>
                             </div>
-                            <div>
-                              <label className="block text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Aulas de antecedência</label>
-                              <input
-                                type="number"
-                                min={0}
-                                value={row.warnBeforeClasses ?? ''}
-                                onChange={e => setRow({ warnBeforeClasses: e.target.value === '' ? null : parseInt(e.target.value) })}
-                                placeholder="—"
-                                className="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 text-center"
-                              />
+                          )
+                        )}
+
+                        {group.mode === 'degree' && (
+                          <div className="space-y-3">
+                            <div className="p-2.5 rounded-xl bg-white/60 dark:bg-slate-900/40 space-y-3">
+                              <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">1º ao {half}º grau</p>
+                              {renderBeltCriteriaFields(group.rows[0], patch => setBeltSettingsRow(belt, 0, patch))}
+                            </div>
+                            <div className="p-2.5 rounded-xl bg-white/60 dark:bg-slate-900/40 space-y-3">
+                              <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">{half + 1}º ao {belt.degreeCount}º grau</p>
+                              {renderBeltCriteriaFields(group.rows[1], patch => setBeltSettingsRow(belt, 1, patch))}
                             </div>
                           </div>
-                        </details>
+                        )}
                       </div>
                     );
                   })}
@@ -1113,6 +1262,16 @@ const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!collapseBeltConfirm}
+        onClose={() => setCollapseBeltConfirm(null)}
+        onConfirm={confirmCollapseToSingle}
+        variant="warning"
+        title="Remover segmentação?"
+        message="Isso descarta o critério adicional (o outro sub-card) e mantém só o valor mais recente como critério único desta faixa."
+        confirmLabel="Remover segmentação"
+      />
 
       {/* Modal de Gestão de Planos de Aula */}
       {isManagingAcademyPlans && (
@@ -2275,7 +2434,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                 subtitle={(() => {
                   if (isLoadingBeltSettings) return 'Carregando...';
                   if (!beltSettingsSport) return 'Esporte não definido';
-                  const configured = beltRanks.filter(b => (b.monthsRequired ?? 0) > 0 || (b.classesRequired ?? 0) > 0).length;
+                  const configured = new Set(beltSettings.filter(s => (s.monthsRequired ?? 0) > 0 || (s.classesRequired ?? 0) > 0).map(s => s.beltRankId)).size;
                   return `${beltSettingsSport.name} · ${configured} de ${beltRanks.length} faixas configuradas`;
                 })()}
                 onClick={openBeltSettingsModal}

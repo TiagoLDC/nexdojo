@@ -33,6 +33,7 @@ router.get('/', async (_req: Request, res: Response, next: NextFunction): Promis
 router.post('/', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const errors = validate(req.body, {
     name: { required: true, type: 'string', maxLength: 100 },
+    youth_max_age: { type: 'number', min: 0, max: 120 },
   });
   if (errors.length) { res.status(400).json({ error: errors[0] }); return; }
 
@@ -48,8 +49,8 @@ router.post('/', async (req: Request, res: Response, next: NextFunction): Promis
 
     const id = crypto.randomUUID();
     await pool.execute(
-      'INSERT INTO sports (id, name, slug, active) VALUES (?, ?, ?, ?)',
-      [id, req.body.name, slug, req.body.active === false ? 0 : 1]
+      'INSERT INTO sports (id, name, slug, active, youth_max_age) VALUES (?, ?, ?, ?, ?)',
+      [id, req.body.name, slug, req.body.active === false ? 0 : 1, req.body.youth_max_age ?? null]
     );
 
     const [rows] = await pool.execute<any[]>('SELECT * FROM sports WHERE id = ?', [id]);
@@ -63,6 +64,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction): Promis
 router.put('/:id', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const errors = validate(req.body, {
     name: { type: 'string', maxLength: 100 },
+    youth_max_age: { type: 'number', min: 0, max: 120 },
   });
   if (errors.length) { res.status(400).json({ error: errors[0] }); return; }
 
@@ -70,7 +72,7 @@ router.put('/:id', async (req: Request, res: Response, next: NextFunction): Prom
     const [existing] = await pool.execute<any[]>('SELECT id FROM sports WHERE id = ?', [req.params.id]);
     if (!existing[0]) { res.status(404).json({ error: 'Esporte não encontrado' }); return; }
 
-    const ALLOWED = ['name', 'active'];
+    const ALLOWED = ['name', 'active', 'youth_max_age'];
     const fields = Object.keys(req.body).filter(k => ALLOWED.includes(k));
     if (req.body.active !== undefined) req.body.active = req.body.active ? 1 : 0;
 

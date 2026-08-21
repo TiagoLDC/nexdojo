@@ -1,5 +1,6 @@
 
 import { Student, Belt } from '../types';
+import type { BeltRank, AcademyBeltSetting, BeltAgeSegment } from '@/types';
 
 export const BELT_LIST = [
   // Kids
@@ -63,7 +64,9 @@ export const getNextRank = (currentBelt: Belt, currentStripes: number) => {
 
 export interface BeltRankConfig {
   degreeCount: number;
+  colorKey?: string;
   monthsRequired?: number | null;
+  monthsRequiredDays?: number | null;
   classesRequired?: number | null;
   warnBeforeMonths?: number | null;
   warnBeforeClasses?: number | null;
@@ -74,15 +77,86 @@ export interface BeltRankConfig {
 // e o input trata como zero, então precisa ser ignorado igual a null).
 const hasThreshold = (value?: number | null): value is number => value != null && value > 0;
 
+// Meses fracionados ("3 meses e 15 dias"): calcula a data-alvo (última graduação + N meses +
+// D dias, com o mesmo clamping de "dia inexistente no mês" que monthsSince já faz) e compara
+// com hoje. Equivalente a monthsSince(...) >= monthsRequired quando monthsRequiredDays é
+// null/0 — zero regressão para faixas que nunca usarem dias.
+export const isMonthsRequirementMet = (
+  dateStr: string | undefined,
+  monthsRequired: number,
+  monthsRequiredDays?: number | null,
+): boolean => {
+  if (!dateStr) return false;
+  const past = parseLocalDate(dateStr);
+  const totalMonths = past.getMonth() + monthsRequired;
+  const targetYear = past.getFullYear() + Math.floor(totalMonths / 12);
+  const targetMonth = ((totalMonths % 12) + 12) % 12;
+  const daysInTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+  const targetDay = Math.min(past.getDate(), daysInTargetMonth);
+  const target = new Date(targetYear, targetMonth, targetDay + (monthsRequiredDays ?? 0));
+  target.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today.getTime() >= target.getTime();
+};
+
 export const isReadyForGraduationByBeltRank = (student: Student, config?: BeltRankConfig) => {
   if (!config) return { readyForBelt: false, readyForStripe: false };
   const classesReady = hasThreshold(config.classesRequired) && (student.classesSinceGraduation ?? 0) >= config.classesRequired;
-  const monthsReady = hasThreshold(config.monthsRequired) && monthsSince(student.lastGraduationDate) >= config.monthsRequired;
+  const monthsReady = hasThreshold(config.monthsRequired) && isMonthsRequirementMet(student.lastGraduationDate, config.monthsRequired, config.monthsRequiredDays);
   const ready = classesReady || monthsReady;
   return {
     readyForBelt: ready && student.stripes >= config.degreeCount,
     readyForStripe: ready && student.stripes < config.degreeCount,
   };
+};
+
+// Resolve, dentre 0..N linhas de configuração de uma faixa (mais de 1 quando segmentada por
+// idade ou por grupo de grau), qual vale para um aluno específico. Sem segmentação (caso
+// comum, 1 linha), retorna direto — zero regressão para faixas que nunca usarem isso.
+export const resolveBeltRankConfig = (
+  beltRanks: BeltRank[],
+  beltSettings: AcademyBeltSetting[],
+  youthMaxAge: number | null | undefined,
+  student: { belt: string; birthDate?: string; stripes?: number },
+): BeltRankConfig | undefined => {
+  const rank = beltRanks.find(b => b.name === student.belt);
+  if (!rank) return undefined;
+
+  const toConfig = (row?: AcademyBeltSetting): BeltRankConfig => ({
+    degreeCount: rank.degreeCount,
+    colorKey: rank.colorKey,
+    monthsRequired: row?.monthsRequired,
+    monthsRequiredDays: row?.monthsRequiredDays,
+    classesRequired: row?.classesRequired,
+    warnBeforeMonths: row?.warnBeforeMonths,
+    warnBeforeClasses: row?.warnBeforeClasses,
+  });
+
+  const rows = beltSettings.filter(s => s.beltRankId === rank.id);
+  if (rows.length === 0) return toConfig(undefined);
+  if (rows.length === 1) return toConfig(rows[0]);
+
+  const ageRows = rows.filter(r => r.ageSegment != null);
+  if (ageRows.length > 0) {
+    const age = calculateAge(student.birthDate ?? '');
+    const wanted: BeltAgeSegment = (youthMaxAge != null && age <= youthMaxAge) ? 'under_limit' : 'over_limit';
+    const picked = ageRows.find(r => r.ageSegment === wanted)
+      ?? ageRows.find(r => r.ageSegment === 'over_limit')
+      ?? ageRows[0];
+    return toConfig(picked);
+  }
+
+  const degreeRows = rows.filter(r => r.degreeSegmentMin != null || r.degreeSegmentMax != null);
+  if (degreeRows.length > 0) {
+    const nextDegree = (student.stripes ?? 0) + 1;
+    const picked = degreeRows.find(r =>
+      nextDegree >= (r.degreeSegmentMin ?? -Infinity) && nextDegree <= (r.degreeSegmentMax ?? Infinity)
+    ) ?? degreeRows[degreeRows.length - 1];
+    return toConfig(picked);
+  }
+
+  return toConfig(rows[0]);
 };
 
 // Progresso a exibir: quando meses E aulas estão configurados, mostra o que estiver

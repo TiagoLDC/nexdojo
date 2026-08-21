@@ -648,10 +648,10 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
 
   const graduationAlerts = useMemo(() => {
     return students.filter(s => {
-      const { readyForBelt, readyForStripe } = isReadyForGraduationByBeltRank(s, getBeltConfig(s.belt));
+      const { readyForBelt, readyForStripe } = isReadyForGraduationByBeltRank(s, getBeltConfig(s));
       return readyForBelt || readyForStripe;
     }).map(s => {
-      const { readyForBelt } = isReadyForGraduationByBeltRank(s, getBeltConfig(s.belt));
+      const { readyForBelt } = isReadyForGraduationByBeltRank(s, getBeltConfig(s));
       let type: 'STRIPE' | 'BELT' = readyForBelt ? 'BELT' : 'STRIPE';
       let message = readyForBelt ? 'Elegível para Próxima Faixa' : 'Elegível para Próximo Grau';
       return { ...s, alertType: type, alertMessage: message };
@@ -662,8 +662,8 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   // mas ainda não elegíveis — ver PLANO_GRADUACAO.md. Complementa graduationAlerts (prontos).
   const closeToGraduationAlerts = useMemo(() => {
     return students
-      .filter(s => isCloseToGraduationByBeltRank(s, getBeltConfig(s.belt)))
-      .map(s => ({ ...s, progress: getGraduationProgressByBeltRank(s, getBeltConfig(s.belt)) }))
+      .filter(s => isCloseToGraduationByBeltRank(s, getBeltConfig(s)))
+      .map(s => ({ ...s, progress: getGraduationProgressByBeltRank(s, getBeltConfig(s)) }))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [students, getBeltConfig]);
 
@@ -949,7 +949,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       if (!((paymentPlan?.price ?? 0) > 0)) return null;
       return { diffDays, price: paymentPlan?.price as number | undefined, planName: paymentPlan?.name as string | undefined };
     })();
-    const beltConfig = getBeltConfig(profile.belt);
+    const beltConfig = getBeltConfig(profile);
     const graduationProgress = getGraduationProgressByBeltRank(profile, beltConfig);
     const { readyForBelt: profileReadyForBelt, readyForStripe: profileReadyForStripe } = isReadyForGraduationByBeltRank(profile, beltConfig);
     const isReadyToGraduate = profileReadyForBelt || profileReadyForStripe;
@@ -1328,7 +1328,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
             <motion.div variants={itemVariants}>
               {(() => {
                 const theme = getBeltTheme(profile.belt);
-                const progressData = getGraduationProgressByBeltRank(profile, getBeltConfig(profile.belt));
+                const progressData = getGraduationProgressByBeltRank(profile, getBeltConfig(profile));
                 const target = progressData?.target ?? 0;
                 const current = progressData?.current ?? 0;
                 const unit = progressData?.unit === 'meses' ? 'Meses' : 'Aulas';

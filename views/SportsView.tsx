@@ -41,7 +41,7 @@ const SportsView: React.FC<SportsViewProps> = ({ user }) => {
 
   const [isSportModalOpen, setIsSportModalOpen] = useState(false);
   const [editingSport, setEditingSport] = useState<Sport | null>(null);
-  const [sportForm, setSportForm] = useState({ name: '', active: true });
+  const [sportForm, setSportForm] = useState<{ name: string; active: boolean; youthMaxAge: number | null }>({ name: '', active: true, youthMaxAge: null });
 
   const [isBeltModalOpen, setIsBeltModalOpen] = useState(false);
   const [editingBelt, setEditingBelt] = useState<BeltRank | null>(null);
@@ -80,13 +80,13 @@ const SportsView: React.FC<SportsViewProps> = ({ user }) => {
 
   const openNewSport = () => {
     setEditingSport(null);
-    setSportForm({ name: '', active: true });
+    setSportForm({ name: '', active: true, youthMaxAge: null });
     setIsSportModalOpen(true);
   };
 
   const openEditSport = (sport: Sport) => {
     setEditingSport(sport);
-    setSportForm({ name: sport.name, active: sport.active });
+    setSportForm({ name: sport.name, active: sport.active, youthMaxAge: sport.youthMaxAge ?? null });
     setIsSportModalOpen(true);
   };
 
@@ -304,6 +304,21 @@ const SportsView: React.FC<SportsViewProps> = ({ user }) => {
               placeholder="Ex: Judô"
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
             />
+          </div>
+          <div>
+            <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Idade limite infanto-juvenil</label>
+            <input
+              type="number"
+              min={0}
+              max={120}
+              value={sportForm.youthMaxAge ?? ''}
+              onChange={e => setSportForm(f => ({ ...f, youthMaxAge: e.target.value === '' ? null : Number(e.target.value) }))}
+              placeholder="Ex: 15"
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <p className="text-[9px] text-slate-400 italic mt-1.5">
+              Usada para decidir qual critério de meses/aulas vale para um aluno em faixas configuradas com 2 critérios por idade (ex: Branca infantil vs adulto).
+            </p>
           </div>
           {editingSport && (
             <label className="flex items-center gap-2 cursor-pointer">

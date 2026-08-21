@@ -40,6 +40,7 @@ const DDL_STATEMENTS = [
     name VARCHAR(100) NOT NULL,
     slug VARCHAR(100) NOT NULL UNIQUE,
     active TINYINT(1) DEFAULT 1,
+    youth_max_age INT NULL COMMENT 'Idade limite (inclusive) do critério infanto-juvenil — decide qual linha segmentada por idade em academy_belt_settings vale para um aluno',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`,
 
@@ -144,18 +145,27 @@ const DDL_STATEMENTS = [
     INDEX idx_plan_day (plan_id, day_of_week)
   )`,
 
-  // Configuração de meses/aulas necessários por faixa, por academia (substitui o JSON graduation_rules)
+  // Configuração de meses/aulas necessários por faixa, por academia (substitui o JSON graduation_rules).
+  // Uma faixa pode ter mais de 1 linha aqui quando o critério é segmentado por idade
+  // (age_segment) ou por grupo de grau (degree_segment_min/max) — ver PLANO_GRADUACAO.md,
+  // seção "Segmentação de Critério de Graduação por Idade e por Grau". Sem segmentação
+  // (comportamento original), a faixa continua com exatamente 1 linha, todos os campos de
+  // segmento NULL.
   `CREATE TABLE academy_belt_settings (
     id VARCHAR(36) PRIMARY KEY,
     academy_id VARCHAR(36) NOT NULL,
     belt_rank_id VARCHAR(36) NOT NULL,
     months_required INT NULL,
+    months_required_days TINYINT UNSIGNED NULL COMMENT 'Dias (0-29) complementares a months_required, para períodos fracionados (ex: 3 meses e 15 dias)',
     classes_required INT NULL,
     warn_before_months INT NULL,
     warn_before_classes INT NULL,
+    age_segment ENUM('under_limit','over_limit') NULL COMMENT 'NULL = linha não segmentada por idade. under_limit = idade <= sports.youth_max_age; over_limit = idade > youth_max_age',
+    degree_segment_min TINYINT UNSIGNED NULL COMMENT 'Próximo grau (stripes+1) mínimo ao qual esta linha se aplica',
+    degree_segment_max TINYINT UNSIGNED NULL COMMENT 'Próximo grau (stripes+1) máximo; NULL nos dois campos de grau = linha não segmentada por grau',
     FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE,
     FOREIGN KEY (belt_rank_id) REFERENCES belt_ranks(id) ON DELETE CASCADE,
-    UNIQUE (academy_id, belt_rank_id)
+    INDEX idx_academy_belt (academy_id, belt_rank_id)
   )`,
 
   // Usuários do sistema

@@ -93,7 +93,7 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =>
     
     // Graduation Stats
     const readyStudents = students.filter(s => {
-      const { readyForBelt, readyForStripe } = isReadyForGraduationByBeltRank(s, getBeltConfig(s.belt));
+      const { readyForBelt, readyForStripe } = isReadyForGraduationByBeltRank(s, getBeltConfig(s));
       return readyForBelt || readyForStripe;
     }).length;
 
@@ -148,7 +148,7 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =>
     return students
       .filter(s => s.status === 'Active')
       .map(s => {
-        const { readyForBelt, readyForStripe } = isReadyForGraduationByBeltRank(s, getBeltConfig(s.belt));
+        const { readyForBelt, readyForStripe } = isReadyForGraduationByBeltRank(s, getBeltConfig(s));
         return { 
           ...s, 
           readyForBelt, 
@@ -162,8 +162,8 @@ const ReportsView: React.FC<{ academy: Academy; user: User }> = ({ academy }) =>
 
   // Graduation Data
   const graduationStats = useMemo(() => {
-    const readyForBelt = students.filter(s => isReadyForGraduationByBeltRank(s, getBeltConfig(s.belt)).readyForBelt).length;
-    const readyForStripe = students.filter(s => isReadyForGraduationByBeltRank(s, getBeltConfig(s.belt)).readyForStripe).length;
+    const readyForBelt = students.filter(s => isReadyForGraduationByBeltRank(s, getBeltConfig(s)).readyForBelt).length;
+    const readyForStripe = students.filter(s => isReadyForGraduationByBeltRank(s, getBeltConfig(s)).readyForStripe).length;
     
     return [
       { name: 'Pronto p/ Faixa', value: readyForBelt, color: '#4f46e5' },

@@ -10,10 +10,10 @@ import { fetchAddressByCep, maskCEP, maskPhone, maskCPF, maskRG } from '../servi
 import { advancePaymentDate } from '@/utils/paymentUtils';
 import { getTodayBrasilia } from '@/utils/date';
 import { compressImage } from '@/utils/imageCompression';
-import { calculateAge, getNextRank, BELT_LIST, isReadyForGraduationByBeltRank, getGraduationProgressByBeltRank, isCloseToGraduationByBeltRank } from '../services/graduation';
+import { calculateAge, getNextRank, BELT_LIST, isReadyForGraduationByBeltRank, getGraduationProgressByBeltRank, isCloseToGraduationByBeltRank, resolveBeltRankConfig } from '../services/graduation';
 import { useTranslation } from '../services/LanguageContext';
-import { beltRankService, AcademyBeltRank } from '@/features/settings/services/beltRankService';
-import type { Sport } from '@/types';
+import { beltRankService } from '@/features/settings/services/beltRankService';
+import type { Sport, BeltRank, AcademyBeltSetting } from '@/types';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Plus,
@@ -119,9 +119,10 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
   const [isPromoting, setIsPromoting] = useState(false);
 
   // Faixas e Graduação por academia (substitui os baldes fixos — ver PLANO_GRADUACAO.md Fase 7)
-  const [beltRanksConfig, setBeltRanksConfig] = useState<AcademyBeltRank[]>([]);
+  const [beltRanks, setBeltRanks] = useState<BeltRank[]>([]);
+  const [beltSettings, setBeltSettings] = useState<AcademyBeltSetting[]>([]);
   const [beltSettingsSport, setBeltSettingsSport] = useState<Sport | null>(null);
-  const getBeltConfig = (student: Student) => beltRanksConfig.find(b => b.name === student.belt);
+  const getBeltConfig = (student: Student) => resolveBeltRankConfig(beltRanks, beltSettings, beltSettingsSport?.youthMaxAge, student);
 
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [beltFilter, setBeltFilter] = useState<string>('All');
@@ -260,7 +261,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     beltRankService.getAcademyBeltSettings(academy.id)
       .then(res => {
         setBeltSettingsSport(res.sport);
-        setBeltRanksConfig(res.beltRanks);
+        setBeltRanks(res.beltRanks);
+        setBeltSettings(res.beltSettings);
       })
       .catch(err => console.error('Erro ao carregar faixas e graduação:', err));
   }, [academy?.id]);
@@ -1772,7 +1774,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                           onClick={() => setEditingStudent({...editingStudent, belt})}
                           className={`px-2 py-3 rounded-2xl border-2 text-[8px] font-black uppercase tracking-widest transition-all ${
                             editingStudent.belt === belt
-                              ? `${getBeltClassName(belt, beltRanksConfig.find(b => b.name === belt)?.colorKey)} shadow-lg shadow-indigo-500/10 scale-105 ring-4 ring-indigo-500/10`
+                              ? `${getBeltClassName(belt, beltRanks.find(b => b.name === belt)?.colorKey)} shadow-lg shadow-indigo-500/10 scale-105 ring-4 ring-indigo-500/10`
                               : 'bg-white dark:bg-slate-900 text-slate-400 border-slate-100 dark:border-slate-800 opacity-60 hover:opacity-100'
                           }`}
                         >
@@ -1993,7 +1995,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     <div>
                       <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-0.5">Faixas Configuradas</p>
                       <p className="text-sm font-black text-white">
-                        {beltRanksConfig.filter(b => (b.monthsRequired ?? 0) > 0 || (b.classesRequired ?? 0) > 0).length} de {beltRanksConfig.length}
+                        {new Set(beltSettings.filter(s => (s.monthsRequired ?? 0) > 0 || (s.classesRequired ?? 0) > 0).map(s => s.beltRankId)).size} de {beltRanks.length}
                       </p>
                     </div>
                     <Link to="/settings" className="text-[9px] font-black text-indigo-300 hover:text-white uppercase tracking-widest underline underline-offset-2">
@@ -2109,7 +2111,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                               <div className="flex flex-wrap items-center gap-y-1.5 gap-x-2 mb-3">
                                 <BeltBadge belt={student.belt} stripes={student.stripes} colorKey={getBeltConfig(student)?.colorKey} />
                                 <ChevronRight size={14} className="text-slate-500 shrink-0" />
-                                <BeltBadge belt={nextBelt} stripes={nextStripes} colorKey={beltRanksConfig.find(b => b.name === nextBelt)?.colorKey} />
+                                <BeltBadge belt={nextBelt} stripes={nextStripes} colorKey={beltRanks.find(b => b.name === nextBelt)?.colorKey} />
                               </div>
                               <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
                                 <div className="shrink-0">

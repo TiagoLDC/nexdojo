@@ -5,6 +5,7 @@ import { requireAuth } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
 import { getAcademyId } from '../utils/academyScope';
 import { validate } from '../utils/validate';
+import { withTransaction } from '../utils/withTransaction';
 
 const router = Router();
 
@@ -200,7 +201,8 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
   }
 });
 
-// GET /api/academies/:id/belt-settings — faixas do esporte da academia + config atual de meses/aulas
+// GET /api/academies/:id/belt-settings — template de faixas do esporte + linhas cruas de
+// configuração da academia (0..N por faixa — mais de 1 quando segmentada por idade ou grau).
 router.get('/:id/belt-settings', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { role, academyId: tokenAcademyId } = req.user!;
 
@@ -216,27 +218,31 @@ router.get('/:id/belt-settings', requireAuth, async (req: Request, res: Response
     const sportId = academyRows[0].sport_id;
     if (!sportId) {
       // Academia ainda sem esporte definido (pendente de migração de dados) — sem faixas para configurar.
-      res.json({ sport: null, belt_ranks: [] });
+      res.json({ sport: null, belt_ranks: [], belt_settings: [] });
       return;
     }
 
-    const [sportRows] = await pool.execute<any[]>('SELECT id, name, slug FROM sports WHERE id = ?', [sportId]);
+    const [sportRows] = await pool.execute<any[]>('SELECT id, name, slug, youth_max_age FROM sports WHERE id = ?', [sportId]);
     const [rankRows] = await pool.execute<any[]>(
-      `SELECT br.*, abs.months_required, abs.classes_required, abs.warn_before_months, abs.warn_before_classes
-       FROM belt_ranks br
-       LEFT JOIN academy_belt_settings abs ON abs.belt_rank_id = br.id AND abs.academy_id = ?
-       WHERE br.sport_id = ?
-       ORDER BY br.order_index ASC`,
-      [req.params.id, sportId]
+      'SELECT * FROM belt_ranks WHERE sport_id = ? ORDER BY order_index ASC',
+      [sportId]
+    );
+    const [settingRows] = await pool.execute<any[]>(
+      'SELECT * FROM academy_belt_settings WHERE academy_id = ?',
+      [req.params.id]
     );
 
-    res.json({ sport: sportRows[0] ?? null, belt_ranks: rankRows });
+    res.json({ sport: sportRows[0] ?? null, belt_ranks: rankRows, belt_settings: settingRows });
   } catch (err) {
     next(err);
   }
 });
 
-// PUT /api/academies/:id/belt-settings — define meses/aulas necessários por faixa
+// PUT /api/academies/:id/belt-settings — substitui a configuração completa de meses/aulas
+// (e, opcionalmente, segmentação por idade ou por grupo de grau) de todas as faixas do
+// esporte da academia. O payload sempre traz o conjunto completo de faixas (contrato já
+// seguido pelo frontend hoje) — cada faixa pode vir como 1 linha (sem segmentação), 2 linhas
+// com age_segment ('under_limit'/'over_limit'), ou 2+ linhas com degree_segment_min/max.
 router.put('/:id/belt-settings', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { role, academyId: tokenAcademyId } = req.user!;
 
@@ -255,41 +261,92 @@ router.put('/:id/belt-settings', requireAuth, requireRole('admin', 'superuser'),
     const sportId = academyRows[0].sport_id;
     if (!sportId) { res.status(409).json({ error: 'Academia ainda sem esporte definido' }); return; }
 
+    const [sportRows] = await pool.execute<any[]>('SELECT id, name, slug, youth_max_age FROM sports WHERE id = ?', [sportId]);
+    const youthMaxAge: number | null = sportRows[0]?.youth_max_age ?? null;
+
+    // Agrupa por faixa, validando que cada belt_rank_id pertence ao esporte da academia.
+    const groups = new Map<string, any[]>();
     for (const item of settings) {
+      if (!item.belt_rank_id) { res.status(400).json({ error: 'belt_rank_id é obrigatório em cada item' }); return; }
       const [rankCheck] = await pool.execute<any[]>(
-        'SELECT id FROM belt_ranks WHERE id = ? AND sport_id = ?',
+        'SELECT id, degree_count FROM belt_ranks WHERE id = ? AND sport_id = ?',
         [item.belt_rank_id, sportId]
       );
       if (!rankCheck[0]) { res.status(400).json({ error: `Faixa inválida para o esporte desta academia: ${item.belt_rank_id}` }); return; }
+      if (!groups.has(item.belt_rank_id)) groups.set(item.belt_rank_id, []);
+      groups.get(item.belt_rank_id)!.push({ ...item, __degreeCount: rankCheck[0].degree_count });
     }
 
-    for (const item of settings) {
-      await pool.execute(
-        `INSERT INTO academy_belt_settings
-           (id, academy_id, belt_rank_id, months_required, classes_required, warn_before_months, warn_before_classes)
-         VALUES (?, ?, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE
-           months_required = VALUES(months_required),
-           classes_required = VALUES(classes_required),
-           warn_before_months = VALUES(warn_before_months),
-           warn_before_classes = VALUES(warn_before_classes)`,
-        [
-          crypto.randomUUID(), req.params.id, item.belt_rank_id,
-          item.months_required ?? null, item.classes_required ?? null,
-          item.warn_before_months ?? null, item.warn_before_classes ?? null,
-        ]
-      );
+    // Valida a "forma" de cada grupo (única / segmentada por idade / segmentada por grau).
+    for (const [beltRankId, rows] of groups) {
+      const hasAge = rows.some(r => r.age_segment != null);
+      const hasDegree = rows.some(r => r.degree_segment_min != null || r.degree_segment_max != null);
+
+      if (hasAge && hasDegree) {
+        res.status(400).json({ error: `Faixa ${beltRankId}: não é possível combinar segmentação por idade e por grau na mesma faixa` });
+        return;
+      }
+
+      if (hasAge) {
+        const hasUnder = rows.some(r => r.age_segment === 'under_limit');
+        const hasOver = rows.some(r => r.age_segment === 'over_limit');
+        if (rows.length !== 2 || !hasUnder || !hasOver) {
+          res.status(400).json({ error: `Faixa ${beltRankId}: segmentação por idade exige exatamente 2 linhas (under_limit e over_limit)` });
+          return;
+        }
+        if (youthMaxAge == null) {
+          res.status(409).json({ error: 'Defina a idade limite infanto-juvenil do esporte antes de segmentar um critério por idade' });
+          return;
+        }
+      } else if (hasDegree) {
+        const degreeCount = rows[0].__degreeCount;
+        if (degreeCount <= 4) {
+          res.status(400).json({ error: `Faixa ${beltRankId}: segmentação por grau só é permitida em faixas com mais de 4 graus` });
+          return;
+        }
+        if (rows.some(r => r.degree_segment_min == null || r.degree_segment_max == null)) {
+          res.status(400).json({ error: `Faixa ${beltRankId}: degree_segment_min e degree_segment_max devem ser preenchidos juntos` });
+          return;
+        }
+        const sorted = [...rows].sort((a, b) => a.degree_segment_min - b.degree_segment_min);
+        for (let i = 1; i < sorted.length; i++) {
+          if (sorted[i].degree_segment_min <= sorted[i - 1].degree_segment_max) {
+            res.status(400).json({ error: `Faixa ${beltRankId}: faixas de grau sobrepostas` });
+            return;
+          }
+        }
+      } else if (rows.length !== 1) {
+        res.status(400).json({ error: `Faixa ${beltRankId}: sem segmentação, deve haver exatamente 1 linha de critério` });
+        return;
+      }
     }
 
-    const [rankRows] = await pool.execute<any[]>(
-      `SELECT br.*, abs.months_required, abs.classes_required, abs.warn_before_months, abs.warn_before_classes
-       FROM belt_ranks br
-       LEFT JOIN academy_belt_settings abs ON abs.belt_rank_id = br.id AND abs.academy_id = ?
-       WHERE br.sport_id = ?
-       ORDER BY br.order_index ASC`,
-      [req.params.id, sportId]
-    );
-    res.json({ belt_ranks: rankRows });
+    // Sem UNIQUE(academy_id, belt_rank_id) (removido para permitir múltiplas linhas por
+    // faixa) — troca o upsert antigo por "apaga tudo daquela faixa e reinsere", seguro porque
+    // o payload sempre traz o conjunto completo de faixas da academia a cada salvamento.
+    await withTransaction(async (conn) => {
+      for (const [beltRankId, rows] of groups) {
+        await conn.execute('DELETE FROM academy_belt_settings WHERE academy_id = ? AND belt_rank_id = ?', [req.params.id, beltRankId]);
+        for (const row of rows) {
+          await conn.execute(
+            `INSERT INTO academy_belt_settings
+               (id, academy_id, belt_rank_id, months_required, months_required_days, classes_required,
+                warn_before_months, warn_before_classes, age_segment, degree_segment_min, degree_segment_max)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              crypto.randomUUID(), req.params.id, beltRankId,
+              row.months_required ?? null, row.months_required_days ?? null, row.classes_required ?? null,
+              row.warn_before_months ?? null, row.warn_before_classes ?? null,
+              row.age_segment ?? null, row.degree_segment_min ?? null, row.degree_segment_max ?? null,
+            ]
+          );
+        }
+      }
+    });
+
+    const [rankRows] = await pool.execute<any[]>('SELECT * FROM belt_ranks WHERE sport_id = ? ORDER BY order_index ASC', [sportId]);
+    const [settingRows] = await pool.execute<any[]>('SELECT * FROM academy_belt_settings WHERE academy_id = ?', [req.params.id]);
+    res.json({ sport: sportRows[0] ?? null, belt_ranks: rankRows, belt_settings: settingRows });
   } catch (err) {
     next(err);
   }
