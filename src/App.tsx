@@ -7,7 +7,6 @@ import { AppLayoutRoute } from '@/app/AppLayoutRoute';
 
 const LoginPage            = React.lazy(() => import('@/pages/LoginPage'));
 const DashboardPage        = React.lazy(() => import('@/pages/DashboardPage'));
-const DashboardPageNovo    = React.lazy(() => import('@/pages/DashboardPageNovo'));
 const MensalidadesReportPage = React.lazy(() => import('@/pages/MensalidadesReportPage'));
 const StudentsPage         = React.lazy(() => import('@/pages/StudentsPage'));
 const InstructorsPage      = React.lazy(() => import('@/pages/InstructorsPage'));
@@ -66,8 +65,6 @@ const App: React.FC = () => (
 
           {/* All authenticated roles */}
           <Route path="/" element={<DashboardPage />} />
-          {/* Dashboard novo — layout compacto em teste, comparar com "/" (ver views/DashboardViewNovo.tsx) */}
-          <Route path="/dashnovo" element={<DashboardPageNovo />} />
           {/* DESATIVADO em #090 — Turmas substituídas por Planos de Aula */}
           {/* <Route path="/schedules"  element={<SchedulesPage />} /> */}
           <Route path="/calendar"   element={<CalendarPage />} />

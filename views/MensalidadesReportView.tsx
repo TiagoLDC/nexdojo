@@ -164,7 +164,7 @@ const MensalidadesReportView: React.FC<{ academy: Academy; user: User }> = ({ ac
       className="max-w-5xl mx-auto space-y-6 pb-16 p-2"
     >
       <header className="flex flex-col gap-4 px-2">
-        <Link to="/dashnovo" className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-widest w-fit transition-colors">
+        <Link to="/" className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-widest w-fit transition-colors">
           <ArrowLeft size={14} />
           Voltar ao Dashboard
         </Link>

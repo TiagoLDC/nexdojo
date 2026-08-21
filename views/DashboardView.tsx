@@ -373,6 +373,16 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       .sort((a, b) => a.diffDays - b.diffDays);
   }, [students, user.role, academy?.plans]);
 
+  // Resumo compacto de mensalidades para o card do dashboard (versão nova): quantidades por
+  // faixa + top 5 alunos com maior atraso. O relatório completo fica em /relatorios/mensalidades.
+  const paymentSummary = useMemo(() => {
+    const overdue = upcomingPayments.filter(p => p.diffDays < 0);
+    const dueToday = upcomingPayments.filter(p => p.diffDays === 0);
+    const dueNext7Days = upcomingPayments.filter(p => p.diffDays > 0 && p.diffDays <= 7);
+    const topOverdue = [...overdue].sort((a, b) => a.diffDays - b.diffDays).slice(0, 5);
+    return { overdueCount: overdue.length, dueTodayCount: dueToday.length, dueNext7DaysCount: dueNext7Days.length, topOverdue };
+  }, [upcomingPayments]);
+
   const getPaymentWhatsappUrl = (student: Student, diffDays: number, price?: number) => {
     const contactPhone = student.phone || student.guardianPhone;
     if (!contactPhone) return null;
@@ -711,11 +721,11 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     const ids = new Set<string>();
     graduationAlerts.forEach(s => ids.add(s.id));
     closeToGraduationAlerts.forEach(s => ids.add(s.id));
-    upcomingPayments.forEach(({ student }) => ids.add(student.id));
+    paymentSummary.topOverdue.forEach(({ student }) => ids.add(student.id));
     recentActivity.forEach(a => { if (a.studentId) ids.add(a.studentId); });
     absenceAlerts.slice(0, 4).forEach(s => ids.add(s.id));
     return Array.from(ids);
-  }, [graduationAlerts, closeToGraduationAlerts, upcomingPayments, recentActivity, absenceAlerts]);
+  }, [graduationAlerts, closeToGraduationAlerts, paymentSummary, recentActivity, absenceAlerts]);
 
   const studentPhotos = useStudentPhotos(neededStudentPhotoIds);
 
@@ -1624,107 +1634,86 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
         </div>
       </motion.header>
 
-      {/* ALERTAS DE GRADUAÇÃO (ADMIN/INSTRUCTOR) */}
-      {(user.role === 'admin' || user.role === 'superuser' || user.role === 'instructor') && graduationAlerts.length > 0 && (
-        <motion.div variants={itemVariants} className="px-2">
-          <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-[40px] p-8 text-white shadow-2xl relative overflow-hidden group">
-            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-              <div className="flex items-center gap-6">
-                <div className="bg-white/20 p-5 rounded-3xl backdrop-blur-sm group-hover:scale-110 transition-transform">
-                  <Trophy size={40} className="text-white" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-black italic tracking-tighter uppercase leading-none">{t.graduationAlertTitle}</h2>
-                  <p className="text-[11px] font-bold text-amber-100 uppercase tracking-[0.2em] mt-2">
-                    {graduationAlerts.length} {t.graduationAlertText}
-                  </p>
-                </div>
-              </div>
-              <Link
-                to="/students"
-                state={{ openGraduationCenter: true }}
-                className="w-full md:w-auto bg-white dark:bg-slate-800 text-amber-600 px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.1em] shadow-xl hover:scale-105 active:scale-95 transition-all text-center"
-              >
-                {t.manageGraduations}
-              </Link>
-            </div>
-            
-            {/* Atalho Rápido - Lista Horizontal */}
-            <div className="relative z-10 mt-8 flex gap-3 overflow-x-auto no-scrollbar pb-2">
-              {graduationAlerts.slice(0, 10).map(s => (
-                <div key={s.id} className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10 flex items-center gap-3 shrink-0">
-                  <div className="relative">
-                    {studentPhotos[s.id] ? (
-                      <img src={studentPhotos[s.id]} className="w-8 h-8 rounded-lg object-cover" />
-                    ) : (
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${getBeltClassName(s.belt, getBeltConfig(s.belt)?.colorKey)}`}>
-                        {s.name.charAt(0)}
-                      </div>
-                    )}
+      {/* ALERTAS DE GRADUAÇÃO — versão compacta (ADMIN/INSTRUCTOR) */}
+      {(user.role === 'admin' || user.role === 'superuser' || user.role === 'instructor') && (graduationAlerts.length > 0 || closeToGraduationAlerts.length > 0) && (
+        <motion.div variants={itemVariants} className="px-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {graduationAlerts.length > 0 && (
+            <div className="bg-white dark:bg-slate-900 rounded-[24px] border border-amber-100 dark:border-amber-900/30 p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="bg-amber-50 dark:bg-amber-900/20 p-2 rounded-xl shrink-0 text-amber-600 dark:text-amber-400">
+                    <Trophy size={16} />
                   </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase truncate max-w-[100px] leading-tight">{s.name.split(' ')[0]}</p>
-                    <p className="text-[8px] font-bold text-amber-100 uppercase tracking-widest">{s.alertType === 'BELT' ? 'Próx. Faixa' : 'Próx. Grau'}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32" />
-          </div>
-        </motion.div>
-      )}
-
-      {/* ALUNOS QUASE LÁ (ADMIN/INSTRUCTOR) — aviso antecipado por faixa, ainda não elegíveis */}
-      {(user.role === 'admin' || user.role === 'superuser' || user.role === 'instructor') && closeToGraduationAlerts.length > 0 && (
-        <motion.div variants={itemVariants} className="px-2">
-          <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-[40px] p-8 text-white shadow-2xl relative overflow-hidden group">
-            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-              <div className="flex items-center gap-6">
-                <div className="bg-white/20 p-5 rounded-3xl backdrop-blur-sm group-hover:scale-110 transition-transform">
-                  <Zap size={40} className="text-yellow-300" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-black italic tracking-tighter uppercase leading-none">Quase Lá</h2>
-                  <p className="text-[11px] font-bold text-indigo-100 uppercase tracking-[0.2em] mt-2">
-                    {closeToGraduationAlerts.length} {closeToGraduationAlerts.length === 1 ? 'atleta prestes a graduar' : 'atletas prestes a graduar'}
-                  </p>
-                </div>
-              </div>
-              <Link
-                to="/students"
-                state={{ openGraduationCenter: true }}
-                className="w-full md:w-auto bg-white dark:bg-slate-800 text-indigo-600 px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.1em] shadow-xl hover:scale-105 active:scale-95 transition-all text-center"
-              >
-                {t.manageGraduations}
-              </Link>
-            </div>
-
-            {/* Atalho Rápido - Lista Horizontal */}
-            <div className="relative z-10 mt-8 flex gap-3 overflow-x-auto no-scrollbar pb-2">
-              {closeToGraduationAlerts.slice(0, 10).map(s => (
-                <div key={s.id} className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10 flex items-center gap-3 shrink-0">
-                  <div className="relative">
-                    {studentPhotos[s.id] ? (
-                      <img src={studentPhotos[s.id]} className="w-8 h-8 rounded-lg object-cover" />
-                    ) : (
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${getBeltClassName(s.belt, getBeltConfig(s.belt)?.colorKey)}`}>
-                        {s.name.charAt(0)}
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase truncate max-w-[100px] leading-tight">{s.name.split(' ')[0]}</p>
-                    <p className="text-[8px] font-bold text-indigo-100 uppercase tracking-widest">
-                      {s.progress ? `${s.progress.current}/${s.progress.target} ${s.progress.unit}` : 'Quase lá'}
+                  <div className="min-w-0">
+                    <h2 className="text-xs font-black text-slate-800 dark:text-white italic uppercase tracking-tight leading-none truncate">{t.graduationAlertTitle}</h2>
+                    <p className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-widest mt-1">
+                      {graduationAlerts.length} {t.graduationAlertText}
                     </p>
                   </div>
                 </div>
-              ))}
+                <Link
+                  to="/students"
+                  state={{ openGraduationCenter: true }}
+                  className="shrink-0 text-[9px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest hover:underline"
+                >
+                  Gerenciar
+                </Link>
+              </div>
+              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                {graduationAlerts.slice(0, 8).map(s => (
+                  <div key={s.id} className="flex flex-col items-center gap-1 shrink-0 w-14" title={`${s.name} • ${s.alertType === 'BELT' ? 'Próx. Faixa' : 'Próx. Grau'}`}>
+                    {studentPhotos[s.id] ? (
+                      <img src={studentPhotos[s.id]} className="w-8 h-8 rounded-xl object-cover" />
+                    ) : (
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${getBeltClassName(s.belt, getBeltConfig(s.belt)?.colorKey)}`}>
+                        {s.name.charAt(0)}
+                      </div>
+                    )}
+                    <p className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase truncate w-full text-center leading-none">{s.name.split(' ')[0]}</p>
+                  </div>
+                ))}
+              </div>
             </div>
+          )}
 
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32" />
-          </div>
+          {closeToGraduationAlerts.length > 0 && (
+            <div className="bg-white dark:bg-slate-900 rounded-[24px] border border-indigo-100 dark:border-indigo-900/30 p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="bg-indigo-50 dark:bg-indigo-900/20 p-2 rounded-xl shrink-0 text-indigo-600 dark:text-indigo-400">
+                    <Zap size={16} />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-xs font-black text-slate-800 dark:text-white italic uppercase tracking-tight leading-none truncate">Quase Lá</h2>
+                    <p className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mt-1">
+                      {closeToGraduationAlerts.length} {closeToGraduationAlerts.length === 1 ? 'atleta prestes a graduar' : 'atletas prestes a graduar'}
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  to="/students"
+                  state={{ openGraduationCenter: true }}
+                  className="shrink-0 text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest hover:underline"
+                >
+                  Gerenciar
+                </Link>
+              </div>
+              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                {closeToGraduationAlerts.slice(0, 8).map(s => (
+                  <div key={s.id} className="flex flex-col items-center gap-1 shrink-0 w-14" title={`${s.name} • ${s.progress ? `${s.progress.current}/${s.progress.target} ${s.progress.unit}` : 'Quase lá'}`}>
+                    {studentPhotos[s.id] ? (
+                      <img src={studentPhotos[s.id]} className="w-8 h-8 rounded-xl object-cover" />
+                    ) : (
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${getBeltClassName(s.belt, getBeltConfig(s.belt)?.colorKey)}`}>
+                        {s.name.charAt(0)}
+                      </div>
+                    )}
+                    <p className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase truncate w-full text-center leading-none">{s.name.split(' ')[0]}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </motion.div>
       )}
 
@@ -1921,87 +1910,90 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
         </motion.div>
       )}
 
-      {/* PRÓXIMOS VENCIMENTOS DE MENSALIDADE (Admin) */}
+      {/* MENSALIDADES — resumo compacto (Admin) */}
       {user.role === 'admin' && upcomingPayments.length > 0 && (
         <motion.div variants={itemVariants} className="px-2">
-          <div className="bg-white dark:bg-slate-900 rounded-[40px] border border-slate-100 dark:border-slate-800 p-6 sm:p-8 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2 uppercase italic tracking-tight">
-                <CreditCard size={24} className="text-emerald-600" />
-                Vencimentos de Mensalidade
+          <div className="bg-white dark:bg-slate-900 rounded-[28px] border border-slate-100 dark:border-slate-800 p-5 sm:p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4 gap-2">
+              <h2 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2 uppercase italic tracking-tight">
+                <CreditCard size={18} className="text-emerald-600" />
+                Mensalidades
               </h2>
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-full">
-                {upcomingPayments.length} aluno{upcomingPayments.length !== 1 ? 's' : ''}
-              </span>
+              <Link
+                to="/relatorios/mensalidades"
+                className="shrink-0 flex items-center gap-1 text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest hover:underline"
+              >
+                Relatório completo
+                <ChevronRight size={12} />
+              </Link>
             </div>
 
-            <div className="space-y-2">
-              {upcomingPayments.map(({ student, diffDays, price }) => {
-                const whatsappUrl = getPaymentWhatsappUrl(student, diffDays, price);
-                return (
-                <div
-                  key={student.id}
-                  className={`flex items-center justify-between p-3 sm:p-4 rounded-3xl border transition-all ${
-                    diffDays < 0
-                      ? 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30'
-                      : diffDays === 0
-                      ? 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30'
-                      : 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={`w-10 h-10 rounded-2xl shrink-0 flex items-center justify-center font-black text-base overflow-hidden ${getBeltClassName(student.belt, getBeltConfig(student.belt)?.colorKey) || 'bg-slate-200 text-slate-700'}`}>
-                      {studentPhotos[student.id]
-                        ? <img src={studentPhotos[student.id]} className="w-full h-full object-cover" />
-                        : student.name.charAt(0)}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-black text-slate-800 dark:text-white text-sm uppercase italic truncate leading-none">{student.name}</p>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                          diffDays < 0 ? 'text-red-500' : diffDays === 0 ? 'text-amber-500' : 'text-slate-400'
-                        }`}>
-                          {diffDays < 0
-                            ? `Vencido há ${Math.abs(diffDays)} dia${Math.abs(diffDays) !== 1 ? 's' : ''}`
-                            : diffDays === 0
-                            ? 'Vence hoje'
-                            : `Vence em ${diffDays} dia${diffDays !== 1 ? 's' : ''}`}
-                        </span>
-                        {price != null && (
-                          <span className="text-[10px] text-slate-400 font-bold">
-                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(price)}
-                          </span>
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
+              <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-2xl p-3 text-center">
+                <p className="text-xl sm:text-2xl font-black text-red-600 dark:text-red-400 italic leading-none">{paymentSummary.overdueCount}</p>
+                <p className="text-[8px] sm:text-[9px] font-black text-red-500/80 uppercase tracking-widest mt-1.5 leading-tight">Vencidas</p>
+              </div>
+              <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-2xl p-3 text-center">
+                <p className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 italic leading-none">{paymentSummary.dueTodayCount}</p>
+                <p className="text-[8px] sm:text-[9px] font-black text-amber-500/80 uppercase tracking-widest mt-1.5 leading-tight">Vence Hoje</p>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 text-center">
+                <p className="text-xl sm:text-2xl font-black text-slate-700 dark:text-slate-200 italic leading-none">{paymentSummary.dueNext7DaysCount}</p>
+                <p className="text-[8px] sm:text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1.5 leading-tight">Próx. 7 Dias</p>
+              </div>
+            </div>
+
+            {paymentSummary.topOverdue.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Maior Atraso</p>
+                {paymentSummary.topOverdue.map(({ student, diffDays, price }) => {
+                  const whatsappUrl = getPaymentWhatsappUrl(student, diffDays, price);
+                  return (
+                    <div
+                      key={student.id}
+                      className="flex items-center justify-between p-2.5 rounded-2xl bg-red-50/60 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center font-black text-xs overflow-hidden ${getBeltClassName(student.belt, getBeltConfig(student.belt)?.colorKey) || 'bg-slate-200 text-slate-700'}`}>
+                          {studentPhotos[student.id]
+                            ? <img src={studentPhotos[student.id]} className="w-full h-full object-cover" />
+                            : student.name.charAt(0)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-black text-slate-800 dark:text-white text-xs uppercase italic truncate leading-none">{student.name}</p>
+                          <p className="text-[9px] font-bold text-red-500 uppercase tracking-wider mt-0.5">
+                            Vencido há {Math.abs(diffDays)} dia{Math.abs(diffDays) !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="shrink-0 ml-2 flex items-center gap-1.5">
+                        {whatsappUrl && (
+                          <a
+                            href={whatsappUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Cobrar pelo WhatsApp"
+                            className="flex items-center justify-center bg-[#25D366] hover:bg-[#128C7E] text-white p-2 rounded-xl transition-all active:scale-95"
+                          >
+                            <WhatsAppIcon size={12} />
+                          </a>
                         )}
+                        <button
+                          disabled={markingPaymentId === student.id}
+                          onClick={() => markPaymentAsPaid(student)}
+                          title="Marcar como pago"
+                          className="flex items-center justify-center bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 p-2 rounded-xl transition-all active:scale-95 disabled:opacity-60 border border-emerald-100 dark:border-emerald-900/30 cursor-pointer"
+                        >
+                          {markingPaymentId === student.id
+                            ? <Loader2 size={12} className="animate-spin" />
+                            : <CheckCircle2 size={12} />}
+                        </button>
                       </div>
                     </div>
-                  </div>
-                  <div className="shrink-0 ml-3 flex items-center gap-2">
-                    {whatsappUrl && (
-                      <a
-                        href={whatsappUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="Cobrar pelo WhatsApp"
-                        className="flex items-center justify-center bg-[#25D366] hover:bg-[#128C7E] text-white p-2.5 rounded-2xl transition-all active:scale-95 shadow-lg shadow-green-500/20"
-                      >
-                        <WhatsAppIcon size={14} />
-                      </a>
-                    )}
-                    <button
-                      disabled={markingPaymentId === student.id}
-                      onClick={() => markPaymentAsPaid(student)}
-                      className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 px-3 sm:px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-60 border border-emerald-100 dark:border-emerald-900/30 cursor-pointer"
-                    >
-                      {markingPaymentId === student.id
-                        ? <Loader2 size={14} className="animate-spin" />
-                        : <CheckCircle2 size={14} />}
-                      <span className="hidden sm:inline">Marcar Pago</span>
-                    </button>
-                  </div>
-                </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </motion.div>
       )}
