@@ -52,9 +52,23 @@ async function main() {
   await addColumn('academy_belt_settings', `degree_segment_max TINYINT UNSIGNED NULL COMMENT 'NULL nos dois campos de grau = linha não segmentada por grau' AFTER degree_segment_min`, 'academy_belt_settings.degree_segment_max');
 
   // 2. Troca do UNIQUE(academy_id, belt_rank_id) por um índice não-único — uma faixa
-  // agora pode ter mais de 1 linha (segmentada por idade ou por grau). Descobre o nome
-  // real do unique index existente em vez de assumir (índices inline de CREATE TABLE
-  // sem nome explícito recebem o nome da 1ª coluna, mas não vale arriscar em produção).
+  // agora pode ter mais de 1 linha (segmentada por idade ou por grau). Cria primeiro o
+  // índice novo (não-único) — o MySQL recusa dropar o unique antigo se ele for a única
+  // estrutura de índice apoiando a FK de academy_id, então a ordem importa: só depois de
+  // idx_academy_belt existir como alternativa o DROP do unique consegue funcionar.
+  try {
+    await pool.execute(`CREATE INDEX idx_academy_belt ON academy_belt_settings (academy_id, belt_rank_id)`);
+    console.log('Índice idx_academy_belt criado.');
+  } catch (e: any) {
+    if (e.code === 'ER_DUP_KEYNAME') {
+      console.log('Índice idx_academy_belt já existe, pulando.');
+    } else {
+      throw e;
+    }
+  }
+
+  // Descobre o nome real do unique index existente em vez de assumir (índices inline de
+  // CREATE TABLE sem nome explícito recebem o nome da 1ª coluna, mas não vale arriscar).
   const [uniqueIndexRows] = await pool.execute<any[]>(
     `SELECT DISTINCT INDEX_NAME FROM information_schema.STATISTICS
      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'academy_belt_settings'
@@ -66,17 +80,6 @@ async function main() {
       console.log(`Unique index ${row.INDEX_NAME} removido.`);
     } catch (e: any) {
       console.log(`Não foi possível remover o index ${row.INDEX_NAME} (${e.message}), verifique manualmente.`);
-    }
-  }
-
-  try {
-    await pool.execute(`CREATE INDEX idx_academy_belt ON academy_belt_settings (academy_id, belt_rank_id)`);
-    console.log('Índice idx_academy_belt criado.');
-  } catch (e: any) {
-    if (e.code === 'ER_DUP_KEYNAME') {
-      console.log('Índice idx_academy_belt já existe, pulando.');
-    } else {
-      throw e;
     }
   }
 
