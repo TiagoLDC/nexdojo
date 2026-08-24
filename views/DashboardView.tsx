@@ -403,6 +403,8 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       text += `\n\nPara realizar o pagamento, utilize a chave PIX (${academy.pixType}): ${academy.pixKey}\n\nApós o pagamento, por favor envie o comprovante por aqui pelo WhatsApp. Obrigado!`;
     }
 
+    text += `\n\nCaso o pagamento já tenha sido efetuado, pedimos que desconsidere esta mensagem. Por gentileza, envie o comprovante por aqui pelo WhatsApp. Obrigado! OSS.`;
+
     return `https://wa.me/55${contactPhone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
   };
 
