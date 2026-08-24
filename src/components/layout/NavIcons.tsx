@@ -3,14 +3,14 @@ import {
   Home, CheckCircle2, DollarSign, Users, Award, Briefcase, KeyRound,
   Clock, CalendarDays, Calendar, MessageSquare, Shirt, CreditCard,
   UserCircle, BarChart3, Trash2, LogOut, Settings, ShieldCheck,
-  Sun, Moon, ChevronLeft, ChevronRight, LayoutGrid, Share2, SlidersHorizontal,
+  Sun, Moon, ChevronLeft, ChevronRight, LayoutGrid, Share2, SlidersHorizontal, Trophy,
 } from 'lucide-react';
 
 const ICON_MAP = {
   Home, CheckCircle2, DollarSign, Users, Award, Briefcase, KeyRound,
   Clock, CalendarDays, Calendar, MessageSquare, Shirt, CreditCard,
   UserCircle, BarChart3, Trash2, LogOut, Settings, ShieldCheck,
-  Sun, Moon, ChevronLeft, ChevronRight, LayoutGrid, Share2, SlidersHorizontal,
+  Sun, Moon, ChevronLeft, ChevronRight, LayoutGrid, Share2, SlidersHorizontal, Trophy,
 } as const;
 
 type IconName = keyof typeof ICON_MAP;

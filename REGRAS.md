@@ -54,6 +54,29 @@ Se não retornar nada, os servidores não estão rodando — executar `npm run d
 
 ---
 
+## 2A. Arquitetura do Frontend — App real vs código morto
+
+> **CRÍTICO — leia antes de mexer em rotas, sidebar, menu mobile ou qualquer navegação.** Erro de diagnóstico real já aconteceu aqui (documentado em `PLANO_GRADUACAO.md`, seção "Descoberta de app duplicado", 24/08/2026) e custou 2 semanas de uma feature (tela "Esportes") ficando invisível para o usuário.
+
+O projeto tem **dois pontos de entrada distintos** convivendo no repositório:
+
+| | `index.tsx` + `App.tsx` (raiz) | `src/main.tsx` + `src/App.tsx` |
+|---|---|---|
+| **Roda de verdade?** | ❌ **NÃO** — código morto | ✅ **SIM** — é este que o navegador executa |
+| Router | `HashRouter` | `BrowserRouter` |
+| Sidebar/menu mobile | Embutidos dentro do próprio `App.tsx` | `src/components/layout/Sidebar.tsx` + `MobileMenu.tsx`, configurados via `src/components/layout/navConfig.ts` |
+| Telas | Importa `views/*.tsx` diretamente | `src/pages/*Page.tsx` (wrappers finos que, na maioria dos casos, importam os **mesmos** `views/*.tsx`) |
+
+**Como confirmar qual roda**: `index.html` (raiz) tem `<script type="module" src="/src/main.tsx">` — é só isso que importa. Nunca confiar de memória em qual dos dois é o real; se houver dúvida, reabrir o `index.html` e seguir o import a partir dali.
+
+**Implicações práticas**:
+- Editar `views/*.tsx` (ex: `views/SettingsView.tsx`, `views/StudentsView.tsx`, `views/DashboardView.tsx`) **tem efeito real**, porque a maioria dos `src/pages/*Page.tsx` os reaproveita (ex: `SettingsPage.tsx` → `import SettingsView from '../../views/SettingsView'`). Antes de assumir que um `views/*.tsx` está morto, confira se algum `src/pages/*Page.tsx` o importa.
+- Editar `App.tsx`/`index.tsx` da **raiz** (rotas, sidebar, menu mobile definidos ali dentro) **não tem nenhum efeito** na aplicação real. Qualquer mudança de navegação (nova rota, novo link de menu) precisa ir em `src/App.tsx` (rotas) + `src/components/layout/navConfig.ts` (item de menu, cobre desktop e mobile de uma vez, pois `Sidebar.tsx` e `MobileMenu.tsx` leem da mesma lista).
+- Se uma tela nova em `views/*.tsx` precisar de rota própria (não só ser uma seção dentro de outra tela), ela **não tem wrapper automático** — é preciso criar manualmente um `src/pages/NomePage.tsx` (mesmo padrão de `SettingsPage.tsx`: busca dados via `useAuthStore`/`useUIStore`, repassa como props pro `views/*.tsx`) e registrar a rota em `src/App.tsx`.
+- `index.tsx` e `App.tsx` da raiz estão marcados com um comentário de aviso no topo do próprio arquivo — não removê-los sem antes confirmar que nada mais referencia (checar `package.json` e `vite.config.ts`).
+
+---
+
 ## 3. Repositório Git
 
 | Campo | Valor |

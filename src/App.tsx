@@ -29,6 +29,7 @@ const StudentProfilePage   = React.lazy(() => import('@/pages/StudentProfilePage
 const InstructorProfilePage = React.lazy(() => import('@/pages/InstructorProfilePage'));
 const PaymentPage          = React.lazy(() => import('@/pages/PaymentPage'));
 const SystemConfigPage     = React.lazy(() => import('@/pages/SystemConfigPage'));
+const SportsPage           = React.lazy(() => import('@/pages/SportsPage'));
 const ResetPasswordPage    = React.lazy(() => import('@/pages/ResetPasswordPage'));
 const StaffInvitePage      = React.lazy(() => import('@/pages/StaffInvitePage'));
 const GuardianInvitePage   = React.lazy(() => import('@/pages/GuardianInvitePage'));
@@ -99,6 +100,7 @@ const App: React.FC = () => (
           {/* Superuser only */}
           <Route element={<RoleGuard roles={['superuser']} />}>
             <Route path="/system-config" element={<SystemConfigPage />} />
+            <Route path="/sports" element={<SportsPage />} />
           </Route>
 
           {/* Student + Guardian (responsável gerenciando o perfil de um dependente) */}

@@ -1,4 +1,14 @@
-
+// ⚠️ CÓDIGO MORTO — NÃO É O APP REAL, NÃO EDITAR ESPERANDO EFEITO NA UI.
+// `index.html` carrega `/src/main.tsx`, que monta `src/App.tsx` (BrowserRouter), não este
+// arquivo. Este `App.tsx` (HashRouter, com Sidebar/menu mobile próprios embutidos aqui dentro)
+// nunca é executado no navegador — confirmado em 24/08/2026 (ver PLANO_GRADUACAO.md, seção
+// "Descoberta de app duplicado"; documentação anterior do projeto, de 11/08/2026, tinha essa
+// conclusão invertida — não confiar nela). Mudanças de UI (rotas, sidebar, menu mobile) devem
+// ir em `src/App.tsx` + `src/components/layout/*` + `src/pages/*Page.tsx`. Os componentes em
+// `views/*.tsx` importados abaixo CONTINUAM ativos — eles são reaproveitados pelos wrappers
+// em `src/pages/*Page.tsx` (ex: `SettingsPage.tsx` importa `views/SettingsView.tsx`), então
+// editar `views/*.tsx` diretamente tem efeito normal na aplicação real. Candidato a remoção
+// numa limpeza futura (junto com `index.tsx` da raiz).
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { 
@@ -375,6 +385,13 @@ const App: React.FC = () => {
                         <option key={a.id} value={a.id} className="text-slate-900">{a.name}</option>
                       ))}
                     </select>
+                    <Link
+                      to="/sports"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="mt-3 flex items-center justify-center gap-2 w-full bg-white/20 rounded-2xl p-3 text-xs font-black uppercase tracking-widest text-white hover:bg-white/30 transition-colors"
+                    >
+                      <Award size={14} /> Esportes
+                    </Link>
                   </div>
                 )}
                 {[...translatedMainMenu, ...translatedManagementMenu].filter(item => item.roles.includes(user.role)).map((item) => {
