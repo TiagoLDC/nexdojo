@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import pool from '../db';
 import { requireAuth } from '../middleware/auth';
 import { sendMail } from '../utils/mailer';
+import { resolveBeltRank } from '../utils/beltRanks';
 
 const router = Router();
 
@@ -244,14 +245,23 @@ router.post('/register/student', async (req: Request, res: Response, next: NextF
     );
     if (dupStudent[0]) { res.status(409).json({ error: 'E-mail já cadastrado.' }); return; }
 
+    // belt_rank_id é NOT NULL com FK para belt_ranks — sem resolver aqui, o INSERT abaixo
+    // falha com "foreign key constraint fails" (MySQL insere '' no lugar do valor omitido,
+    // pois o sql_mode do servidor não é estrito). Ver PLANO_GRADUACAO.md Fase 3.
+    const resolvedBeltRank = await resolveBeltRank(academyId, belt);
+    if (!resolvedBeltRank) {
+      res.status(400).json({ error: 'Faixa inválida para o esporte desta academia.' });
+      return;
+    }
+
     const studentId = 'stu_' + Math.random().toString(36).substr(2, 9);
     const userId = 'usr_' + Math.random().toString(36).substr(2, 9);
     const passwordHash = await bcrypt.hash(String(password), 10);
 
     await pool.execute(
-      `INSERT INTO students (id, academy_id, name, email, belt, stripes, birth_date, gender, phone, cpf, rg, weight, height, blood_type, emergency_contact, emergency_phone, cep, address, address_number, guardian_name, guardian_phone, guardian_relation, guardian_cpf, medical_notes, photo, plan_id, last_graduation_date, next_payment_date, status, join_date, total_classes, total_hours, absent_count)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW(), 0, 0, 0)`,
-      [studentId, academyId, name, String(email).toLowerCase().trim(), belt, stripes || 0, birthDate,
+      `INSERT INTO students (id, academy_id, name, email, belt, belt_rank_id, stripes, birth_date, gender, phone, cpf, rg, weight, height, blood_type, emergency_contact, emergency_phone, cep, address, address_number, guardian_name, guardian_phone, guardian_relation, guardian_cpf, medical_notes, photo, plan_id, last_graduation_date, next_payment_date, status, join_date, total_classes, total_hours, absent_count)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW(), 0, 0, 0)`,
+      [studentId, academyId, name, String(email).toLowerCase().trim(), belt, resolvedBeltRank.id, stripes || 0, birthDate,
        gender || null, phone || null, cpf || null, rg || null,
        weight || null, height || null, bloodType || null,
        emergencyContact || null, emergencyPhone || null,
@@ -310,14 +320,21 @@ router.post('/register/instructor', async (req: Request, res: Response, next: Ne
     );
     if (dupInstructor[0]) { res.status(409).json({ error: 'E-mail já cadastrado.' }); return; }
 
+    // belt_rank_id é NOT NULL com FK para belt_ranks — mesmo caso do register/student acima.
+    const resolvedBeltRank = await resolveBeltRank(academyId, belt);
+    if (!resolvedBeltRank) {
+      res.status(400).json({ error: 'Faixa inválida para o esporte desta academia.' });
+      return;
+    }
+
     const instructorId = 'instr_' + Math.random().toString(36).substr(2, 9);
     const userId = 'usr_' + Math.random().toString(36).substr(2, 9);
     const passwordHash = await bcrypt.hash(String(password), 10);
 
     await pool.execute(
-      `INSERT INTO instructors (id, academy_id, name, email, belt, stripes, birth_date, gender, phone, cpf, rg, marital_status, specialties, cep, address, address_number, photo, status, join_date)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())`,
-      [instructorId, academyId, name, String(email).toLowerCase().trim(), belt, stripes || 0, birthDate,
+      `INSERT INTO instructors (id, academy_id, name, email, belt, belt_rank_id, stripes, birth_date, gender, phone, cpf, rg, marital_status, specialties, cep, address, address_number, photo, status, join_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending', NOW())`,
+      [instructorId, academyId, name, String(email).toLowerCase().trim(), belt, resolvedBeltRank.id, stripes || 0, birthDate,
        gender || null, phone || null, cpf || null, rg || null,
        maritalStatus || 'Solteiro',
        specialties || null, cep || null, address || null,
