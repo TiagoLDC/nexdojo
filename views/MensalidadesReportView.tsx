@@ -105,10 +105,10 @@ const MensalidadesReportView: React.FC<{ academy: Academy; user: User }> = ({ ac
     }
 
     if (academy?.pixKey) {
-      text += `\n\nPara realizar o pagamento, utilize a chave PIX (${academy.pixType}): ${academy.pixKey}\n\nApós o pagamento, por favor envie o comprovante por aqui pelo WhatsApp.`;
+      text += `\n\nPara realizar o pagamento, utilize a chave PIX (${academy.pixType}): ${academy.pixKey}`;
     }
 
-    text += `\n\nObrigado! OSS.\n\n_Caso o pagamento já tenha sido efetuado, pedimos que desconsidere esta mensagem._`;
+    text += `\n\nSe acaso já efetuou o pagamento, desconsidere essa mensagem e por favor envie o comprovante por aqui pelo WhatsApp. Obrigado!`;
 
     return `https://wa.me/55${contactPhone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
   };

@@ -24,7 +24,30 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   useEffect(() => {
     if (!user) return;
-    authService.getProfiles().then(setProfiles).catch(() => {});
+    let lastFetchAt = 0;
+
+    const loadProfiles = () => {
+      lastFetchAt = Date.now();
+      authService.getProfiles().then(setProfiles).catch(() => {});
+    };
+    loadProfiles();
+
+    // Mesmo problema do dashboard: sessão parada há dias (app fixado na tela inicial,
+    // suspenso pelo navegador sem descarregar o JS) mantém o "Alternar Perfil" com a
+    // faixa/dados de quando o app foi aberto pela última vez. Revalida ao voltar o
+    // foco/visibilidade, com intervalo mínimo pra não duplicar a busca.
+    const REVALIDATE_MIN_INTERVAL_MS = 60_000;
+    const revalidateIfStale = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - lastFetchAt < REVALIDATE_MIN_INTERVAL_MS) return;
+      loadProfiles();
+    };
+    document.addEventListener('visibilitychange', revalidateIfStale);
+    window.addEventListener('focus', revalidateIfStale);
+    return () => {
+      document.removeEventListener('visibilitychange', revalidateIfStale);
+      window.removeEventListener('focus', revalidateIfStale);
+    };
   }, [user?.id, setProfiles]);
 
   useEffect(() => {
@@ -69,7 +92,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           ].join(' ')}
         >
           <div className="bg-amber-400 text-amber-950 text-[8px] font-black uppercase tracking-widest px-3 py-px rounded-b-lg select-none shadow-sm">
-            VERSÃO QAS 24/08/2026 14:48:28
+            VERSÃO QAS 24/08/2026 18:38:27
           </div>
         </div>
       )}

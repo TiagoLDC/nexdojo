@@ -102,7 +102,10 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   const isViewingDependentProfile = activeProfile?.kind === 'guardian' && activeProfile.entityType === 'student';
 
   React.useEffect(() => {
+    let lastFetchAt = 0;
+
     const loadData = async () => {
+      lastFetchAt = Date.now();
       setIsLoading(true);
       try {
         if (academy) {
@@ -158,8 +161,27 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       }
     };
     loadData();
+
+    // Sessões que ficam abertas por muito tempo sem recarregar (ex.: app fixado na tela
+    // inicial do celular, que o navegador suspende sem descarregar o JS) continuam exibindo
+    // os dados buscados no último mount, mesmo que algo tenha mudado no banco há dias — foi
+    // o caso de uma faixa promovida que continuava aparecendo desatualizada no dispositivo
+    // do próprio aluno. Revalida ao voltar o foco/visibilidade, com intervalo mínimo pra não
+    // duplicar a busca a cada troca rápida de aba.
+    const REVALIDATE_MIN_INTERVAL_MS = 60_000;
+    const revalidateIfStale = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - lastFetchAt < REVALIDATE_MIN_INTERVAL_MS) return;
+      loadData();
+    };
+    document.addEventListener('visibilitychange', revalidateIfStale);
+    window.addEventListener('focus', revalidateIfStale);
+    return () => {
+      document.removeEventListener('visibilitychange', revalidateIfStale);
+      window.removeEventListener('focus', revalidateIfStale);
+    };
   }, [academy?.id, user.role]);
-  
+
   const hasNewMessages = useMemo(() => {
     const visibleMessages = user.role === 'student'
       ? chatMessages.filter(m => m.senderId !== 'system')
