@@ -1716,7 +1716,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         {(['admin', 'superuser', 'instructor', 'staff'] as const).includes(user.role as any) && (() => {
                            const { readyForBelt, readyForStripe } = isReadyForGraduationByBeltRank(editingStudent, getBeltConfig(editingStudent));
                            if (readyForBelt || readyForStripe) {
-                             const { nextBelt, nextStripes } = getNextRank(editingStudent.belt, editingStudent.stripes);
+                             const { nextBelt, nextStripes } = getNextRank(editingStudent.belt, editingStudent.stripes, { studentAge: calculateAge(editingStudent.birthDate), beltRanks });
                              return (
                                <button
                                  onClick={() => handlePromoteStudent(editingStudent, nextBelt, nextStripes)}
@@ -2070,7 +2070,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         })
                         .sort((a, b) => getProgressRatio(b) - getProgressRatio(a))
                         .map(student => {
-                          const { nextBelt, nextStripes } = getNextRank(student.belt, student.stripes);
+                          const { nextBelt, nextStripes } = getNextRank(student.belt, student.stripes, { studentAge: calculateAge(student.birthDate), beltRanks });
                           const progress = getGraduationProgressByBeltRank(student, getBeltConfig(student));
 
                         return (

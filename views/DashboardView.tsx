@@ -80,7 +80,7 @@ import { useProfileStore, getActiveProfile } from '@/stores/profileStore';
 
 const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAcademy?: (a: Academy) => void }> = ({ academy, user, onSwitchAcademy }) => {
   const { t, language, showNotification } = useTranslation();
-  const { getBeltConfig } = useAcademyBeltRanks(academy?.id);
+  const { getBeltConfig, beltRanks } = useAcademyBeltRanks(academy?.id);
   const [students, setStudents] = React.useState<Student[]>([]);
   const [instructors, setInstructors] = React.useState<Instructor[]>([]);
   const [staff, setStaff] = React.useState<Staff[]>([]);
@@ -948,7 +948,7 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     const graduationWarning = isCloseToGraduationByBeltRank(profile, beltConfig) && graduationProgress
       ? { remaining: Math.max(0, graduationProgress.target - graduationProgress.current), unit: graduationProgress.unit }
       : null;
-    const studentNextRank = getNextRank(profile.belt, profile.stripes);
+    const studentNextRank = getNextRank(profile.belt, profile.stripes, { studentAge: calculateAge(profile.birthDate), beltRanks });
 
     return (
       <>

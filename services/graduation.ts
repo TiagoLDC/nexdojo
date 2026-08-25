@@ -39,16 +39,35 @@ export const monthsSince = (dateStr?: string): number => {
   return Math.max(0, months);
 };
 
-export const getNextRank = (currentBelt: Belt, currentStripes: number) => {
+// Ao trocar de faixa (não só de grau), pula faixas cujo `minAge`/`maxAge` cadastrado
+// (tela Esportes, superuser) não cabe a idade do aluno — ex: aluno de 16 anos não pode
+// cair numa faixa infantil com `maxAge: 15` (Cinza-e-Branca) só porque é a próxima da
+// sequência; o sistema avança até achar a faixa adequada (ex: Azul). Sem `ageContext`
+// (chamador não tem idade/faixas disponíveis), mantém o comportamento antigo — sempre a
+// próxima da lista, sem checagem de idade.
+export const getNextRank = (
+  currentBelt: Belt,
+  currentStripes: number,
+  ageContext?: { studentAge: number; beltRanks: BeltRank[] },
+) => {
   const maxStripes = currentBelt === Belt.BLACK ? 6 : 4;
   let nextBelt = currentBelt;
   let nextStripes = currentStripes + 1;
 
   if (nextStripes > maxStripes) {
-    const idx = BELT_LIST.indexOf(currentBelt);
+    let idx = BELT_LIST.indexOf(currentBelt);
     if (idx < BELT_LIST.length - 1) {
-      nextBelt = BELT_LIST[idx + 1];
       nextStripes = 0;
+      while (idx < BELT_LIST.length - 1) {
+        idx++;
+        const candidate = BELT_LIST[idx];
+        nextBelt = candidate;
+        if (!ageContext) break;
+        const rank = ageContext.beltRanks.find(b => b.name === candidate);
+        const tooOld = rank?.maxAge != null && ageContext.studentAge > rank.maxAge;
+        const tooYoung = rank?.minAge != null && ageContext.studentAge < rank.minAge;
+        if (!tooOld && !tooYoung) break;
+      }
     } else {
       nextStripes = maxStripes;
     }

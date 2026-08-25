@@ -374,6 +374,18 @@ A faixa **Branca** hoje é compartilhada por duas regras de negócio diferentes:
 
 ---
 
+## Correção (25/08/2026) — `getNextRank` ignorava idade ao sugerir a próxima faixa
+
+**Bug reportado pelo usuário**: aluno de 16 anos (`margaleticgabriel60@gmail.com`, academia Saikoo) na faixa Branca, elegível para graduar (critério de aulas segmentado por idade, resolvido corretamente via `resolveBeltRankConfig`), aparecia na Central de Graduação como pronto para ir para **Cinza-e-Branca** — uma faixa infantil (`belt_ranks.max_age = 15`) inadequada para a idade dele. A Branca é cadastrada como `category: 'both'` (sem `min_age`/`max_age` própria, de propósito — ver "Nota de risco" acima), então nada barrava a sequência linear.
+
+**Causa raiz**: `getNextRank` (`services/graduation.ts`) sempre calculava a próxima faixa como "a próxima posição em `BELT_LIST`", sem checar se essa faixa cabe na idade do aluno — mesmo o cadastro de faixas (tela Esportes) já guardando `min_age`/`max_age` por faixa desde a Fase 1. Isso nunca tinha sido testado com um aluno real de fronteira (~16 anos) numa faixa `both` até este caso.
+
+**Correção**: `getNextRank` ganhou um 3º parâmetro opcional `ageContext: { studentAge, beltRanks }`. Quando informado, ao trocar de faixa (não só de grau), avança sequencialmente por `BELT_LIST` pulando qualquer faixa cujo `maxAge`/`minAge` cadastrado não caiba na idade do aluno, até achar uma adequada (ou chegar ao fim da lista). Sem esse parâmetro, mantém o comportamento antigo (compatibilidade). Atualizados os 3 pontos de chamada para passar `{ studentAge: calculateAge(birthDate), beltRanks }`: `views/StudentsView.tsx` (botão "Promover" no modal de edição e fila de promoção da Central de Graduação) e `views/DashboardView.tsx` (card "Próxima Graduação" do próprio aluno, que passou a expor `beltRanks` do `useAcademyBeltRanks`).
+
+**Verificação**: `npx tsc --noEmit` — mesmos 68 erros pré-existentes, zero novos. Não testado no navegador (regra do projeto). Pendente: o usuário reprocessar/promover manualmente o aluno reportado (a elegibilidade calculada não muda, só a faixa sugerida).
+
+---
+
 ## Riscos e pontos de atenção
 
 - Trocar `students.belt` de `ENUM` para FK é migração de dados sensível — **fazer backup do banco QAS antes de rodar o script da Fase 3**.
