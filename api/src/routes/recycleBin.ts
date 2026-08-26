@@ -115,6 +115,15 @@ router.post('/:id/restore', requireAuth, requireRole('admin', 'superuser'), asyn
         }
       }
 
+      // Reverte o bloqueio aplicado no DELETE (só reativa quem foi bloqueado por causa
+      // dessa exclusão, nunca uma conta bloqueada manualmente por outro motivo).
+      if (student.user_id) {
+        await pool.execute(
+          `UPDATE users SET status = 'Active' WHERE id = ? AND academy_id = ? AND status = 'Blocked'`,
+          [student.user_id, student.academy_id]
+        );
+      }
+
     } else if (item.type === 'instructor') {
       const [conflictRows] = await pool.execute<any[]>(
         'SELECT id FROM instructors WHERE id = ?',
@@ -143,6 +152,13 @@ router.post('/:id/restore', requireAuth, requireRole('admin', 'superuser'), asyn
           data.status ?? 'Active', data.join_date ?? null,
         ]
       );
+
+      if (data.user_id) {
+        await pool.execute(
+          `UPDATE users SET status = 'Active' WHERE id = ? AND academy_id = ? AND status = 'Blocked'`,
+          [data.user_id, data.academy_id]
+        );
+      }
 
     } else if (item.type === 'template') {
       const { schedules, assignedStudentIds, ...template } = data;
@@ -206,6 +222,13 @@ router.post('/:id/restore', requireAuth, requireRole('admin', 'superuser'), asyn
           data.medical_notes ?? null, data.status ?? 'Active', data.join_date ?? null,
         ]
       );
+
+      if (data.user_id) {
+        await pool.execute(
+          `UPDATE users SET status = 'Active' WHERE id = ? AND academy_id = ? AND status = 'Blocked'`,
+          [data.user_id, data.academy_id]
+        );
+      }
 
     } else {
       res.status(400).json({ error: `Tipo de item desconhecido: ${item.type}` });

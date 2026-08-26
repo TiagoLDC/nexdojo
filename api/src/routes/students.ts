@@ -698,6 +698,16 @@ router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), async (req
 
     await pool.execute('DELETE FROM students WHERE id = ?', [req.params.id]);
 
+    // Sem isso, a conta de login vinculada continua ativa após a ficha ir pra lixeira,
+    // gerando um cadastro "órfão" (login funciona, mas nenhuma tela acha o perfil de aluno).
+    // A restauração em POST /api/recycle-bin/:id/restore reverte isso.
+    if (rows[0].user_id) {
+      await pool.execute(
+        `UPDATE users SET status = 'Blocked' WHERE id = ? AND academy_id = ?`,
+        [rows[0].user_id, academyId]
+      );
+    }
+
     res.json({ message: 'Aluno movido para a lixeira' });
   } catch (err) {
     next(err);
