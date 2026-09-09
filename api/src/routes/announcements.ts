@@ -123,8 +123,10 @@ router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Req
   if (errors.length) { res.status(400).json({ error: errors[0] }); return; }
 
   const { title, content } = req.body;
-  const beltRankIds: string[] = Array.isArray(req.body.beltRankIds)
-    ? req.body.beltRankIds.filter((id: unknown): id is string => typeof id === 'string' && id.length > 0)
+  // O interceptor axios do front converte o body para snake_case antes de enviar
+  // (ver src/lib/api.ts) — "beltRankIds" chega aqui como "belt_rank_ids".
+  const beltRankIds: string[] = Array.isArray(req.body.belt_rank_ids)
+    ? req.body.belt_rank_ids.filter((id: unknown): id is string => typeof id === 'string' && id.length > 0)
     : [];
   const targetAll = beltRankIds.length === 0;
   const { userId } = req.user!;
