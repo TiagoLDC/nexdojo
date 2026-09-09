@@ -11,6 +11,7 @@ interface ModalProps {
   footer?: React.ReactNode;
   size?: ModalSize;
   closeOnBackdrop?: boolean;
+  closeOnEsc?: boolean;
 }
 
 const sizeClasses: Record<ModalSize, string> = {
@@ -29,13 +30,14 @@ export const Modal: React.FC<ModalProps> = ({
   footer,
   size = 'md',
   closeOnBackdrop = true,
+  closeOnEsc = true,
 }) => {
   useEffect(() => {
-    if (!open) return;
+    if (!open || !closeOnEsc) return;
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, onClose]);
+  }, [open, onClose, closeOnEsc]);
 
   if (!open) return null;
 

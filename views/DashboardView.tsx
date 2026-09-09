@@ -13,6 +13,8 @@ import { attendanceService } from '@/features/attendance/services/attendanceServ
 import { financeService } from '@/features/finances/services/financeService';
 import { calendarService } from '@/features/calendar/services/calendarService';
 import { chatService } from '@/features/chat/services/chatService';
+import { announcementService } from '@/features/announcements/services/announcementService';
+import type { PendingAnnouncement } from '@/types';
 import { academyService } from '@/features/settings/services/academyService';
 import { PrivacyValue } from '../components/PrivacyValue';
 import { calculateAge, getNextRank, isReadyForGraduationByBeltRank, getGraduationProgressByBeltRank, isCloseToGraduationByBeltRank, BELT_LIST } from '../services/graduation';
@@ -54,7 +56,8 @@ import {
   Lock,
   Loader2,
   KeyRound,
-  Shirt
+  Shirt,
+  Megaphone
 } from 'lucide-react';
 import { authService } from '@/features/auth/services/authService';
 import { StorageService } from '../services/storage';
@@ -74,7 +77,7 @@ import {
 } from 'recharts';
 import { BeltBadge } from '../components/BeltBadge';
 import { getBeltClassName } from '../constants';
-import { DateSelectInput, ConfirmDialog, Spinner } from '@/components/ui';
+import { DateSelectInput, ConfirmDialog, Spinner, Modal, Button } from '@/components/ui';
 import { QRCodeSVG } from 'qrcode.react';
 import { useProfileStore, getActiveProfile } from '@/stores/profileStore';
 
@@ -94,6 +97,8 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   const [sessions, setSessions] = React.useState<any[]>([]);
   const [_isLoading, setIsLoading] = React.useState(true);
   const [selectedPending, setSelectedPending] = React.useState<{ user: User; details: any } | null>(null);
+  const [pendingAnnouncements, setPendingAnnouncements] = React.useState<PendingAnnouncement[]>([]);
+  const [isConfirmingAnnouncement, setIsConfirmingAnnouncement] = React.useState(false);
   const [lastReadChat, setLastReadChat] = React.useState<string>(academy ? localStorage.getItem(`oss_chat_last_read_${academy.id}`) || '' : '');
   const { profiles: switcherProfiles, activeProfileId } = useProfileStore();
   const activeProfile = getActiveProfile(switcherProfiles, activeProfileId);
@@ -181,6 +186,29 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
       window.removeEventListener('focus', revalidateIfStale);
     };
   }, [academy?.id, user.role]);
+
+  // Comunicados pendentes de confirmação de leitura — busca à parte do restante do dashboard
+  // para não travar o carregamento das outras seções caso essa chamada demore/falhe.
+  React.useEffect(() => {
+    if (!academy) return;
+    announcementService.getPending(academy.id)
+      .then(setPendingAnnouncements)
+      .catch((err) => console.error('Erro ao carregar comunicados pendentes:', err));
+  }, [academy?.id]);
+
+  const handleConfirmAnnouncement = async () => {
+    const current = pendingAnnouncements[0];
+    if (!current) return;
+    setIsConfirmingAnnouncement(true);
+    try {
+      await announcementService.markAsRead(current.id);
+      setPendingAnnouncements((prev) => prev.filter((a) => a.id !== current.id));
+    } catch (err) {
+      console.error('Erro ao confirmar leitura do comunicado:', err);
+    } finally {
+      setIsConfirmingAnnouncement(false);
+    }
+  };
 
   const hasNewMessages = useMemo(() => {
     const visibleMessages = user.role === 'student'
@@ -1545,6 +1573,12 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
           </div>
         </div>
       )}
+
+      <PendingAnnouncementsModal
+        pendingAnnouncements={pendingAnnouncements}
+        isConfirming={isConfirmingAnnouncement}
+        onConfirm={handleConfirmAnnouncement}
+      />
       </>
     );
   }
@@ -3063,7 +3097,56 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
         message={<>Esta ação não pode ser desfeita. Todos os dados da unidade <strong className="text-slate-900 dark:text-white">{selectedAcademy?.name}</strong> serão removidos definitivamente.</>}
         confirmLabel="Sim, Excluir"
       />
+
+      <PendingAnnouncementsModal
+        pendingAnnouncements={pendingAnnouncements}
+        isConfirming={isConfirmingAnnouncement}
+        onConfirm={handleConfirmAnnouncement}
+      />
     </>
+  );
+};
+
+const PendingAnnouncementsModal: React.FC<{
+  pendingAnnouncements: PendingAnnouncement[];
+  isConfirming: boolean;
+  onConfirm: () => void;
+}> = ({ pendingAnnouncements, isConfirming, onConfirm }) => {
+  if (pendingAnnouncements.length === 0) return null;
+
+  return (
+    <Modal
+      open
+      onClose={() => {}}
+      closeOnBackdrop={false}
+      closeOnEsc={false}
+      size="md"
+      footer={
+        <Button onClick={onConfirm} loading={isConfirming} className="w-full sm:w-auto">
+          Confirmar Leitura
+        </Button>
+      }
+    >
+      <div className="flex items-start gap-3 mb-3">
+        <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 p-2.5 rounded-2xl text-white shadow-lg shadow-indigo-600/20 shrink-0">
+          <Megaphone size={20} />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[9px] font-black text-indigo-500 uppercase tracking-[0.2em] leading-none mb-1">Comunicado</p>
+          <h2 className="text-lg font-black text-slate-800 dark:text-white tracking-tight leading-snug">
+            {pendingAnnouncements[0].title}
+          </h2>
+        </div>
+      </div>
+      <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap break-words leading-relaxed">
+        {pendingAnnouncements[0].content}
+      </p>
+      {pendingAnnouncements.length > 1 && (
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-4">
+          +{pendingAnnouncements.length - 1} comunicado{pendingAnnouncements.length - 1 > 1 ? 's' : ''} aguardando confirmação
+        </p>
+      )}
+    </Modal>
   );
 };
 

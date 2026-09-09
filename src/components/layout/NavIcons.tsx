@@ -4,6 +4,7 @@ import {
   Clock, CalendarDays, Calendar, MessageSquare, Shirt, CreditCard,
   UserCircle, BarChart3, Trash2, LogOut, Settings, ShieldCheck,
   Sun, Moon, ChevronLeft, ChevronRight, LayoutGrid, Share2, SlidersHorizontal, Trophy,
+  Megaphone,
 } from 'lucide-react';
 
 const ICON_MAP = {
@@ -11,6 +12,7 @@ const ICON_MAP = {
   Clock, CalendarDays, Calendar, MessageSquare, Shirt, CreditCard,
   UserCircle, BarChart3, Trash2, LogOut, Settings, ShieldCheck,
   Sun, Moon, ChevronLeft, ChevronRight, LayoutGrid, Share2, SlidersHorizontal, Trophy,
+  Megaphone,
 } as const;
 
 type IconName = keyof typeof ICON_MAP;

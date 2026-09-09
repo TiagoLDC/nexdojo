@@ -47,6 +47,15 @@ export interface SearchParams extends PaginationParams {
   search?: string;
 }
 
+// ── Announcement DTOs ─────────────────────────────────────────────────────
+
+export interface CreateAnnouncementDTO {
+  title: string;
+  content: string;
+  // Vazio/omitido = comunicado para todos os usuários da academia
+  beltRankIds?: string[];
+}
+
 // ── Student DTOs ──────────────────────────────────────────────────────────
 
 export interface GetStudentsParams extends SearchParams {

@@ -72,6 +72,42 @@ async function applySchemaPatches() {
       UNIQUE KEY uniq_guardian_student (guardian_user_id, student_id)
     )
   `);
+
+  // Comunicados — mensagem do admin para todos da academia ou restrita a faixas específicas,
+  // exibida como modal bloqueante no dashboard até o usuário confirmar a leitura.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS announcements (
+      id VARCHAR(36) PRIMARY KEY,
+      academy_id VARCHAR(36) NOT NULL,
+      title VARCHAR(255) NOT NULL,
+      content TEXT NOT NULL,
+      target_all TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = todos os usuários da academia; 0 = restrito às faixas em announcement_belt_ranks',
+      created_by VARCHAR(36) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE,
+      FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS announcement_belt_ranks (
+      announcement_id VARCHAR(36) NOT NULL,
+      belt_rank_id VARCHAR(36) NOT NULL,
+      PRIMARY KEY (announcement_id, belt_rank_id),
+      FOREIGN KEY (announcement_id) REFERENCES announcements(id) ON DELETE CASCADE,
+      FOREIGN KEY (belt_rank_id) REFERENCES belt_ranks(id) ON DELETE CASCADE
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS announcement_reads (
+      id VARCHAR(36) PRIMARY KEY,
+      announcement_id VARCHAR(36) NOT NULL,
+      user_id VARCHAR(36) NOT NULL,
+      read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (announcement_id) REFERENCES announcements(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE KEY uniq_announcement_user (announcement_id, user_id)
+    )
+  `);
 }
 
 async function start() {

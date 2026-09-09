@@ -6,6 +6,9 @@ dotenv.config({ path: `${__dirname}/../../.env` });
 const DDL_STATEMENTS = [
   // Limpar banco
   'SET FOREIGN_KEY_CHECKS = 0',
+  'DROP TABLE IF EXISTS announcement_reads',
+  'DROP TABLE IF EXISTS announcement_belt_ranks',
+  'DROP TABLE IF EXISTS announcements',
   'DROP TABLE IF EXISTS academy_belt_settings',
   'DROP TABLE IF EXISTS belt_ranks',
   'DROP TABLE IF EXISTS sports',
@@ -499,6 +502,40 @@ const DDL_STATEMENTS = [
     INDEX idx_token_hash (token_hash),
     INDEX idx_user_id (user_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+  // Comunicados — mensagem do admin para todos da academia ou restrita a faixas específicas,
+  // exibida como modal bloqueante no dashboard até o usuário confirmar a leitura.
+  `CREATE TABLE announcements (
+    id VARCHAR(36) PRIMARY KEY,
+    academy_id VARCHAR(36) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    target_all TINYINT(1) NOT NULL DEFAULT 1 COMMENT '1 = todos os usuários da academia; 0 = restrito às faixas em announcement_belt_ranks',
+    created_by VARCHAR(36) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+  )`,
+
+  // Faixas-alvo de um comunicado restrito (N:N) — ausência de linhas aqui só é válida quando target_all=1
+  `CREATE TABLE announcement_belt_ranks (
+    announcement_id VARCHAR(36) NOT NULL,
+    belt_rank_id VARCHAR(36) NOT NULL,
+    PRIMARY KEY (announcement_id, belt_rank_id),
+    FOREIGN KEY (announcement_id) REFERENCES announcements(id) ON DELETE CASCADE,
+    FOREIGN KEY (belt_rank_id) REFERENCES belt_ranks(id) ON DELETE CASCADE
+  )`,
+
+  // Confirmação de leitura por usuário — um comunicado só some do dashboard do usuário após esse registro existir
+  `CREATE TABLE announcement_reads (
+    id VARCHAR(36) PRIMARY KEY,
+    announcement_id VARCHAR(36) NOT NULL,
+    user_id VARCHAR(36) NOT NULL,
+    read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (announcement_id) REFERENCES announcements(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uniq_announcement_user (announcement_id, user_id)
+  )`,
 ];
 
 async function migrate() {

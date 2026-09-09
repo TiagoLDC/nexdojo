@@ -69,6 +69,31 @@ export interface AcademyBeltSetting {
   degreeSegmentMax?: number | null;
 }
 
+// ── Announcements (Comunicados) ─────────────────────────────────────────────
+
+export interface Announcement {
+  id: string;
+  academyId: string;
+  title: string;
+  content: string;
+  targetAll: boolean;
+  createdBy: string;
+  createdByName?: string;
+  createdAt: string;
+  beltRanks?: Pick<BeltRank, 'id' | 'name' | 'colorKey'>[];
+  readCount?: number;
+  totalRecipients?: number;
+}
+
+// Formato usado na fila do dashboard (endpoint /pending) — sem os campos de gestão do admin
+export interface PendingAnnouncement {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  createdByName?: string;
+}
+
 // ── Documents & Graduation ────────────────────────────────────────────────
 
 export interface StudentDocument {

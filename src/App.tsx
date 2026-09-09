@@ -30,6 +30,7 @@ const InstructorProfilePage = React.lazy(() => import('@/pages/InstructorProfile
 const PaymentPage          = React.lazy(() => import('@/pages/PaymentPage'));
 const SystemConfigPage     = React.lazy(() => import('@/pages/SystemConfigPage'));
 const SportsPage           = React.lazy(() => import('@/pages/SportsPage'));
+const AnnouncementsPage    = React.lazy(() => import('@/pages/AnnouncementsPage'));
 const ResetPasswordPage    = React.lazy(() => import('@/pages/ResetPasswordPage'));
 const StaffInvitePage      = React.lazy(() => import('@/pages/StaffInvitePage'));
 const GuardianInvitePage   = React.lazy(() => import('@/pages/GuardianInvitePage'));
@@ -92,6 +93,7 @@ const App: React.FC = () => (
             <Route path="/instructors" element={<InstructorsPage />} />
             <Route path="/staff"       element={<StaffPage />} />
             <Route path="/users"       element={<UsersPage />} />
+            <Route path="/announcements" element={<AnnouncementsPage />} />
             <Route path="/reports"     element={<ReportsPage />} />
             <Route path="/relatorios/mensalidades" element={<MensalidadesReportPage />} />
             <Route path="/recycle-bin" element={<RecycleBinPage />} />
