@@ -56,18 +56,44 @@ router.post('/login', loginMiddleware, async (req: Request, res: Response, next:
 
     const user = rows[0];
 
+    const emailTentado = String(email).toLowerCase().trim();
+
     // Mensagem genérica para não revelar se o email existe ou não
     if (!user) {
+      // Sem academia (e-mail não pertence a ninguém) — visível só na consulta global do superusuário
+      await logAudit(req, {
+        action: 'auth.login_failed',
+        userEmail: emailTentado,
+        details: { reason: 'user_not_found' },
+      });
       res.status(401).json({ error: 'Credenciais inválidas' });
       return;
     }
 
     if (user.status === 'Pending') {
+      await logAudit(req, {
+        action: 'auth.login_failed',
+        entityType: 'user',
+        entityId: user.id,
+        academyId: user.academy_id,
+        userId: user.id,
+        userEmail: user.email,
+        details: { reason: 'account_pending' },
+      });
       res.status(403).json({ error: 'Cadastro pendente de aprovação. Aguarde o administrador ativar sua conta.' });
       return;
     }
 
     if (user.status === 'Blocked') {
+      await logAudit(req, {
+        action: 'auth.login_failed',
+        entityType: 'user',
+        entityId: user.id,
+        academyId: user.academy_id,
+        userId: user.id,
+        userEmail: user.email,
+        details: { reason: 'account_blocked' },
+      });
       res.status(403).json({ error: 'Conta bloqueada. Entre em contato com o administrador.' });
       return;
     }
@@ -88,6 +114,15 @@ router.post('/login', loginMiddleware, async (req: Request, res: Response, next:
     }
 
     if (!valid) {
+      await logAudit(req, {
+        action: 'auth.login_failed',
+        entityType: 'user',
+        entityId: user.id,
+        academyId: user.academy_id,
+        userId: user.id,
+        userEmail: user.email,
+        details: { reason: 'invalid_password' },
+      });
       res.status(401).json({ error: 'Credenciais inválidas' });
       return;
     }
@@ -101,6 +136,16 @@ router.post('/login', loginMiddleware, async (req: Request, res: Response, next:
         academyId: user.academy_id,
         userId: user.id,
         userEmail: user.email,
+      });
+    } else {
+      await logAudit(req, {
+        action: 'auth.login_success',
+        entityType: 'user',
+        entityId: user.id,
+        academyId: user.academy_id,
+        userId: user.id,
+        userEmail: user.email,
+        details: { role: user.role },
       });
     }
 
@@ -678,6 +723,13 @@ router.post('/change-password', requireAuth, async (req: Request, res: Response,
       'UPDATE users SET password_hash = ?, requires_password_change = 0 WHERE id = ?',
       [hash, req.user!.userId]
     );
+
+    await logAudit(req, {
+      action: 'auth.password_changed',
+      entityType: 'user',
+      entityId: req.user!.userId,
+    });
+
     res.json({ message: 'Senha alterada com sucesso' });
   } catch (err) {
     next(err);
@@ -733,13 +785,23 @@ router.post('/forgot-password', forgotPasswordMiddleware, async (req: Request, r
     await pool.execute('DELETE FROM password_reset_tokens WHERE expires_at < NOW()');
 
     const [rows] = await pool.execute<any[]>(
-      'SELECT id, name, email, status FROM users WHERE email = ?',
+      'SELECT id, academy_id, name, email, status FROM users WHERE email = ?',
       [email]
     );
     const user = rows[0];
 
     // Anti-enumeração: resposta sempre 200 com a mesma mensagem
     if (!user || user.status === 'Blocked') {
+      // Registrado mesmo sem envio de e-mail: volume alto aqui é sinal de varredura de e-mails
+      await logAudit(req, {
+        action: 'auth.password_reset_requested',
+        entityType: user ? 'user' : undefined,
+        entityId: user?.id,
+        academyId: user?.academy_id ?? null,
+        userId: user?.id ?? null,
+        userEmail: user?.email ?? email,
+        details: { delivered: false, reason: user ? 'account_blocked' : 'user_not_found' },
+      });
       res.json({ message: GENERIC_MESSAGE });
       return;
     }
@@ -763,6 +825,7 @@ router.post('/forgot-password', forgotPasswordMiddleware, async (req: Request, r
     const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:3002').replace(/\/$/, '');
     const link = `${frontendUrl}/reset-password?token=${token}`;
 
+    let mailSent = false;
     try {
       await sendMail({
         to: user.email,
@@ -784,10 +847,21 @@ router.post('/forgot-password', forgotPasswordMiddleware, async (req: Request, r
           </div>
         `,
       });
+      mailSent = true;
     } catch (mailErr: any) {
       console.error('[forgot-password] Falha ao enviar e-mail:', mailErr?.message);
       // Não revelar falha de envio ao cliente — mantém resposta genérica
     }
+
+    await logAudit(req, {
+      action: 'auth.password_reset_requested',
+      entityType: 'user',
+      entityId: user.id,
+      academyId: user.academy_id,
+      userId: user.id,
+      userEmail: user.email,
+      details: { delivered: mailSent },
+    });
 
     res.json({ message: GENERIC_MESSAGE });
   } catch (err) {
@@ -819,6 +893,11 @@ router.post('/reset-password', async (req: Request, res: Response, next: NextFun
     const record = rows[0];
 
     if (!record) {
+      // Nunca registrar o token em si — só o fato da tentativa inválida
+      await logAudit(req, {
+        action: 'auth.password_reset_failed',
+        details: { reason: 'invalid_or_expired_token' },
+      });
       res.status(400).json({ error: 'Link inválido ou expirado. Solicite um novo link de recuperação.' });
       return;
     }
@@ -833,6 +912,20 @@ router.post('/reset-password', async (req: Request, res: Response, next: NextFun
       'UPDATE password_reset_tokens SET used = 1 WHERE id = ?',
       [record.id]
     );
+
+    const [userRows] = await pool.execute<any[]>(
+      'SELECT academy_id, email FROM users WHERE id = ?',
+      [record.user_id]
+    );
+
+    await logAudit(req, {
+      action: 'auth.password_reset_completed',
+      entityType: 'user',
+      entityId: record.user_id,
+      academyId: userRows[0]?.academy_id ?? null,
+      userId: record.user_id,
+      userEmail: userRows[0]?.email ?? null,
+    });
 
     res.json({ message: 'Senha alterada com sucesso. Faça login com sua nova senha.' });
   } catch (err) {

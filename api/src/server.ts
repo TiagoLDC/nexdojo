@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import pool from './db';
 import router from './routes/index';
 import { errorHandler } from './middleware/errorHandler';
+import { requestLogger } from './middleware/requestLogger';
 
 dotenv.config();
 
@@ -24,6 +25,9 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));
+
+// Registra no evento 'finish', então req.user já foi populado pelo requireAuth quando a linha sai
+app.use(requestLogger);
 
 app.use('/api', router);
 app.use(errorHandler);

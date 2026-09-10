@@ -8,6 +8,12 @@ services:
       - ./api/.env
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    # Sem isso o json-file driver cresce sem limite até encher o disco do servidor
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
 
   frontend:
     build: .
@@ -16,3 +22,8 @@ services:
       - "3003:80"
     depends_on:
       - api
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"

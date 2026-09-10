@@ -19,6 +19,7 @@ import kimonoLoansRouter from './kimonoLoans';
 import sportsRouter from './sports';
 import announcementsRouter from './announcements';
 import auditLogRouter from './auditLog';
+import clientErrorsRouter from './clientErrors';
 
 const router = Router();
 
@@ -46,5 +47,6 @@ router.use('/kimono-loans', kimonoLoansRouter);
 router.use('/sports', sportsRouter);
 router.use('/announcements', announcementsRouter);
 router.use('/audit-log', auditLogRouter);
+router.use('/client-errors', clientErrorsRouter);
 
 export default router;

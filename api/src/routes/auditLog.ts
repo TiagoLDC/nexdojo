@@ -8,16 +8,23 @@ const router = Router();
 
 // GET /api/audit-log — trilha de auditoria de ações sensíveis (exclusões, financeiro, troca de role/status, etc.)
 router.get('/', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  const academyId = getAcademyId(req, res);
-  if (!academyId) return;
+  // Tentativa de login em e-mail inexistente não tem academia (academy_id NULL) e ficaria invisível
+  // em qualquer filtro por academia — só o superusuário alcança esses registros, via academyId=all.
+  const globalScope = req.user!.role === 'superuser' && req.query.academyId === 'all';
+
+  let academyId: string | null = null;
+  if (!globalScope) {
+    academyId = getAcademyId(req, res);
+    if (!academyId) return;
+  }
 
   const { action, entityType, entityId, dateFrom, dateTo, page = '1', limit = '50' } = req.query;
   const pageNum  = Math.max(1, parseInt(String(page), 10));
   const limitNum = Math.min(200, Math.max(1, parseInt(String(limit), 10)));
   const offset   = (pageNum - 1) * limitNum;
 
-  let where = 'WHERE academy_id = ?';
-  const params: any[] = [academyId];
+  let where = globalScope ? 'WHERE 1=1' : 'WHERE academy_id = ?';
+  const params: any[] = globalScope ? [] : [academyId];
 
   if (action)     { where += ' AND action = ?';                     params.push(action); }
   if (entityType) { where += ' AND entity_type = ?';                params.push(entityType); }
