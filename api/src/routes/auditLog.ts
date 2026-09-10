@@ -18,29 +18,52 @@ router.get('/', requireAuth, requireRole('admin', 'superuser'), async (req: Requ
     if (!academyId) return;
   }
 
-  const { action, entityType, entityId, dateFrom, dateTo, page = '1', limit = '50' } = req.query;
+  const { action, entityType, entityId, dateFrom, dateTo, search, page = '1', limit = '50' } = req.query;
   const pageNum  = Math.max(1, parseInt(String(page), 10));
   const limitNum = Math.min(200, Math.max(1, parseInt(String(limit), 10)));
   const offset   = (pageNum - 1) * limitNum;
 
-  let where = globalScope ? 'WHERE 1=1' : 'WHERE academy_id = ?';
+  let where = globalScope ? 'WHERE 1=1' : 'WHERE al.academy_id = ?';
   const params: any[] = globalScope ? [] : [academyId];
 
-  if (action)     { where += ' AND action = ?';                     params.push(action); }
-  if (entityType) { where += ' AND entity_type = ?';                params.push(entityType); }
-  if (entityId)   { where += ' AND entity_id = ?';                  params.push(entityId); }
-  if (dateFrom)   { where += ' AND created_at >= ?';                params.push(dateFrom); }
-  if (dateTo)     { where += ' AND created_at <= ?';                params.push(dateTo); }
+  // `action` aceita lista separada por vírgula para a tela filtrar uma categoria inteira
+  // (ex: todas as ações de acesso) sem precisar de uma chamada por ação.
+  if (action) {
+    const actions = String(action).split(',').map(a => a.trim()).filter(Boolean);
+    if (actions.length) {
+      where += ` AND al.action IN (${actions.map(() => '?').join(',')})`;
+      params.push(...actions);
+    }
+  }
+  if (entityType) { where += ' AND al.entity_type = ?'; params.push(entityType); }
+  if (entityId)   { where += ' AND al.entity_id = ?';   params.push(entityId); }
+  if (dateFrom)   { where += ' AND al.created_at >= ?'; params.push(dateFrom); }
+  // Data pura (YYYY-MM-DD) vira 00:00:00 e excluiria o próprio dia escolhido do resultado
+  if (dateTo) {
+    const raw = String(dateTo);
+    where += ' AND al.created_at <= ?';
+    params.push(/^\d{4}-\d{2}-\d{2}$/.test(raw) ? `${raw} 23:59:59` : raw);
+  }
+  if (search) {
+    where += ' AND (al.user_email LIKE ? OR u.name LIKE ? OR u.email LIKE ? OR al.details LIKE ?)';
+    const term = `%${search}%`;
+    params.push(term, term, term, term);
+  }
+
+  // LEFT JOIN em users porque o autor é gravado só como user_id na maioria dos eventos;
+  // o user_email da própria linha é o fallback para quando o autor já não existe mais.
+  const FROM = 'FROM audit_log al LEFT JOIN users u ON u.id = al.user_id';
 
   try {
     const [countRows] = await pool.execute<any[]>(
-      `SELECT COUNT(*) as total FROM audit_log ${where}`,
+      `SELECT COUNT(*) as total ${FROM} ${where}`,
       params
     );
     const total = (countRows[0] as any).total;
 
     const [rows] = await pool.execute<any[]>(
-      `SELECT * FROM audit_log ${where} ORDER BY created_at DESC LIMIT ${limitNum} OFFSET ${offset}`,
+      `SELECT al.*, u.name AS user_name, COALESCE(al.user_email, u.email) AS user_email
+       ${FROM} ${where} ORDER BY al.created_at DESC LIMIT ${limitNum} OFFSET ${offset}`,
       params
     );
 

@@ -421,3 +421,20 @@ export interface RecycleBinItem {
   originalData: Student | Instructor | ClassTemplate;
   deletedAt: string;
 }
+
+// ── Audit Log ─────────────────────────────────────────────────────────────
+
+export interface AuditLogEntry {
+  id: string;
+  academyId: string | null;
+  userId: string | null;
+  /** Nome do autor via JOIN em users — ausente se a conta já foi excluída */
+  userName: string | null;
+  userEmail: string | null;
+  action: string;
+  entityType: string | null;
+  entityId: string | null;
+  details: Record<string, unknown> | null;
+  ipAddress: string | null;
+  createdAt: string;
+}

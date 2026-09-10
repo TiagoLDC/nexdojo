@@ -169,11 +169,25 @@ Ao fazer deploy PRD, após `git reset --hard origin/main`, aplicar os patches ab
 # 1. api/.env com PORT=3007, DB_HOST=127.0.0.1, DB_NAME=sisnexdojo_prd, etc.
 # 2. nginx.conf com proxy_pass http://host.docker.internal:3007
 # 3. docker-compose.yml com api: network_mode: "host" e frontend: ports 3005:80 + extra_hosts
+#    + bloco `logging:` em AMBOS os serviços (ver abaixo — não vem junto do git)
 
 # Rodar com:
 # docker compose --project-name nexdojo-prd down
 # docker compose --project-name nexdojo-prd up -d --build
 ```
+
+> [!IMPORTANT]
+> **Rotação de log no PRD.** O `docker-compose.yml` do git tem o bloco abaixo nos dois serviços, mas
+> o deploy PRD **sobrescreve esse arquivo via SFTP** — então a rotação **não vai junto sozinha** e
+> precisa estar no conteúdo enviado. Sem ela o driver `json-file` cresce sem limite até encher o disco:
+>
+> ```yaml
+>     logging:
+>       driver: "json-file"
+>       options:
+>         max-size: "20m"
+>         max-file: "5"
+> ```
 
 ### 5.3 Fluxo Completo de Deploy QAS (quando o usuário pedir "commit, push e deploy")
 
@@ -371,6 +385,7 @@ Fazer alterações de código, corrigir bugs, criar componentes, editar arquivos
 | **Banco MySQL** | `qasnexdojo_qas` | `sisnexdojo_prd` |
 | **Docker project name** | (padrão — não precisa `--project-name`) | `nexdojo-prd` (OBRIGATÓRIO `--project-name nexdojo-prd`) |
 | **docker-compose.yml** | arquivo do git (porta 3003) | **sobrescrito via SFTP** antes do up |
+| **Rotação de log** | vem do git (`max-size: 20m` / `max-file: 5`) | **precisa estar no arquivo enviado via SFTP** (ver 5.2) |
 | **nginx.conf** | arquivo do git (`proxy_pass http://api:3005`) | **sobrescrito via SFTP** (`proxy_pass http://host.docker.internal:3007`) |
 | **FRONTEND_URL** | `https://qas.nexdojo.com.br` | `https://sistema.nexdojo.com.br` |
 | **Impacto de erro** | Afeta apenas ambiente de teste | **Afeta usuários reais — CUIDADO** |
@@ -449,9 +464,21 @@ Acompanhar em `PLANO_MOBILE.md` (raiz do projeto). Marcar checkboxes conforme co
 
 ## 11. Observações Adicionais
 
-```
-<!-- Espaço livre para anotações, gotchas, bugs conhecidos, etc. -->
-```
+### Sistema de logs (implementado em #233 / #234)
+
+Duas camadas distintas, com destinos diferentes:
+
+| Camada | Onde vive | O que registra |
+|---|---|---|
+| **Trilha de auditoria** | tabela `audit_log` (MySQL) | Ações sensíveis de usuário: exclusão/restauração/purge de aluno, instrutor, colaborador e template; criação, edição e exclusão de transação financeira; troca de role/status e reset de senha por admin; login (sucesso, falha com motivo, senha mestra), troca e reset de senha |
+| **Log técnico** | stdout do container (`docker logs`) | Uma linha JSON por requisição (`requestLogger`), exceções com contexto (`errorHandler`) e erros de render do frontend (`POST /api/client-errors`) |
+
+Pontos de atenção:
+
+- **Nunca logar senha nem token de reset.** O `requestLogger` não inclui o body justamente porque `/auth/login` e `/auth/reset-password` o carregam.
+- **`audit_log` cresce sem limite.** O volume é baixo (dezenas de linhas/dia, a maioria de `auth.login_success`), mas se incomodar, limpar apenas os eventos de login antigos — **preservar sempre** os de exclusão e financeiro, que são o único rastro de dados apagados em definitivo.
+- **Tentativa de login em e-mail inexistente grava `academy_id` NULL** (não há academia a que associar) e por isso é invisível em qualquer filtro por academia. Só o superusuário alcança esses registros, via `GET /api/audit-log?academyId=all`.
+- **Exclusão de transação financeira é física, sem lixeira** — o `audit_log` é o único lugar onde o valor excluído sobrevive.
 
 ---
 

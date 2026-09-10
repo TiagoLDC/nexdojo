@@ -31,6 +31,7 @@ const PaymentPage          = React.lazy(() => import('@/pages/PaymentPage'));
 const SystemConfigPage     = React.lazy(() => import('@/pages/SystemConfigPage'));
 const SportsPage           = React.lazy(() => import('@/pages/SportsPage'));
 const AnnouncementsPage    = React.lazy(() => import('@/pages/AnnouncementsPage'));
+const AuditLogPage         = React.lazy(() => import('@/pages/AuditLogPage'));
 const ResetPasswordPage    = React.lazy(() => import('@/pages/ResetPasswordPage'));
 const StaffInvitePage      = React.lazy(() => import('@/pages/StaffInvitePage'));
 const GuardianInvitePage   = React.lazy(() => import('@/pages/GuardianInvitePage'));
@@ -97,6 +98,7 @@ const App: React.FC = () => (
             <Route path="/reports"     element={<ReportsPage />} />
             <Route path="/relatorios/mensalidades" element={<MensalidadesReportPage />} />
             <Route path="/recycle-bin" element={<RecycleBinPage />} />
+            <Route path="/logs"        element={<AuditLogPage />} />
           </Route>
 
           {/* Superuser only */}
