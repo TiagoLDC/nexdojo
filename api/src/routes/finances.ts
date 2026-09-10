@@ -5,6 +5,7 @@ import { requireRole } from '../middleware/requireRole';
 import { getAcademyId } from '../utils/academyScope';
 import { validate } from '../utils/validate';
 import { isGuardianOfStudent } from '../utils/guardianAccess';
+import { logAudit } from '../utils/auditLog';
 
 const router = Router();
 
@@ -82,6 +83,14 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'staff'), async 
 
     const [rows] = await pool.execute<any[]>('SELECT * FROM finance_transactions WHERE id = ?', [id]);
     const row = rows[0] as any;
+
+    await logAudit(req, {
+      action: 'finance.create',
+      entityType: 'finance_transaction',
+      entityId: id,
+      details: { description: row.description, amount: Number(row.amount), type: row.type, status: row.status },
+    });
+
     res.status(201).json({ ...row, amount: Number(row.amount) });
   } catch (err) {
     next(err);
@@ -108,10 +117,11 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser', 'staff'), asyn
 
   try {
     const [existing] = await pool.execute<any[]>(
-      'SELECT id FROM finance_transactions WHERE id = ? AND academy_id = ?',
+      'SELECT * FROM finance_transactions WHERE id = ? AND academy_id = ?',
       [req.params.id, academyId]
     );
     if (!existing[0]) { res.status(404).json({ error: 'Transação não encontrada' }); return; }
+    const before = existing[0] as any;
 
     const set    = fields.map(f => `${f} = ?`).join(', ');
     const values = fields.map(f => req.body[f] ?? null);
@@ -123,6 +133,20 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser', 'staff'), asyn
 
     const [rows] = await pool.execute<any[]>('SELECT * FROM finance_transactions WHERE id = ?', [req.params.id]);
     const row = rows[0] as any;
+
+    const changes: Record<string, { from: unknown; to: unknown }> = {};
+    for (const f of fields) {
+      if (String(before[f] ?? '') !== String(row[f] ?? '')) changes[f] = { from: before[f], to: row[f] };
+    }
+    if (Object.keys(changes).length) {
+      await logAudit(req, {
+        action: 'finance.update',
+        entityType: 'finance_transaction',
+        entityId: req.params.id,
+        details: { changes },
+      });
+    }
+
     res.json({ ...row, amount: Number(row.amount) });
   } catch (err) {
     next(err);
@@ -136,12 +160,22 @@ router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), async (req
 
   try {
     const [rows] = await pool.execute<any[]>(
-      'SELECT id FROM finance_transactions WHERE id = ? AND academy_id = ?',
+      'SELECT * FROM finance_transactions WHERE id = ? AND academy_id = ?',
       [req.params.id, academyId]
     );
     if (!rows[0]) { res.status(404).json({ error: 'Transação não encontrada' }); return; }
+    const row = rows[0] as any;
 
     await pool.execute('DELETE FROM finance_transactions WHERE id = ?', [req.params.id]);
+
+    // Exclusão é permanente e sem lixeira — o audit_log é o único rastro que sobra desse valor.
+    await logAudit(req, {
+      action: 'finance.delete',
+      entityType: 'finance_transaction',
+      entityId: req.params.id,
+      details: { description: row.description, amount: Number(row.amount), type: row.type, status: row.status, date: row.date },
+    });
+
     res.json({ message: 'Transação removida' });
   } catch (err) {
     next(err);

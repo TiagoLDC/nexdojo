@@ -7,6 +7,7 @@ import { getAcademyId } from '../utils/academyScope';
 import { validate } from '../utils/validate';
 import { autoLinkEntityToUser } from '../utils/linkEntityUser';
 import { resolveBeltRank } from '../utils/beltRanks';
+import { logAudit } from '../utils/auditLog';
 
 const router = Router();
 
@@ -452,6 +453,13 @@ router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), async (req
         [rows[0].user_id, academyId]
       );
     }
+
+    await logAudit(req, {
+      action: 'instructor.delete',
+      entityType: 'instructor',
+      entityId: req.params.id,
+      details: { name: rows[0].name, email: rows[0].email },
+    });
 
     res.json({ message: 'Instrutor movido para a lixeira' });
   } catch (err) {

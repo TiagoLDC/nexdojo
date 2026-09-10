@@ -11,6 +11,7 @@ import { autoLinkEntityToUser } from '../utils/linkEntityUser';
 import { isGuardianOfStudent, getGuardianStudentIds } from '../utils/guardianAccess';
 import { getTodayBrasilia } from '../utils/date';
 import { resolveBeltRank } from '../utils/beltRanks';
+import { logAudit } from '../utils/auditLog';
 
 const router = Router();
 
@@ -707,6 +708,13 @@ router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), async (req
         [rows[0].user_id, academyId]
       );
     }
+
+    await logAudit(req, {
+      action: 'student.delete',
+      entityType: 'student',
+      entityId: req.params.id,
+      details: { name: rows[0].name, email: rows[0].email },
+    });
 
     res.json({ message: 'Aluno movido para a lixeira' });
   } catch (err) {

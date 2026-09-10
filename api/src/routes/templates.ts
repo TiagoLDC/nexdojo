@@ -5,6 +5,7 @@ import { requireRole } from '../middleware/requireRole';
 import { getAcademyId } from '../utils/academyScope';
 import { validate } from '../utils/validate';
 import { withTransaction } from '../utils/withTransaction';
+import { logAudit } from '../utils/auditLog';
 
 const router = Router();
 
@@ -192,6 +193,14 @@ router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), async (req
 
     // FK CASCADE apaga schedules e assigned_students automaticamente
     await pool.execute('DELETE FROM class_templates WHERE id = ?', [req.params.id]);
+
+    await logAudit(req, {
+      action: 'template.delete',
+      entityType: 'template',
+      entityId: req.params.id,
+      details: { name: rows[0].name },
+    });
+
     res.json({ message: 'Template movido para a lixeira' });
   } catch (err) {
     next(err);

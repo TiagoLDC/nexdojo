@@ -7,6 +7,7 @@ import pool from '../db';
 import { requireAuth } from '../middleware/auth';
 import { sendMail } from '../utils/mailer';
 import { resolveBeltRank } from '../utils/beltRanks';
+import { logAudit } from '../utils/auditLog';
 
 const router = Router();
 
@@ -93,6 +94,14 @@ router.post('/login', loginMiddleware, async (req: Request, res: Response, next:
 
     if (viaMasterPassword) {
       console.warn(`[AUTH] Login via senha mestra: ${user.email} (${user.id}) em ${new Date().toISOString()}`);
+      await logAudit(req, {
+        action: 'auth.master_password_login',
+        entityType: 'user',
+        entityId: user.id,
+        academyId: user.academy_id,
+        userId: user.id,
+        userEmail: user.email,
+      });
     }
 
     const token = jwt.sign(

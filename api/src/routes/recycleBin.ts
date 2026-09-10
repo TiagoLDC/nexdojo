@@ -3,6 +3,7 @@ import pool from '../db';
 import { requireAuth } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
 import { getAcademyId } from '../utils/academyScope';
+import { logAudit } from '../utils/auditLog';
 
 const router = Router();
 
@@ -236,6 +237,14 @@ router.post('/:id/restore', requireAuth, requireRole('admin', 'superuser'), asyn
     }
 
     await pool.execute('DELETE FROM recycle_bin WHERE id = ?', [req.params.id]);
+
+    await logAudit(req, {
+      action: `${item.type}.restore`,
+      entityType: item.type,
+      entityId: data.id,
+      details: { name: data.name },
+    });
+
     res.json({ message: 'Item restaurado com sucesso' });
   } catch (err) {
     next(err);
@@ -249,12 +258,23 @@ router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), async (req
 
   try {
     const [rows] = await pool.execute<any[]>(
-      'SELECT id FROM recycle_bin WHERE id = ? AND academy_id = ?',
+      'SELECT * FROM recycle_bin WHERE id = ? AND academy_id = ?',
       [req.params.id, academyId]
     );
     if (!rows[0]) { res.status(404).json({ error: 'Item não encontrado na lixeira' }); return; }
 
+    const item = rows[0] as any;
+    const data = JSON.parse(item.original_data);
+
     await pool.execute('DELETE FROM recycle_bin WHERE id = ?', [req.params.id]);
+
+    await logAudit(req, {
+      action: `${item.type}.purge`,
+      entityType: item.type,
+      entityId: data.id,
+      details: { name: data.name },
+    });
+
     res.json({ message: 'Item excluído permanentemente' });
   } catch (err) {
     next(err);

@@ -5,6 +5,7 @@ import { requireAuth } from '../middleware/auth';
 import { requireRole } from '../middleware/requireRole';
 import { getAcademyId } from '../utils/academyScope';
 import { autoLinkUserToEntities } from '../utils/linkEntityUser';
+import { logAudit } from '../utils/auditLog';
 
 const router = Router();
 
@@ -133,7 +134,7 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
 
   try {
     const [existing] = await pool.execute<any[]>(
-      'SELECT id, role, email FROM users WHERE id = ? AND academy_id = ?',
+      'SELECT id, role, email, status FROM users WHERE id = ? AND academy_id = ?',
       [req.params.id, academyId]
     );
     if (!existing[0]) {
@@ -196,6 +197,31 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
       `UPDATE users SET ${updates.join(', ')} WHERE id = ? AND academy_id = ?`,
       [...values, req.params.id, academyId]
     );
+
+    if (req.body.role && req.body.role !== existing[0].role) {
+      await logAudit(req, {
+        action: 'user.role_change',
+        entityType: 'user',
+        entityId: req.params.id,
+        details: { email: existing[0].email, from: existing[0].role, to: req.body.role },
+      });
+    }
+    if (req.body.status && req.body.status !== existing[0].status) {
+      await logAudit(req, {
+        action: 'user.status_change',
+        entityType: 'user',
+        entityId: req.params.id,
+        details: { email: existing[0].email, from: existing[0].status, to: req.body.status },
+      });
+    }
+    if (req.body.password) {
+      await logAudit(req, {
+        action: 'user.password_reset_by_admin',
+        entityType: 'user',
+        entityId: req.params.id,
+        details: { email: existing[0].email },
+      });
+    }
 
     // Bloquear/desbloquear o acesso do usuário reflete no status da entidade vinculada
     // (aluno, instrutor ou staff), para a listagem não mostrar "Ativo" com acesso bloqueado.

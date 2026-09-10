@@ -18,6 +18,7 @@ import systemConfigRouter from './systemConfig';
 import kimonoLoansRouter from './kimonoLoans';
 import sportsRouter from './sports';
 import announcementsRouter from './announcements';
+import auditLogRouter from './auditLog';
 
 const router = Router();
 
@@ -44,5 +45,6 @@ router.use('/system-config', systemConfigRouter);
 router.use('/kimono-loans', kimonoLoansRouter);
 router.use('/sports', sportsRouter);
 router.use('/announcements', announcementsRouter);
+router.use('/audit-log', auditLogRouter);
 
 export default router;

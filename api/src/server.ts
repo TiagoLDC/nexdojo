@@ -108,6 +108,27 @@ async function applySchemaPatches() {
       UNIQUE KEY uniq_announcement_user (announcement_id, user_id)
     )
   `);
+
+  // Trilha de auditoria de ações sensíveis (exclusões, lixeira, financeiro, troca de role/status,
+  // login via senha mestra). Sem FK de propósito: o registro precisa sobreviver mesmo depois que
+  // a entidade original for excluída em definitivo (purge da lixeira) ou o usuário autor for removido.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id VARCHAR(36) PRIMARY KEY,
+      academy_id VARCHAR(36) NULL,
+      user_id VARCHAR(36) NULL,
+      user_email VARCHAR(255) NULL,
+      action VARCHAR(100) NOT NULL,
+      entity_type VARCHAR(50) NULL,
+      entity_id VARCHAR(36) NULL,
+      details LONGTEXT NULL COMMENT 'JSON com contexto adicional (snapshot do dado, diff de campos, etc.)',
+      ip_address VARCHAR(45) NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_audit_academy (academy_id),
+      INDEX idx_audit_entity (entity_type, entity_id),
+      INDEX idx_audit_created (created_at)
+    )
+  `);
 }
 
 async function start() {
