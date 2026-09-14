@@ -544,6 +544,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                 : null;
 
               const hasAgeWarning = !!(record as any).ageWarning;
+              const isJustified = !!(record as any).justified;
               return (
                 <div key={record.id} className="bg-white dark:bg-slate-900 flex items-center justify-between p-4 rounded-[24px] border border-slate-100 dark:border-slate-800">
                   <div className="flex items-center gap-3">
@@ -565,6 +566,11 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                         {hasAgeWarning && (
                           <span title="Divergência de idade com o plano — presença confirmada manualmente" className="flex items-center">
                             <AlertCircle size={13} className="text-amber-500" />
+                          </span>
+                        )}
+                        {isJustified && (
+                          <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-px rounded-full bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400">
+                            Justificada
                           </span>
                         )}
                       </div>
@@ -802,6 +808,7 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                   const checkInTime = (record as any).checkInTime
                     ? String((record as any).checkInTime).substring(0, 5)
                     : null;
+                  const isJustified = !!(record as any).justified;
 
                   return (
                     <div key={record.id} className="bg-slate-50 dark:bg-slate-800 flex items-center justify-between p-4 rounded-[20px]">
@@ -814,7 +821,14 @@ const AttendanceView: React.FC<{ academy: Academy; user: User }> = ({ academy, u
                           )}
                         </div>
                         <div>
-                          <p className="font-bold text-sm text-slate-800 dark:text-white leading-tight">{name}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-bold text-sm text-slate-800 dark:text-white leading-tight">{name}</p>
+                            {isJustified && (
+                              <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-px rounded-full bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400">
+                                Justificada
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[10px] text-slate-400 font-bold mt-0.5">{dateStr}{checkInTime ? ` às ${checkInTime}` : ''}</p>
                         </div>
                       </div>

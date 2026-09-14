@@ -94,6 +94,31 @@ export interface PendingAnnouncement {
   createdByName?: string;
 }
 
+// ── Justificativa de falta ──────────────────────────────────────────────────
+
+export type AbsenceJustificationStatus = 'Pending' | 'Approved' | 'Rejected';
+
+export interface AbsenceJustification {
+  id: string;
+  academyId: string;
+  studentId: string;
+  /** Dia da falta — 'YYYY-MM-DD' */
+  date: string;
+  reason: string;
+  status: AbsenceJustificationStatus;
+  reviewNote?: string | null;
+  reviewedAt?: string | null;
+  reviewedByName?: string | null;
+  /** Presença gerada quando a justificativa é aceita (null nas pendentes e recusadas) */
+  attendanceRecordId?: string | null;
+  createdAt: string;
+  createdByName?: string | null;
+  // Vindos do JOIN com students, para a fila de análise do professor
+  studentName?: string;
+  belt?: Belt;
+  stripes?: number;
+}
+
 // ── Documents & Graduation ────────────────────────────────────────────────
 
 export interface StudentDocument {
@@ -269,6 +294,8 @@ export interface AttendanceRecord {
   matchedPlanId?: string;
   matchedScheduleId?: string;
   ageWarning?: boolean;
+  /** Presença concedida por justificativa de falta aceita (não houve check-in) */
+  justified?: boolean;
 }
 
 // ── Chat ──────────────────────────────────────────────────────────────────

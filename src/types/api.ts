@@ -56,6 +56,23 @@ export interface CreateAnnouncementDTO {
   beltRankIds?: string[];
 }
 
+// ── Absence Justification DTOs ────────────────────────────────────────────
+
+export interface CreateAbsenceJustificationDTO {
+  /** Dia da falta — 'YYYY-MM-DD' */
+  date: string;
+  reason: string;
+  /** Só quando o responsável justifica pelo dependente; omitido, a API usa a ficha da conta logada */
+  studentId?: string;
+}
+
+export interface GetAbsenceJustificationsParams extends PaginationParams {
+  status?: 'Pending' | 'Approved' | 'Rejected';
+  studentId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
 // ── Student DTOs ──────────────────────────────────────────────────────────
 
 export interface GetStudentsParams extends SearchParams {

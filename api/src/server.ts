@@ -54,6 +54,7 @@ async function applySchemaPatches() {
     `ALTER TABLE students ADD UNIQUE KEY uniq_academy_email (academy_id, email)`,
     `ALTER TABLE instructors ADD UNIQUE KEY uniq_academy_email (academy_id, email)`,
     `ALTER TABLE staff ADD UNIQUE KEY uniq_academy_email (academy_id, email)`,
+    `ALTER TABLE attendance_records ADD COLUMN justified TINYINT(1) DEFAULT 0 COMMENT 'Presenca concedida por justificativa de falta aceita'`,
   ];
   for (const sql of patches) {
     try {
@@ -110,6 +111,30 @@ async function applySchemaPatches() {
       FOREIGN KEY (announcement_id) REFERENCES announcements(id) ON DELETE CASCADE,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
       UNIQUE KEY uniq_announcement_user (announcement_id, user_id)
+    )
+  `);
+
+  // Justificativa de falta enviada pelo aluno (ou pelo responsável do dependente) e analisada
+  // pelo professor/admin. Aceita, gera a presença daquele dia em attendance_records — o id fica
+  // em attendance_record_id para que uma reversão da aprovação desfaça também os contadores.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS absence_justifications (
+      id VARCHAR(36) PRIMARY KEY,
+      academy_id VARCHAR(36) NOT NULL,
+      student_id VARCHAR(36) NOT NULL,
+      date DATE NOT NULL,
+      reason TEXT NOT NULL,
+      status ENUM('Pending','Approved','Rejected') NOT NULL DEFAULT 'Pending',
+      review_note VARCHAR(500) NULL,
+      created_by VARCHAR(36) NOT NULL COMMENT 'Usuário que enviou — o próprio aluno ou o responsável',
+      reviewed_by VARCHAR(36) NULL,
+      reviewed_at TIMESTAMP NULL,
+      attendance_record_id VARCHAR(36) NULL COMMENT 'Presença criada ao aceitar a justificativa',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE,
+      FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+      UNIQUE KEY uniq_student_date (student_id, date),
+      INDEX idx_absence_just_academy_status (academy_id, status)
     )
   `);
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   ScrollText, LogIn, Trash2, DollarSign, KeyRound, Layers,
-  Search, Globe, ShieldAlert, ChevronLeft, ChevronRight, X,
+  Search, Globe, ShieldAlert, ChevronLeft, ChevronRight, X, FileText,
 } from 'lucide-react';
 import type { Academy, User, AuditLogEntry } from '../src/types';
 import { auditLogService } from '@/features/auditLog/services/auditLogService';
@@ -44,6 +44,12 @@ const CATEGORIES: Category[] = [
     actions: ['finance.create', 'finance.update', 'finance.delete'],
   },
   {
+    id: 'justifications',
+    label: 'Justificativas de falta',
+    icon: FileText,
+    actions: ['absence_justification.approve', 'absence_justification.reject'],
+  },
+  {
     id: 'users',
     label: 'Usuários e permissões',
     icon: KeyRound,
@@ -74,6 +80,8 @@ const ACTION_LABELS: Record<string, string> = {
   'finance.create': 'Lançamento criado',
   'finance.update': 'Lançamento editado',
   'finance.delete': 'Lançamento excluído',
+  'absence_justification.approve': 'Justificativa de falta aceita',
+  'absence_justification.reject': 'Justificativa de falta recusada',
   'user.role_change': 'Função alterada',
   'user.status_change': 'Status de acesso alterado',
   'user.password_reset_by_admin': 'Senha redefinida pelo admin',
@@ -136,6 +144,14 @@ const describeDetails = (entry: AuditLogEntry): string => {
   if (entry.action.startsWith('finance.')) {
     const parts = [d.description, d.amount !== undefined ? formatMoney(Number(d.amount)) : null].filter(Boolean);
     return parts.length ? parts.join(' · ') : '—';
+  }
+  if (entry.action.startsWith('absence_justification.')) {
+    const day = typeof d.date === 'string' ? d.date.split('-').reverse().join('/') : '—';
+    const base = `Falta de ${day}`;
+    const extra = entry.action === 'absence_justification.approve'
+      ? (d.attendanceGranted ? ' · presença concedida' : ' · presença já existia no dia')
+      : (d.previousStatus === 'Approved' ? ' · presença concedida foi revertida' : '');
+    return `${base}${extra}${d.note ? ` · "${d.note}"` : ''}`;
   }
   if (entry.action === 'user.role_change' || entry.action === 'user.status_change') {
     return `${d.email ?? ''} — de "${d.from}" para "${d.to}"`.trim();
@@ -290,7 +306,7 @@ const AuditLogView: React.FC<{ academy: Academy; user: User }> = ({ academy, use
       </header>
 
       {/* Seletor de qual log ver */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 md:gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 md:gap-3">
         {CATEGORIES.map(cat => {
           const Icon = cat.icon;
           const active = cat.id === categoryId;

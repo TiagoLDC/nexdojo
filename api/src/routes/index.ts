@@ -18,6 +18,7 @@ import systemConfigRouter from './systemConfig';
 import kimonoLoansRouter from './kimonoLoans';
 import sportsRouter from './sports';
 import announcementsRouter from './announcements';
+import absenceJustificationsRouter from './absenceJustifications';
 import auditLogRouter from './auditLog';
 import clientErrorsRouter from './clientErrors';
 
@@ -46,6 +47,7 @@ router.use('/system-config', systemConfigRouter);
 router.use('/kimono-loans', kimonoLoansRouter);
 router.use('/sports', sportsRouter);
 router.use('/announcements', announcementsRouter);
+router.use('/absence-justifications', absenceJustificationsRouter);
 router.use('/audit-log', auditLogRouter);
 router.use('/client-errors', clientErrorsRouter);
 

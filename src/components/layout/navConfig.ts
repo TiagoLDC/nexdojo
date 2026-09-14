@@ -30,6 +30,7 @@ export const MANAGEMENT_NAV: NavItem[] = [
   { to: '/pay', labelKey: 'pay', icon: 'CreditCard', roles: ['student', 'guardian'] },
   { to: '/profile', labelKey: 'profile', icon: 'UserCircle', roles: ['student', 'guardian'] },
   { to: '/instructor-profile', labelKey: 'myData', icon: 'UserCircle', roles: ['instructor', 'staff'] },
+  { to: '/justifications', labelKey: 'absenceJustifications', icon: 'FileText', roles: ['superuser', 'admin', 'instructor', 'staff', 'student', 'guardian'] },
   { to: '/announcements', labelKey: 'announcements', icon: 'Megaphone', roles: ['superuser', 'admin'] },
   { to: '/reports', labelKey: 'reports', icon: 'BarChart3', roles: ['superuser', 'admin'] },
   { to: '/recycle-bin', labelKey: 'recycleBin', icon: 'Trash2', roles: ['superuser', 'admin'] },

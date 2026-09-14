@@ -32,6 +32,7 @@ const SystemConfigPage     = React.lazy(() => import('@/pages/SystemConfigPage')
 const SportsPage           = React.lazy(() => import('@/pages/SportsPage'));
 const AnnouncementsPage    = React.lazy(() => import('@/pages/AnnouncementsPage'));
 const AuditLogPage         = React.lazy(() => import('@/pages/AuditLogPage'));
+const AbsenceJustificationsPage = React.lazy(() => import('@/pages/AbsenceJustificationsPage'));
 const ResetPasswordPage    = React.lazy(() => import('@/pages/ResetPasswordPage'));
 const StaffInvitePage      = React.lazy(() => import('@/pages/StaffInvitePage'));
 const GuardianInvitePage   = React.lazy(() => import('@/pages/GuardianInvitePage'));
@@ -74,6 +75,11 @@ const App: React.FC = () => (
           <Route path="/chat"       element={<ChatPage />} />
           <Route path="/inventory"  element={<InventoryPage />} />
           <Route path="/settings"   element={<SettingsPage />} />
+
+          {/* Justificativa de falta: aluno/responsável envia, professor/admin analisa */}
+          <Route element={<RoleGuard roles={['superuser', 'admin', 'instructor', 'staff', 'student', 'guardian']} />}>
+            <Route path="/justifications" element={<AbsenceJustificationsPage />} />
+          </Route>
 
           {/* Admin + Instructor + Staff */}
           <Route element={<RoleGuard roles={['superuser', 'admin', 'instructor', 'staff']} />}>
