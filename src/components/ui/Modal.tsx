@@ -41,9 +41,14 @@ export const Modal: React.FC<ModalProps> = ({
 
   if (!open) return null;
 
+  // z-[200]: o MobileDock (z-[90]) e o MobileMenu (z-[100]) são `fixed` e ficavam POR CIMA do modal
+  // enquanto ele estava em z-50 — em mobile isso escondia o footer, porque o botão de ação do modal
+  // cai justamente na faixa do dock, que passava a receber o toque no lugar dele. 200 é o mesmo
+  // patamar dos overlays de modal das views; o ConfirmDialog (z-[500]) continua acima.
+  // pb com safe-area: evita que o footer fique sob o home indicator / barra do Safari no iPhone.
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
       role="dialog"
       aria-modal="true"
     >
@@ -58,7 +63,7 @@ export const Modal: React.FC<ModalProps> = ({
       <div
         className={[
           'relative w-full rounded-2xl bg-white dark:bg-slate-800 shadow-xl',
-          'flex flex-col max-h-[90vh]',
+          'flex flex-col max-h-[90dvh]',
           'animate-in zoom-in',
           sizeClasses[size],
         ].join(' ')}

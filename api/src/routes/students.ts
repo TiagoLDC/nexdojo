@@ -670,7 +670,11 @@ router.delete('/:id/guardians/:guardianUserId', requireAuth, requireRole('admin'
 });
 
 // DELETE /api/students/:id — move para lixeira
-router.delete('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+// 'staff' incluído porque o colaborador é o perfil que opera a tela de Alunos no dia a dia
+// (é a única tela de pessoas no menu dele) e o botão "Excluir" da ficha sempre apareceu pra ele,
+// só falhando com 403 no backend. A ação é reversível: o aluno vai pra lixeira, que continua
+// restrita a admin/superuser — quem exclui por engano depende de um admin pra restaurar.
+router.delete('/:id', requireAuth, requireRole('admin', 'superuser', 'staff'), async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
 
