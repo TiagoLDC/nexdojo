@@ -7,7 +7,7 @@ import { requireRole } from '../middleware/requireRole';
 import { getAcademyId } from '../utils/academyScope';
 import { validate } from '../utils/validate';
 import { withTransaction } from '../utils/withTransaction';
-import { autoLinkEntityToUser } from '../utils/linkEntityUser';
+import { autoLinkEntityToUser, blockEntityUserIfExclusive } from '../utils/linkEntityUser';
 import { isGuardianOfStudent, getGuardianStudentIds } from '../utils/guardianAccess';
 import { getTodayBrasilia } from '../utils/date';
 import { resolveBeltRank } from '../utils/beltRanks';
@@ -705,19 +705,17 @@ router.delete('/:id', requireAuth, requireRole('admin', 'superuser', 'staff'), a
 
     // Sem isso, a conta de login vinculada continua ativa após a ficha ir pra lixeira,
     // gerando um cadastro "órfão" (login funciona, mas nenhuma tela acha o perfil de aluno).
-    // A restauração em POST /api/recycle-bin/:id/restore reverte isso.
-    if (rows[0].user_id) {
-      await pool.execute(
-        `UPDATE users SET status = 'Blocked' WHERE id = ? AND academy_id = ?`,
-        [rows[0].user_id, academyId]
-      );
-    }
+    // A restauração em POST /api/recycle-bin/:id/restore reverte isso. Só bloqueia conta
+    // exclusiva desta ficha — ver blockEntityUserIfExclusive.
+    const accountBlocked = rows[0].user_id
+      ? await blockEntityUserIfExclusive('students', rows[0].user_id, academyId)
+      : false;
 
     await logAudit(req, {
       action: 'student.delete',
       entityType: 'student',
       entityId: req.params.id,
-      details: { name: rows[0].name, email: rows[0].email },
+      details: { name: rows[0].name, email: rows[0].email, accountBlocked },
     });
 
     res.json({ message: 'Aluno movido para a lixeira' });
