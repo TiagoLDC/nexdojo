@@ -73,14 +73,38 @@ const RecycleBinView: React.FC<{ academy: Academy; user: User }> = ({ academy })
   };
 
   const restoreMany = async (itemsToRestore: RecycleBinItem[]) => {
-    try {
-      await Promise.all(itemsToRestore.map(item => recycleBinService.restore(item.id)));
-      setItems(prev => prev.filter(i => !itemsToRestore.find(r => r.id === i.id)));
-      setSelectedIds(new Set());
-      showNotification(`${itemsToRestore.length} item(s) restaurado(s)!`);
-    } catch {
-      showNotification('Erro ao restaurar item(s).', 'delete');
+    // allSettled (e não all): com Promise.all, uma falha em qualquer item deixava os que
+    // deram certo ainda listados na lixeira até o próximo reload, e a mensagem do backend
+    // (ex: e-mail já em uso por outro cadastro) era trocada pelo genérico "Erro ao restaurar".
+    const results = await Promise.allSettled(
+      itemsToRestore.map(item => recycleBinService.restore(item.id))
+    );
+
+    const restoredIds = itemsToRestore
+      .filter((_, idx) => results[idx].status === 'fulfilled')
+      .map(item => item.id);
+    const firstFailure = results.find(r => r.status === 'rejected') as PromiseRejectedResult | undefined;
+
+    if (restoredIds.length) {
+      setItems(prev => prev.filter(i => !restoredIds.includes(i.id)));
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        restoredIds.forEach(id => next.delete(id));
+        return next;
+      });
     }
+
+    if (!firstFailure) {
+      setSelectedIds(new Set());
+      showNotification(`${restoredIds.length} item(s) restaurado(s)!`);
+      return;
+    }
+
+    const reason: any = firstFailure.reason;
+    showNotification(
+      reason?.response?.data?.error || 'Erro ao restaurar item(s).',
+      'delete'
+    );
   };
 
   const deleteMany = async (idsToDelete: string[]) => {
