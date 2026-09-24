@@ -622,13 +622,17 @@ const UsersView: React.FC<{ academy: Academy; user: User }> = ({ user: currentUs
                   value={editingUser.role ?? 'admin'}
                   onChange={e => setEditingUser({ ...editingUser, role: e.target.value as any })}
                   className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
-                  disabled={!isNew && ['superuser', 'guardian'].includes(editingUser.role ?? '')}
+                  disabled={!isNew && editingUser.role === 'superuser'}
                 >
                   <option value="admin">Admin</option>
                   <option value="instructor">Instrutor</option>
                   <option value="staff">Staff</option>
                   {!isNew && <option value="student">Aluno</option>}
-                  {!isNew && editingUser.role === 'guardian' && <option value="guardian">Responsável</option>}
+                  {/* "Responsável" aparecia só para quem já era, e o campo inteiro ficava
+                      travado nesse caso — então quem foi importado como colaborador/aluno por
+                      engano não tinha como virar responsável, nem o contrário. Superusuário
+                      segue intocável. */}
+                  {!isNew && <option value="guardian">Responsável</option>}
                 </select>
               </div>
 

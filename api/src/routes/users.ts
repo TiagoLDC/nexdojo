@@ -9,7 +9,11 @@ import { logAudit } from '../utils/auditLog';
 
 const router = Router();
 
-const ROLE_VALUES = ['admin', 'instructor', 'staff', 'student'];
+// 'guardian' entra só aqui (edição), não na criação: conta de responsável nasce do convite,
+// mas precisava de caminho de volta. Sem isso, uma conta que virou staff/aluno por engano na
+// migração ficava presa nesse papel — o PUT descartava role: 'guardian' em silêncio e a única
+// saída era UPDATE manual no banco. Caso real no PRD: responsáveis importados como colaboradores.
+const ROLE_VALUES = ['admin', 'instructor', 'staff', 'student', 'guardian'];
 const STATUS_VALUES = ['Active', 'Pending', 'Blocked'];
 
 const USER_SELECT = `
