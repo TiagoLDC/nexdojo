@@ -1,16 +1,11 @@
 import axios from 'axios';
 import { useAuthStore } from '@/stores/authStore';
+import { getApiToken, notifyUnauthorized, setApiToken, setUnauthorizedHandler } from '@/lib/apiToken';
 
-let _token: string | null = null;
-let _onUnauthorized: (() => void) | null = null;
-
-export const setApiToken = (token: string | null) => {
-  _token = token;
-};
-
-export const setUnauthorizedHandler = (handler: () => void) => {
-  _onUnauthorized = handler;
-};
+// Reexportados por compatibilidade com quem já importava daqui (ex: GuardianInvitePage).
+// A fonte é `@/lib/apiToken`, que não importa nada e por isso não entra em ciclo com o
+// authStore — ver o comentário naquele arquivo.
+export { setApiToken, setUnauthorizedHandler };
 
 function snakeToCamel(str: string): string {
   return str.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
@@ -42,14 +37,19 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  if (_token) {
-    config.headers.Authorization = `Bearer ${_token}`;
+  const { user, academy, token } = useAuthStore.getState();
+
+  // O token vem do módulo `apiToken` (setado no login e na hidratação do persist). O fallback
+  // para o store é uma segunda rede: aqui já estamos em runtime, com todos os módulos
+  // inicializados, então mesmo que a hidratação não tenha conseguido setar o token o header sai.
+  const authToken = getApiToken() ?? token;
+  if (authToken) {
+    config.headers.Authorization = `Bearer ${authToken}`;
   }
 
   // Superuser não tem academia fixa no token — rotas exigem academyId explícito na query/body.
   // Se a própria chamada não informou nenhum (ex: update/delete que só recebem o id), injeta
   // automaticamente a academia atualmente selecionada, evitando 400 "academyId é obrigatório".
-  const { user, academy } = useAuthStore.getState();
   if (user?.role === 'superuser' && academy?.id) {
     const hasAcademyIdInParams = !!config.params && (config.params.academyId !== undefined || config.params.academy_id !== undefined);
     const hasAcademyIdInData =
@@ -79,7 +79,7 @@ api.interceptors.response.use(
   },
   (error: unknown) => {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
-      _onUnauthorized?.();
+      notifyUnauthorized();
     }
     return Promise.reject(error);
   },

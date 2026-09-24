@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { setApiToken, setUnauthorizedHandler } from '@/lib/api';
+// Importa de '@/lib/apiToken' (módulo sem imports), e NÃO de '@/lib/api': api.ts importa este
+// store, então importar de lá de volta cria um ciclo em que a hidratação do persist pode rodar
+// antes de api.ts inicializar — deixando a sessão sem header Authorization. Ver apiToken.ts.
+import { setApiToken, setUnauthorizedHandler } from '@/lib/apiToken';
 import { useProfileStore } from '@/stores/profileStore';
 import type { User, Academy } from '@/types';
 
