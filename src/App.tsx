@@ -8,6 +8,7 @@ import { AppLayoutRoute } from '@/app/AppLayoutRoute';
 const LoginPage            = React.lazy(() => import('@/pages/LoginPage'));
 const DashboardPage        = React.lazy(() => import('@/pages/DashboardPage'));
 const MensalidadesReportPage = React.lazy(() => import('@/pages/MensalidadesReportPage'));
+const InactiveStudentsReportPage = React.lazy(() => import('@/pages/InactiveStudentsReportPage'));
 const StudentsPage         = React.lazy(() => import('@/pages/StudentsPage'));
 const InstructorsPage      = React.lazy(() => import('@/pages/InstructorsPage'));
 const StaffPage            = React.lazy(() => import('@/pages/StaffPage'));
@@ -103,6 +104,7 @@ const App: React.FC = () => (
             <Route path="/announcements" element={<AnnouncementsPage />} />
             <Route path="/reports"     element={<ReportsPage />} />
             <Route path="/relatorios/mensalidades" element={<MensalidadesReportPage />} />
+            <Route path="/relatorios/alunos-inativos" element={<InactiveStudentsReportPage />} />
             <Route path="/recycle-bin" element={<RecycleBinPage />} />
             <Route path="/logs"        element={<AuditLogPage />} />
           </Route>

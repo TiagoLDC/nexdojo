@@ -29,3 +29,5 @@ export { EmptyState } from './EmptyState';
 export { ErrorState } from './ErrorState';
 
 export { DateSelectInput } from './DateSelectInput';
+
+export { WhatsAppIcon } from './WhatsAppIcon';

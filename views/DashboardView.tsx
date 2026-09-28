@@ -57,11 +57,13 @@ import {
   Loader2,
   KeyRound,
   Shirt,
-  Megaphone
+  Megaphone,
+  UserMinus
 } from 'lucide-react';
 import { authService } from '@/features/auth/services/authService';
 import { StorageService } from '../services/storage';
 import { advancePaymentDate } from '@/utils/paymentUtils';
+import { getInactiveStudents, getReturnWhatsappUrl } from '@/utils/inactiveStudents';
 import { getTodayBrasilia } from '@/utils/date';
 import { 
   PieChart, 
@@ -77,7 +79,7 @@ import {
 } from 'recharts';
 import { BeltBadge } from '../components/BeltBadge';
 import { getBeltClassName } from '../constants';
-import { DateSelectInput, ConfirmDialog, Spinner, Modal, Button } from '@/components/ui';
+import { DateSelectInput, ConfirmDialog, Spinner, Modal, Button, WhatsAppIcon } from '@/components/ui';
 import { QRCodeSVG } from 'qrcode.react';
 import { useProfileStore, getActiveProfile } from '@/stores/profileStore';
 
@@ -426,6 +428,20 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     return { overdueCount: overdue.length, dueTodayCount: dueToday.length, dueNext7DaysCount: dueNext7Days.length, topOverdue };
   }, [upcomingPayments]);
 
+  // Alunos inativados (inativos + evadidos) para o card do dashboard: contagens + os 5 que
+  // pararam de treinar mais recentemente, que são os com maior chance de voltar. A lista
+  // completa, com filtros e busca, fica em /relatorios/alunos-inativos.
+  const inactiveSummary = useMemo(() => {
+    if (user.role !== 'admin') return { total: 0, inactiveCount: 0, droppedCount: 0, mostRecent: [] as ReturnType<typeof getInactiveStudents> };
+    const entries = getInactiveStudents(students);
+    return {
+      total: entries.length,
+      inactiveCount: entries.filter(e => e.student.status === 'Inactive').length,
+      droppedCount: entries.filter(e => e.student.status === 'Dropped').length,
+      mostRecent: entries.slice(0, 5),
+    };
+  }, [students, user.role]);
+
   const [markingPaymentId, setMarkingPaymentId] = React.useState<string | null>(null);
 
   const markPaymentAsPaid = async (student: Student) => {
@@ -742,10 +758,11 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
     graduationAlerts.forEach(s => ids.add(s.id));
     closeToGraduationAlerts.forEach(s => ids.add(s.id));
     paymentSummary.topOverdue.forEach(({ student }) => ids.add(student.id));
+    inactiveSummary.mostRecent.forEach(({ student }) => ids.add(student.id));
     recentActivity.forEach(a => { if (a.studentId) ids.add(a.studentId); });
     absenceAlerts.slice(0, 4).forEach(s => ids.add(s.id));
     return Array.from(ids);
-  }, [graduationAlerts, closeToGraduationAlerts, paymentSummary, recentActivity, absenceAlerts]);
+  }, [graduationAlerts, closeToGraduationAlerts, paymentSummary, inactiveSummary, recentActivity, absenceAlerts]);
 
   const studentPhotos = useStudentPhotos(neededStudentPhotoIds);
 
@@ -2002,6 +2019,86 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                             ? <Loader2 size={12} className="animate-spin" />
                             : <CheckCircle2 size={12} />}
                         </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      {/* ALUNOS INATIVADOS — resumo compacto (Admin) */}
+      {user.role === 'admin' && inactiveSummary.total > 0 && (
+        <motion.div variants={itemVariants} className="px-2">
+          <div className="bg-white dark:bg-slate-900 rounded-[28px] border border-slate-100 dark:border-slate-800 p-5 sm:p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4 gap-2">
+              <h2 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2 uppercase italic tracking-tight">
+                <UserMinus size={18} className="text-orange-600" />
+                Alunos Inativados
+              </h2>
+              <Link
+                to="/relatorios/alunos-inativos"
+                className="shrink-0 flex items-center gap-1 text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest hover:underline"
+              >
+                Relatório completo
+                <ChevronRight size={12} />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
+              <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/30 rounded-2xl p-3 text-center">
+                <p className="text-xl sm:text-2xl font-black text-orange-600 dark:text-orange-400 italic leading-none">{inactiveSummary.total}</p>
+                <p className="text-[8px] sm:text-[9px] font-black text-orange-500/80 uppercase tracking-widest mt-1.5 leading-tight">Total</p>
+              </div>
+              <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-2xl p-3 text-center">
+                <p className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 italic leading-none">{inactiveSummary.inactiveCount}</p>
+                <p className="text-[8px] sm:text-[9px] font-black text-amber-500/80 uppercase tracking-widest mt-1.5 leading-tight">Inativos</p>
+              </div>
+              <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-2xl p-3 text-center">
+                <p className="text-xl sm:text-2xl font-black text-red-600 dark:text-red-400 italic leading-none">{inactiveSummary.droppedCount}</p>
+                <p className="text-[8px] sm:text-[9px] font-black text-red-500/80 uppercase tracking-widest mt-1.5 leading-tight">Evadidos</p>
+              </div>
+            </div>
+
+            {inactiveSummary.mostRecent.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">Afastamento Mais Recente</p>
+                {inactiveSummary.mostRecent.map(({ student, daysSinceLastAttendance }) => {
+                  const whatsappUrl = getReturnWhatsappUrl(student, academy?.name ?? '');
+                  return (
+                    <div
+                      key={student.id}
+                      className="flex items-center justify-between p-2.5 rounded-2xl bg-orange-50/60 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/30"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center font-black text-xs overflow-hidden ${getBeltClassName(student.belt, getBeltConfig(student.belt)?.colorKey) || 'bg-slate-200 text-slate-700'}`}>
+                          {studentPhotos[student.id]
+                            ? <img src={studentPhotos[student.id]} className="w-full h-full object-cover" />
+                            : student.name.charAt(0)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-black text-slate-800 dark:text-white text-xs uppercase italic truncate leading-none">{student.name}</p>
+                          <p className="text-[9px] font-bold text-orange-500 uppercase tracking-wider mt-0.5">
+                            {daysSinceLastAttendance === null
+                              ? 'Nunca treinou'
+                              : `Sem treinar há ${daysSinceLastAttendance} dia${daysSinceLastAttendance !== 1 ? 's' : ''}`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="shrink-0 ml-2 flex items-center gap-1.5">
+                        {whatsappUrl && (
+                          <a
+                            href={whatsappUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Chamar de volta pelo WhatsApp"
+                            className="flex items-center justify-center bg-[#25D366] hover:bg-[#128C7E] text-white p-2 rounded-xl transition-all active:scale-95 shadow-lg shadow-green-500/20"
+                          >
+                            <WhatsAppIcon size={12} />
+                          </a>
+                        )}
                       </div>
                     </div>
                   );
