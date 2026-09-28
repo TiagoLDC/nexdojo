@@ -45,18 +45,25 @@ export function getInactiveStudents(students: Student[]): InactiveStudentEntry[]
 /**
  * Mensagem de reengajamento ("O Caminho do Samurai"), definida pela academia. O nome entra nos
  * três pontos em que o texto original trazia o placeholder da academia.
+ *
+ * ATENÇÃO — só usar emoji do BMP (código ≤ U+FFFF) aqui. O texto original trazia 🥋 (U+1F94B),
+ * 🥷 (U+1F977) e 🔥 (U+1F525), todos acima de U+FFFF, e eles chegavam quebrados (um "�" por
+ * metade do par surrogate) no campo de mensagem do WhatsApp Web ao abrir o link do wa.me — o
+ * arquivo, o bundle e o que o servidor entrega estavam corretos em UTF-8, a perda era na
+ * passagem do link. Foram trocados por ⛩️ (U+26E9), ☯️ (U+262F) e ⚡ (U+26A1), que são BMP,
+ * assim como o ⚔️ (U+2694) que já vinha do texto original e nunca quebrou.
  */
 export function buildReturnMessage(academyName: string): string {
   const academia = academyName?.trim() || 'nossa academia';
-  return `🥋⚔️ ${academia} ⚔️🥋
+  return `⛩️⚔️ ${academia} ⚔️⛩️
 
-🥷 O CAMINHO DO SAMURAI – O RETORNO DO GUERREIRO 🥷
+☯️ O CAMINHO DO SAMURAI – O RETORNO DO GUERREIRO ☯️
 
 Guerreiro não é aquele que nunca cai. É aquele que sempre encontra forças para se levantar!
 
 Assim como um samurai, cada praticante de Jiu Jitsu carrega dentro de si a força da disciplina, a honra de suas atitudes e a determinação de nunca desistir.
 
-🔥 É HORA DE VOLTAR AOS TREINOS! 🔥
+⚡ É HORA DE VOLTAR AOS TREINOS! ⚡
 
 O tatame está esperando por você!
 
@@ -66,19 +73,19 @@ Seja você um guerreiro ou uma guerreira, cada treino é uma oportunidade de evo
 
 Não importa se você está começando ou retornando. O importante é dar o primeiro passo, vestir o kimono e continuar sua jornada.
 
-🥋 DISCIPLINA • HONRA • LEALDADE • CARÁTER • FOCO • DETERMINAÇÃO
+⛩️ DISCIPLINA • HONRA • LEALDADE • CARÁTER • FOCO • DETERMINAÇÃO
 
 Na ${academia}, formamos guerreiros e guerreiras preparados para os desafios do tatame e da vida.
 
 O caminho é árduo. A evolução é diária. A honra é para sempre!
 
-🔥 Volte aos treinos. Retome seus objetivos. Reacenda o espírito guerreiro que existe em você!
+⚡ Volte aos treinos. Retome seus objetivos. Reacenda o espírito guerreiro que existe em você!
 
 ${academia}
 
 O caminho do guerreiro começa com um passo.
 
-OSS! 🥋⚔️`;
+OSS! ⛩️⚔️`;
 }
 
 /**
