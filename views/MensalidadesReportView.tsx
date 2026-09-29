@@ -19,6 +19,7 @@ import { useStudentPhotos } from '@/features/students/hooks/useStudentPhotos';
 import { getBeltClassName } from '../constants';
 import { advancePaymentDate } from '@/utils/paymentUtils';
 import { getTodayBrasilia } from '@/utils/date';
+import { buildWhatsappUrl } from '@/utils/whatsapp';
 import { useTranslation } from '../services/LanguageContext';
 import { Spinner, WhatsAppIcon } from '@/components/ui';
 
@@ -103,7 +104,7 @@ const MensalidadesReportView: React.FC<{ academy: Academy; user: User }> = ({ ac
 
     text += `\n\nSe acaso já efetuou o pagamento, desconsidere essa mensagem e por favor envie o comprovante por aqui pelo WhatsApp. Obrigado!`;
 
-    return `https://wa.me/55${contactPhone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
+    return buildWhatsappUrl(contactPhone, text);
   };
 
   const markPaymentAsPaid = async (student: Student) => {
