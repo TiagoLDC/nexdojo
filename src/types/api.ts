@@ -118,7 +118,10 @@ export interface CreateStudentDTO {
   nextPaymentDate?: string;
 }
 
-export type UpdateStudentDTO = Partial<CreateStudentDTO>;
+export type UpdateStudentDTO = Partial<CreateStudentDTO> & {
+  /** Bloqueio de acesso pela academia — só admin/superusuário; ver Student.accessBlocked */
+  accessBlocked?: boolean;
+};
 
 export interface GraduateStudentDTO {
   newBelt: Belt;

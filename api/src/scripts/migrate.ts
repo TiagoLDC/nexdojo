@@ -227,6 +227,7 @@ const DDL_STATEMENTS = [
     last_attendance DATE,
     absent_count INT DEFAULT 0,
     status ENUM('Active','Inactive','Dropped','Pending') DEFAULT 'Active',
+    access_blocked TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Bloqueio deliberado do acesso pela academia — separado de status, que indica evasão e alimenta o relatório de retorno',
     join_date DATE,
     last_graduation_date DATE,
     plan_id VARCHAR(36),

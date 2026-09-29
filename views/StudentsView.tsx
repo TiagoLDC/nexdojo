@@ -420,12 +420,37 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
     // Backend cascateia esse status para students.status (bloqueado -> Inactive, desbloqueado -> Active
     // apenas se estava Inactive por causa do bloqueio; não mexe em Dropped/Pending).
     const newStudentStatus = newStatus === 'Blocked' ? 'Inactive' : (student.status === 'Inactive' ? 'Active' : student.status);
+    // O backend cascateia também o access_blocked (ver PUT /users) — replicado aqui só para o
+    // estado local não ficar defasado até o próximo carregamento da lista.
+    const accessBlocked = newStatus === 'Blocked';
     setAccountActionLoading(student.userId);
     try {
       await usersService.update(student.userId, { status: newStatus });
-      setStudents(prev => prev.map(s => s.id === student.id ? { ...s, userStatus: newStatus, status: newStudentStatus } : s));
-      setEditingStudent(prev => prev?.id === student.id ? { ...prev, userStatus: newStatus, status: newStudentStatus } : prev);
+      setStudents(prev => prev.map(s => s.id === student.id ? { ...s, userStatus: newStatus, status: newStudentStatus, accessBlocked } : s));
+      setEditingStudent(prev => prev?.id === student.id ? { ...prev, userStatus: newStatus, status: newStudentStatus, accessBlocked } : prev);
       showNotification(newStatus === 'Blocked' ? 'Acesso bloqueado' : 'Acesso ativado', 'success');
+    } catch {
+      showNotification('Erro ao alterar acesso', 'error');
+    } finally {
+      setAccountActionLoading(null);
+    }
+  };
+
+  // Aluno sem conta de login não tem nada em `users` para bloquear. O bloqueio grava a marca
+  // `accessBlocked` e inativa a matrícula — é o status que o backend exige ser 'Active' no
+  // lançamento de presença e no check-in por QR Code. Os dois campos andam juntos de propósito:
+  // sem o status, o aluno seguiria treinando; sem a marca, o bloqueio seria indistinguível de
+  // uma evasão e a pessoa cairia no relatório de "chamar de volta".
+  const handleToggleStudentEnrollmentAccess = async (student: Student) => {
+    if (student.userId) return;
+    const wasBlocked = !!student.accessBlocked;
+    const newStatus: Student['status'] = wasBlocked ? 'Active' : 'Inactive';
+    setAccountActionLoading(student.id);
+    try {
+      await studentService.update(student.id, { status: newStatus, accessBlocked: !wasBlocked });
+      setStudents(prev => prev.map(s => s.id === student.id ? { ...s, status: newStatus, accessBlocked: !wasBlocked } : s));
+      setEditingStudent(prev => prev?.id === student.id ? { ...prev, status: newStatus, accessBlocked: !wasBlocked } : prev);
+      showNotification(wasBlocked ? 'Acesso liberado' : 'Acesso bloqueado', 'success');
     } catch {
       showNotification('Erro ao alterar acesso', 'error');
     } finally {
@@ -1350,12 +1375,49 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                             )}
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
-                            <LockKeyhole size={13} className="text-slate-300 dark:text-slate-600 shrink-0" />
-                            <span className="text-xs text-slate-400 font-medium">Sem conta de acesso</span>
-                            {(['admin', 'superuser'] as const).includes(user.role as any) && editingStudent.email && (
-                              <span className="ml-auto text-[10px] text-slate-400 italic">Defina uma senha acima para criar o acesso</span>
-                            )}
+                          <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <LockKeyhole size={13} className="text-slate-300 dark:text-slate-600 shrink-0" />
+                              <span className="text-xs text-slate-400 font-medium">Sem conta de acesso</span>
+                              <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-tight ${
+                                editingStudent.accessBlocked ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                editingStudent.status === 'Active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                editingStudent.status === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                              }`}>
+                                {editingStudent.accessBlocked ? 'Acesso bloqueado'
+                                  : editingStudent.status === 'Active' ? 'Acesso liberado'
+                                  : editingStudent.status === 'Pending' ? 'Cadastro pendente'
+                                  : editingStudent.status === 'Dropped' ? 'Desistente'
+                                  : 'Matrícula inativa'}
+                              </span>
+                              {(['admin', 'superuser'] as const).includes(user.role as any) && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleStudentEnrollmentAccess(editingStudent)}
+                                  disabled={accountActionLoading === editingStudent.id}
+                                  className={`ml-auto text-[10px] font-black uppercase tracking-tight px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors ${
+                                    editingStudent.accessBlocked
+                                      ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400'
+                                      : 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400'
+                                  }`}
+                                >
+                                  {accountActionLoading === editingStudent.id ? (
+                                    <Loader2 size={11} className="animate-spin" />
+                                  ) : editingStudent.accessBlocked ? (
+                                    <><ShieldCheckIcon size={11} /> Liberar acesso</>
+                                  ) : (
+                                    <><ShieldOff size={11} /> Bloquear acesso</>
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-slate-400 italic leading-snug">
+                              {(['admin', 'superuser'] as const).includes(user.role as any) && editingStudent.email
+                                ? 'Defina uma senha acima para criar o acesso de login. '
+                                : ''}
+                              Sem conta de login não há o que bloquear no login — o bloqueio aqui impede o aluno de registrar presença e fazer check-in por QR Code, e inativa a matrícula. Quem é bloqueado fica de fora do relatório de alunos inativados, para não receber a mensagem de retorno.
+                            </p>
                           </div>
                         )}
                       </div>

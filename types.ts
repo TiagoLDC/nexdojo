@@ -84,6 +84,8 @@ export interface Student {
   lastAttendance?: string;
   absentCount: number;
   status: 'Active' | 'Inactive' | 'Dropped' | 'Pending';
+  /** Acesso bloqueado pela academia — ver src/types/entities.ts, Student.accessBlocked */
+  accessBlocked?: boolean;
   joinDate: string;
   absenceLimit?: number;
   customAbsenceLimit?: string;

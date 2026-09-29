@@ -119,7 +119,7 @@ router.post('/qr-checkin', requireAuth, async (req: Request, res: Response, next
     let student: any;
     if (student_id && typeof student_id === 'string') {
       const [studentRows] = await pool.execute<any[]>(
-        `SELECT id, user_id, status, birth_date, plan_id, total_classes, total_hours
+        `SELECT id, user_id, status, access_blocked, birth_date, plan_id, total_classes, total_hours
          FROM students WHERE id = ? AND academy_id = ?`,
         [student_id, academyId]
       );
@@ -135,7 +135,7 @@ router.post('/qr-checkin', requireAuth, async (req: Request, res: Response, next
       }
     } else {
       const [studentRows] = await pool.execute<any[]>(
-        `SELECT id, user_id, status, birth_date, plan_id, total_classes, total_hours
+        `SELECT id, user_id, status, access_blocked, birth_date, plan_id, total_classes, total_hours
          FROM students WHERE user_id = ? AND academy_id = ?`,
         [userId, academyId]
       );
@@ -144,6 +144,10 @@ router.post('/qr-checkin', requireAuth, async (req: Request, res: Response, next
         res.status(404).json({ error: 'Perfil de aluno não encontrado. Entre em contato com a academia.' });
         return;
       }
+    }
+    if (student.access_blocked) {
+      res.status(403).json({ error: 'Acesso bloqueado pela academia. Procure a recepção.' });
+      return;
     }
     if (student.status !== 'Active') {
       res.status(400).json({ error: 'Aluno inativo. Apenas alunos com status Ativo podem marcar presença.' });
@@ -237,7 +241,7 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor', 's
   try {
     // ── 1. Aluno existe e pertence à academia ────────────────────────────────
     const [studentRows] = await pool.execute<any[]>(
-      `SELECT s.id, s.status, s.birth_date, s.plan_id, s.total_classes, s.total_hours
+      `SELECT s.id, s.status, s.access_blocked, s.birth_date, s.plan_id, s.total_classes, s.total_hours
        FROM students s
        WHERE s.id = ? AND s.academy_id = ?`,
       [student_id, academyId]
@@ -245,7 +249,11 @@ router.post('/', requireAuth, requireRole('admin', 'superuser', 'instructor', 's
     const student = studentRows[0];
     if (!student) { res.status(404).json({ error: 'Aluno não encontrado' }); return; }
 
-    // ── 2. Aluno ativo ───────────────────────────────────────────────────────
+    // ── 2. Aluno ativo e sem bloqueio de acesso ──────────────────────────────
+    if (student.access_blocked) {
+      res.status(403).json({ error: 'Acesso bloqueado pela academia. Libere o acesso na ficha do aluno para registrar presença.' });
+      return;
+    }
     if (student.status !== 'Active') {
       res.status(400).json({ error: 'Aluno inativo. Apenas alunos com status Ativo podem marcar presença.' });
       return;

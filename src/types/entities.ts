@@ -182,6 +182,12 @@ export interface Student {
   lastAttendance?: string;
   absentCount: number;
   status: StudentStatus;
+  /**
+   * Acesso bloqueado pela academia — decisão deliberada do admin, distinta de `status`, que
+   * descreve a matrícula (evasão/inatividade) e alimenta o relatório de retorno. Bloquear
+   * também inativa a matrícula, mas só esta marca diz que foi de propósito.
+   */
+  accessBlocked?: boolean;
   joinDate: string;
   absenceLimit?: number;
   customAbsenceLimit?: string;

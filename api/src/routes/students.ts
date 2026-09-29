@@ -36,7 +36,7 @@ const UPDATABLE_FIELDS = [
   'cpf', 'rg', 'weight', 'height', 'blood_type', 'emergency_contact', 'emergency_phone',
   'cep', 'address', 'address_number', 'guardian_name', 'guardian_phone', 'guardian_email',
   'guardian_cpf', 'guardian_rg', 'guardian_relation', 'guardian_profession',
-  'medical_notes', 'status', 'join_date', 'plan_id', 'next_payment_date',
+  'medical_notes', 'status', 'access_blocked', 'join_date', 'plan_id', 'next_payment_date',
   'absence_limit', 'last_graduation_date',
 ];
 
@@ -338,7 +338,7 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
 
   try {
     const [existing] = await pool.execute<any[]>(
-      'SELECT id, user_id, name, email, belt, belt_rank_id, stripes, last_graduation_date FROM students WHERE id = ? AND academy_id = ?',
+      'SELECT id, user_id, name, email, belt, belt_rank_id, stripes, status, access_blocked, last_graduation_date FROM students WHERE id = ? AND academy_id = ?',
       [req.params.id, academyId]
     );
     if (!existing[0]) { res.status(404).json({ error: 'Aluno não encontrado' }); return; }
@@ -379,17 +379,24 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
 
     if (isInstructor) {
       // Instrutor pode editar dados do aluno, mas não campos financeiros/administrativos
-      ['status', 'plan_id', 'join_date', 'next_payment_date', 'absence_limit',
+      ['status', 'access_blocked', 'plan_id', 'join_date', 'next_payment_date', 'absence_limit',
        'last_graduation_date', 'user_id'].forEach(f => delete req.body[f]);
     } else if (isStaff) {
       // Colaborador pode cadastrar/aprovar (inclusive status), definir o plano de aula e atualizar faixa/grau, mas não mexe em campos financeiros
-      ['join_date', 'next_payment_date',
+      ['access_blocked', 'join_date', 'next_payment_date',
        'absence_limit', 'last_graduation_date', 'user_id'].forEach(f => delete req.body[f]);
     } else if (!isAdmin) {
       // Aluno (ou responsável) editando o cadastro: sem acesso a campos administrativos nem faixa
-      ['status', 'belt', 'stripes', 'plan_id', 'join_date',
+      ['status', 'access_blocked', 'belt', 'stripes', 'plan_id', 'join_date',
        'next_payment_date', 'absence_limit', 'last_graduation_date', 'user_id']
         .forEach(f => delete req.body[f]);
+    }
+
+    // Um aluno com status 'Active' e access_blocked=1 seria um estado contraditório: passaria
+    // no check-in estando bloqueado. Colocar a matrícula de volta em Ativo é, por si só, liberar
+    // o acesso — a não ser que o próprio payload esteja dizendo o contrário.
+    if (req.body.status === 'Active' && req.body.access_blocked === undefined) {
+      req.body.access_blocked = 0;
     }
 
     const fields = Object.keys(req.body).filter(k => UPDATABLE_FIELDS.includes(k));
@@ -402,6 +409,40 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
         `UPDATE students SET ${set} WHERE id = ? AND academy_id = ?`,
         [...values, req.params.id, academyId]
       );
+
+      // Bloquear/liberar o acesso de um aluno sem conta de login é feito por aqui (não passa
+      // pelo PUT /users, que só existe para quem tem conta) — deixa o mesmo rastro que o
+      // 'user.status_change' deixa no caso com conta. Quando os dois campos mudam juntos (o
+      // bloqueio também inativa a matrícula), o evento de bloqueio já conta a história inteira.
+      const blockChanged = fields.includes('access_blocked')
+        && Number(req.body.access_blocked ?? 0) !== Number(existing[0].access_blocked ?? 0);
+      const statusChanged = fields.includes('status') && req.body.status !== existing[0].status;
+
+      if (blockChanged) {
+        await logAudit(req, {
+          action: 'student.access_change',
+          entityType: 'student',
+          entityId: req.params.id,
+          details: {
+            name: existing[0].name,
+            blocked: Number(req.body.access_blocked) === 1,
+            status: req.body.status ?? existing[0].status,
+            hasAccount: !!existing[0].user_id,
+          },
+        });
+      } else if (statusChanged) {
+        await logAudit(req, {
+          action: 'student.status_change',
+          entityType: 'student',
+          entityId: req.params.id,
+          details: {
+            name: existing[0].name,
+            from: existing[0].status,
+            to: req.body.status,
+            hasAccount: !!existing[0].user_id,
+          },
+        });
+      }
 
       // Registra no histórico de graduações se admin/instrutor/staff alterou faixa ou grau
       if (isAdmin || isInstructor || isStaff) {

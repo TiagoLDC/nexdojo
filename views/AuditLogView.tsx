@@ -53,7 +53,8 @@ const CATEGORIES: Category[] = [
     id: 'users',
     label: 'Usuários e permissões',
     icon: KeyRound,
-    actions: ['user.role_change', 'user.status_change', 'user.password_reset_by_admin'],
+    actions: ['user.role_change', 'user.status_change', 'user.password_reset_by_admin',
+      'student.access_change', 'student.status_change'],
   },
 ];
 
@@ -85,6 +86,8 @@ const ACTION_LABELS: Record<string, string> = {
   'user.role_change': 'Função alterada',
   'user.status_change': 'Status de acesso alterado',
   'user.password_reset_by_admin': 'Senha redefinida pelo admin',
+  'student.access_change': 'Acesso do aluno bloqueado/liberado',
+  'student.status_change': 'Status de matrícula alterado',
 };
 
 const FAILURE_REASONS: Record<string, string> = {
@@ -155,6 +158,13 @@ const describeDetails = (entry: AuditLogEntry): string => {
   }
   if (entry.action === 'user.role_change' || entry.action === 'user.status_change') {
     return `${d.email ?? ''} — de "${d.from}" para "${d.to}"`.trim();
+  }
+  if (entry.action === 'student.access_change') {
+    const acao = d.blocked ? 'Acesso bloqueado' : 'Acesso liberado';
+    return `${d.name ?? ''} — ${acao}${d.hasAccount ? '' : ' · sem conta de acesso'}`.trim();
+  }
+  if (entry.action === 'student.status_change') {
+    return `${d.name ?? ''} — de "${d.from}" para "${d.to}"${d.hasAccount ? '' : ' · sem conta de acesso'}`.trim();
   }
   // Exclusões/restaurações e demais: nome e e-mail do registro afetado
   const parts = [d.name, d.email].filter(Boolean);

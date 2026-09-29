@@ -132,6 +132,7 @@ const CREATE_STATEMENTS = [
     last_attendance DATE,
     absent_count INT DEFAULT 0,
     status ENUM('Active','Inactive','Dropped','Pending') DEFAULT 'Active',
+    access_blocked TINYINT(1) NOT NULL DEFAULT 0,
     join_date DATE,
     last_graduation_date DATE,
     plan_id VARCHAR(36),

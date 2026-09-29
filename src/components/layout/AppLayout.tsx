@@ -92,7 +92,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           ].join(' ')}
         >
           <div className="bg-amber-400 text-amber-950 text-[8px] font-black uppercase tracking-widest px-3 py-px rounded-b-lg select-none shadow-sm">
-            VERSÃO QAS 29/09/2026 09:55:09
+            VERSÃO QAS 29/09/2026 14:16:18
           </div>
         </div>
       )}

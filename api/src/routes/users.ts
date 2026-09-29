@@ -239,6 +239,14 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
           [entityStatus, req.params.id, academyId]
         );
       }
+
+      // A marca de bloqueio (que só existe em students) acompanha a conta. Sem ela, bastaria
+      // olhar o status para confundir "eu bloqueei esta pessoa" com "esta pessoa parou de
+      // treinar" — e o aluno bloqueado voltaria a aparecer no relatório de reengajamento.
+      await pool.execute(
+        `UPDATE students SET access_blocked = ? WHERE user_id = ? AND academy_id = ?`,
+        [req.body.status === 'Blocked' ? 1 : 0, req.params.id, academyId]
+      );
     }
 
     // Auto-vínculo: se email foi alterado ou usuário ainda não tem entidade vinculada, tenta linkar
