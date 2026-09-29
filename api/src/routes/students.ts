@@ -492,11 +492,15 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
         }
       }
 
-      // Ao ativar aluno, ativa também o usuário vinculado
+      // Ao ativar aluno, ativa também o usuário vinculado. Inclui as contas 'Blocked': quando o
+      // aluno volta a treinar, quem reativa a matrícula espera que ele consiga entrar de novo —
+      // antes só 'Pending' era reativado, então a conta bloqueada continuava barrada no login
+      // sem nenhum aviso, e o admin tinha que descobrir sozinho que faltava um segundo passo
+      // na tela de Usuários.
       if (req.body.status === 'Active') {
         if (existing[0].user_id) {
           await pool.execute(
-            `UPDATE users SET status = 'Active' WHERE id = ? AND status = 'Pending'`,
+            `UPDATE users SET status = 'Active' WHERE id = ? AND status IN ('Pending', 'Blocked')`,
             [existing[0].user_id]
           );
         } else {

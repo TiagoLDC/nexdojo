@@ -9,6 +9,9 @@ import {
   PhoneOff,
   Users,
   CalendarOff,
+  UserCheck,
+  ShieldOff,
+  Loader2,
 } from 'lucide-react';
 import { Academy, Student, User } from '../types';
 import { studentService } from '@/features/students/services/studentService';
@@ -16,16 +19,19 @@ import { useAcademyBeltRanks } from '@/features/settings/hooks/useAcademyBeltRan
 import { useStudentPhotos } from '@/features/students/hooks/useStudentPhotos';
 import { getBeltClassName } from '../constants';
 import { getInactiveStudents, getReturnWhatsappUrl } from '@/utils/inactiveStudents';
+import { useTranslation } from '../services/LanguageContext';
 import { Spinner, WhatsAppIcon } from '@/components/ui';
 
 type InactiveFilter = 'all' | 'inactive' | 'dropped' | 'recent' | 'old';
 
 const InactiveStudentsReportView: React.FC<{ academy: Academy; user: User }> = ({ academy }) => {
   const { getBeltConfig } = useAcademyBeltRanks(academy?.id);
+  const { showNotification } = useTranslation();
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<InactiveFilter>('all');
+  const [reactivatingId, setReactivatingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!academy?.id) return;
@@ -72,6 +78,29 @@ const InactiveStudentsReportView: React.FC<{ academy: Academy; user: User }> = (
     { key: 'recent', label: 'Até 30 Dias', count: summary.recent },
     { key: 'old', label: '+90 Dias', count: summary.old },
   ];
+
+  /**
+   * Aluno voltou a treinar. Esta é a tela em que todos os afastados aparecem juntos, então é
+   * o lugar natural para trazer alguém de volta — na lista de alunos o filtro padrão esconde
+   * quem está inativo, e achar a ficha exige saber que é preciso filtrar por "Inativos".
+   * `accessBlocked: false` tira também o bloqueio, e o backend reativa a conta de login junto,
+   * para o aluno não voltar com a matrícula ativa e o login ainda barrado.
+   */
+  const handleReactivate = async (student: Student) => {
+    setReactivatingId(student.id);
+    try {
+      await studentService.update(student.id, { status: 'Active', accessBlocked: false });
+      setStudents(prev => prev.map(s => s.id === student.id
+        ? { ...s, status: 'Active', accessBlocked: false }
+        : s));
+      showNotification(`${student.name} voltou para a lista de alunos ativos!`);
+    } catch (e) {
+      console.error(e);
+      showNotification('Erro ao reativar aluno.', 'error');
+    } finally {
+      setReactivatingId(null);
+    }
+  };
 
   const formatLastAttendance = (student: Student, days: number | null) => {
     if (days === null || !student.lastAttendance) return 'Nunca treinou';
@@ -204,6 +233,12 @@ const InactiveStudentsReportView: React.FC<{ academy: Academy; user: User }> = (
                         }`}>
                           {isDropped ? 'Evadido' : 'Inativo'}
                         </span>
+                        {student.accessBlocked && (
+                          <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300" title="Acesso bloqueado pela academia — não registra presença nem check-in">
+                            <ShieldOff size={10} />
+                            Bloqueado
+                          </span>
+                        )}
                         <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                           <CalendarOff size={11} />
                           {formatLastAttendance(student, daysSinceLastAttendance)}
@@ -229,6 +264,18 @@ const InactiveStudentsReportView: React.FC<{ academy: Academy; user: User }> = (
                         Sem telefone
                       </span>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => handleReactivate(student)}
+                      disabled={reactivatingId === student.id}
+                      title="Voltou a treinar: reativa a matrícula, o acesso e a conta de login"
+                      className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-900/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-3 sm:px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      {reactivatingId === student.id
+                        ? <Loader2 size={14} className="animate-spin" />
+                        : <UserCheck size={14} />}
+                      <span>Reativar</span>
+                    </button>
                   </div>
                 </div>
               );

@@ -15,14 +15,17 @@ export interface InactiveStudentEntry {
 }
 
 /**
- * Quem o admin bloqueou de propósito fica de fora: o bloqueio inativa a matrícula, então sem
- * essa checagem o aluno bloqueado (por inadimplência, disciplina, o que for) cairia aqui e
- * receberia o convite para voltar aos treinos — ainda por cima no topo do card do dashboard,
- * que ordena pelo afastamento mais recente. `status` diz que a pessoa não está treinando;
- * só `accessBlocked` diz se isso foi decisão da academia.
+ * Todo aluno inativado entra, com conta de login ou sem, bloqueado ou não: o objetivo da tela
+ * é reconquistar quem parou de treinar, e quem foi bloqueado — por mensalidade atrasada, por
+ * exemplo — é justamente quem o admin pode querer chamar para resolver e voltar.
+ *
+ * Filtrar por `accessBlocked` aqui foi tentado e deu errado: como bloquear a conta era o único
+ * jeito de inativar alguém antes desta coluna existir, os inativados históricos estavam todos
+ * marcados como bloqueados e a tela ficou vazia. O bloqueio serve para barrar presença e
+ * check-in, não para decidir quem merece ser chamado de volta.
  */
 export const isInactiveStudent = (s: Student) =>
-  !s.accessBlocked && (INACTIVE_STATUSES as readonly string[]).includes(s.status);
+  (INACTIVE_STATUSES as readonly string[]).includes(s.status);
 
 /**
  * Lista os alunos inativados ordenada pelo afastamento mais recente primeiro — quem parou de
