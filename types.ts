@@ -134,6 +134,9 @@ export interface Instructor {
   userStatus?: 'Active' | 'Pending' | 'Blocked' | null;
   hasLoanedKimono?: boolean;
   kimonoLoanDate?: string | null;
+  // Permissão administrativa: libera a tela de Alunos para este instrutor. Só admin/superuser
+  // gravam (o backend remove o campo do payload de quem edita a própria ficha).
+  canViewStudents?: boolean;
 }
 
 export interface Staff {

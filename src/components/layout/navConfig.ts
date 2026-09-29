@@ -15,7 +15,9 @@ export const MAIN_NAV: NavItem[] = [
 ];
 
 export const MANAGEMENT_NAV: NavItem[] = [
-  { to: '/students', labelKey: 'students', icon: 'Users', roles: ['superuser', 'admin', 'staff'] },
+  // Instrutor só vê este item se a ficha dele tiver a permissão marcada — o filtro extra fica
+  // em Sidebar/MobileMenu (hasStudentsAccess), mesmo padrão do /kimonos com o módulo da academia.
+  { to: '/students', labelKey: 'students', icon: 'Users', roles: ['superuser', 'admin', 'staff', 'instructor'] },
   { to: '/instructors', labelKey: 'instructors', icon: 'Award', roles: ['superuser', 'admin'] },
   { to: '/staff',  labelKey: 'staff',  icon: 'Briefcase', roles: ['superuser', 'admin'] },
   { to: '/users',  labelKey: 'users',  icon: 'KeyRound',  roles: ['superuser', 'admin'] },

@@ -663,12 +663,16 @@ router.post('/register/guardian', async (req: Request, res: Response, next: Next
 // o perfil próprio (se houver ficha vinculada) + todos os alunos vinculados via guardianships
 router.get('/profiles', requireAuth, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    // can_view_students só existe em instructors; as outras pernas do UNION completam com NULL
+    // para manter a mesma quantidade de colunas. É por aqui que o frontend descobre a permissão:
+    // o AppLayout já rebusca /auth/profiles a cada foco, então tirar/dar a permissão chega na
+    // sessão do instrutor sem exigir novo login.
     const [selfRows] = await pool.execute<any[]>(
-      `SELECT 'student' AS entity_type, id, name, photo, belt, total_classes FROM students WHERE user_id = ?
+      `SELECT 'student' AS entity_type, id, name, photo, belt, total_classes, NULL AS can_view_students FROM students WHERE user_id = ?
        UNION ALL
-       SELECT 'instructor' AS entity_type, id, name, photo, NULL, NULL FROM instructors WHERE user_id = ?
+       SELECT 'instructor' AS entity_type, id, name, photo, NULL, NULL, can_view_students FROM instructors WHERE user_id = ?
        UNION ALL
-       SELECT 'staff' AS entity_type, id, name, photo, NULL, NULL FROM staff WHERE user_id = ?`,
+       SELECT 'staff' AS entity_type, id, name, photo, NULL, NULL, NULL FROM staff WHERE user_id = ?`,
       [req.user!.userId, req.user!.userId, req.user!.userId]
     );
 
@@ -690,6 +694,7 @@ router.get('/profiles', requireAuth, async (req: Request, res: Response, next: N
         photo: r.photo || undefined,
         belt: r.belt || undefined,
         totalClasses: r.total_classes ?? undefined,
+        canViewStudents: r.entity_type === 'instructor' ? Number(r.can_view_students) === 1 : undefined,
       })),
       ...guardianRows.map((r: any) => ({
         kind: 'guardian',

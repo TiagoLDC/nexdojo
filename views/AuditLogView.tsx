@@ -54,7 +54,7 @@ const CATEGORIES: Category[] = [
     label: 'Usuários e permissões',
     icon: KeyRound,
     actions: ['user.role_change', 'user.status_change', 'user.password_reset_by_admin',
-      'student.access_change', 'student.status_change'],
+      'student.access_change', 'student.status_change', 'instructor.permission_change'],
   },
 ];
 
@@ -88,6 +88,7 @@ const ACTION_LABELS: Record<string, string> = {
   'user.password_reset_by_admin': 'Senha redefinida pelo admin',
   'student.access_change': 'Acesso do aluno bloqueado/liberado',
   'student.status_change': 'Status de matrícula alterado',
+  'instructor.permission_change': 'Permissão do instrutor alterada',
 };
 
 const FAILURE_REASONS: Record<string, string> = {
@@ -162,6 +163,10 @@ const describeDetails = (entry: AuditLogEntry): string => {
   if (entry.action === 'student.access_change') {
     const acao = d.blocked ? 'Acesso bloqueado' : 'Acesso liberado';
     return `${d.name ?? ''} — ${acao}${d.hasAccount ? '' : ' · sem conta de acesso'}`.trim();
+  }
+  if (entry.action === 'instructor.permission_change') {
+    const label = d.permission === 'canViewStudents' ? 'Visualizar alunos' : String(d.permission ?? '');
+    return `${d.name ?? ''} — ${label}: ${d.granted ? 'concedida' : 'removida'}`.trim();
   }
   if (entry.action === 'student.status_change') {
     return `${d.name ?? ''} — de "${d.from}" para "${d.to}"${d.hasAccount ? '' : ' · sem conta de acesso'}`.trim();

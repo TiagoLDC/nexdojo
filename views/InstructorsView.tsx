@@ -31,6 +31,7 @@ import {
   Check,
   Camera,
   User as UserIcon,
+  Users as UsersIcon,
   Award,
   MapPin,
   Mail,
@@ -109,7 +110,8 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
       addressNumber: '',
       medicalNotes: '',
       specialties: '',
-      graduationHistory: []
+      graduationHistory: [],
+      canViewStudents: false
     };
     setEditingInstructor(newInstructor);
     setIsEditModalOpen(true);
@@ -609,6 +611,44 @@ const InstructorsView: React.FC<{ academy: Academy; user: User }> = ({ academy, 
                         <option value="Inactive">{t.inactiveTitle}</option>
                         <option value="Pending">{t.pendingTitle}</option>
                       </select>
+                    </div>
+
+                    {/* Permissão de acesso à tela de Alunos — por instrutor, não por função.
+                        Esta tela é admin/superusuário por rota, então quem chega aqui já pode
+                        conceder; o backend ignora o campo se ele vier de quem edita a própria
+                        ficha. Marcar/desmarcar entra no log de auditoria. */}
+                    <div className="md:col-span-2">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1 flex items-center gap-1.5">
+                        <UsersIcon size={10} /> Permissões
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setEditingInstructor({ ...editingInstructor, canViewStudents: !editingInstructor.canViewStudents })}
+                        className={`w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-colors ${
+                          editingInstructor.canViewStudents
+                            ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800'
+                            : 'bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700'
+                        }`}
+                      >
+                        <span className={`mt-0.5 w-5 h-5 shrink-0 rounded-md border flex items-center justify-center transition-colors ${
+                          editingInstructor.canViewStudents
+                            ? 'bg-indigo-600 border-indigo-600 text-white'
+                            : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-transparent'
+                        }`}>
+                          <Check size={13} strokeWidth={3} />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-xs font-black uppercase tracking-tight text-slate-700 dark:text-slate-200">
+                            Visualizar alunos
+                          </span>
+                          <span className="block text-[10px] text-slate-400 font-medium leading-snug mt-0.5">
+                            Libera o menu "Alunos" e a ficha completa de cada aluno para este instrutor.
+                            Cadastro, exclusão, documentos, responsáveis e dados financeiros continuam
+                            fora do alcance dele. Sem a marca, o lançamento de presença segue funcionando
+                            normalmente.
+                          </span>
+                        </span>
+                      </button>
                     </div>
                   </div>
                 </div>

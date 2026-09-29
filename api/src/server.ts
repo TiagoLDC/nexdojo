@@ -58,6 +58,9 @@ async function applySchemaPatches() {
     // COMMENT vem ANTES de AFTER — a ordem inversa e erro de sintaxe (ER_PARSE_ERROR), e como
     // o throw sai do applySchemaPatches, as patches seguintes e os CREATE TABLE abaixo nem rodam.
     `ALTER TABLE students ADD COLUMN access_blocked TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Bloqueio deliberado do acesso pela academia, separado de status' AFTER status`,
+    // Permissao por instrutor para abrir a tela de Alunos. Default 0: quem ja esta cadastrado
+    // continua sem a tela ate o admin marcar na ficha, que e o comportamento de hoje.
+    `ALTER TABLE instructors ADD COLUMN can_view_students TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Se 1, o instrutor enxerga a tela/lista de alunos' AFTER status`,
   ];
   for (const sql of patches) {
     try {

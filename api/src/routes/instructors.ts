@@ -27,7 +27,7 @@ const UPDATABLE_FIELDS = [
   'cpf', 'rg', 'weight', 'height', 'blood_type', 'marital_status',
   'emergency_contact', 'emergency_phone', 'cep', 'address', 'address_number',
   'specialties', 'medical_notes', 'status', 'join_date', 'user_id',
-  'last_graduation_date',
+  'last_graduation_date', 'can_view_students',
 ];
 
 const mapDoc = (d: any) => ({
@@ -152,8 +152,9 @@ router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Req
       `INSERT INTO instructors (
         id, academy_id, user_id, name, email, phone, belt, belt_rank_id, stripes, birth_date, gender, photo,
         cpf, rg, weight, height, blood_type, marital_status, emergency_contact, emergency_phone,
-        cep, address, address_number, specialties, medical_notes, status, join_date
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        cep, address, address_number, specialties, medical_notes, status, join_date,
+        can_view_students
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         id, academyId, b.user_id ?? null,
         b.name, b.email ?? null, b.phone ?? null,
@@ -164,6 +165,7 @@ router.post('/', requireAuth, requireRole('admin', 'superuser'), async (req: Req
         b.cep ?? null, b.address ?? null, b.address_number ?? null,
         b.specialties ?? null, b.medical_notes ?? null,
         b.status ?? 'Active', b.join_date ?? null,
+        b.can_view_students ? 1 : 0,
       ]
     );
 
@@ -200,7 +202,7 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
 
   try {
     const [existing] = await pool.execute<any[]>(
-      'SELECT id, user_id, name, email, belt FROM instructors WHERE id = ? AND academy_id = ?',
+      'SELECT id, user_id, name, email, belt, can_view_students FROM instructors WHERE id = ? AND academy_id = ?',
       [req.params.id, academyId]
     );
     if (!existing[0]) { res.status(404).json({ error: 'Instrutor não encontrado' }); return; }
@@ -237,10 +239,18 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
       return;
     }
 
-    // Instrutor não pode alterar campos administrativos
+    // Instrutor não pode alterar campos administrativos. can_view_students entra aqui porque a
+    // ficha própria (/instructor-profile) devolve o objeto inteiro no PUT — sem esta linha o
+    // instrutor conseguiria se conceder a tela de Alunos só reenviando o que leu.
     if (!isAdmin) {
-      ['status', 'belt', 'stripes', 'join_date', 'user_id']
+      ['status', 'belt', 'stripes', 'join_date', 'user_id', 'can_view_students']
         .forEach(f => delete req.body[f]);
+    }
+
+    // Coluna TINYINT NOT NULL: o front manda boolean e o mapeamento de valores abaixo troca
+    // undefined por null, o que quebraria o UPDATE. Normaliza para 0/1 antes.
+    if (req.body.can_view_students !== undefined) {
+      req.body.can_view_students = req.body.can_view_students ? 1 : 0;
     }
 
     const fields = Object.keys(req.body).filter(k => UPDATABLE_FIELDS.includes(k));
@@ -253,6 +263,24 @@ router.put('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
         `UPDATE instructors SET ${set} WHERE id = ? AND academy_id = ?`,
         [...values, req.params.id, academyId]
       );
+
+      // Dar ou tirar a lista de alunos de um instrutor é decisão administrativa sobre dado
+      // pessoal de terceiros (ficha completa, telefone, endereço) — fica na trilha de auditoria.
+      const permissionChanged = fields.includes('can_view_students')
+        && Number(req.body.can_view_students ?? 0) !== Number(existing[0].can_view_students ?? 0);
+      if (permissionChanged) {
+        await logAudit(req, {
+          action: 'instructor.permission_change',
+          entityType: 'instructor',
+          entityId: String(req.params.id),
+          academyId,
+          details: {
+            name: req.body.name || existing[0].name,
+            permission: 'canViewStudents',
+            granted: Number(req.body.can_view_students) === 1,
+          },
+        });
+      }
 
       // Dual-write: mantém belt_rank_id em dia com o belt (ENUM) — ver PLANO_GRADUACAO.md Fase 3
       const beltChanged = req.body.belt !== undefined && req.body.belt !== existing[0].belt;

@@ -46,3 +46,19 @@ export function getEffectiveRoles(userRole: string, activeProfile: Profile | nul
   if (activeProfile?.kind === 'guardian') return [userRole, activeProfile.entityType];
   return [userRole];
 }
+
+// Acesso à tela de Alunos. Para admin, superusuário e colaborador a regra continua sendo só o
+// role. Para instrutor existe uma segunda chave, marcada individualmente na ficha dele
+// (instructors.can_view_students): sem ela o item some do menu e a rota redireciona.
+//
+// A marca chega junto do perfil próprio em GET /auth/profiles — o mesmo payload que o AppLayout
+// já rebusca ao voltar o foco. Por isso dar ou tirar a permissão reflete na sessão aberta do
+// instrutor sem exigir novo login, e não dá para guardá-la no objeto `user` do authStore, que é
+// congelado no login e nunca mais revalidado.
+export function hasStudentsAccess(userRole: string, profiles: Profile[]): boolean {
+  if (['superuser', 'admin', 'staff'].includes(userRole)) return true;
+  if (userRole !== 'instructor') return false;
+  return profiles.some(
+    (p) => p.kind === 'self' && p.entityType === 'instructor' && p.canViewStudents === true,
+  );
+}

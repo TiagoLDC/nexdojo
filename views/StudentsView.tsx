@@ -109,6 +109,12 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
   const [templates, _setTemplates] = useState<ClassTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const currentUser = user;
+  // O instrutor chega nesta tela por PERMISSAO DE CONSULTA (instructors.can_view_students), nao
+  // por funcao. Ele continua podendo editar a ficha e graduar - o PUT /students e o POST
+  // /students/:id/graduate aceitam role 'instructor' -, mas cadastro, exclusao, documentos,
+  // responsaveis, senha e troca de status sao recusados pelo backend com 403. Esconder esses
+  // controles e o que evita oferecer botao que so devolve erro.
+  const isInstructor = user.role === 'instructor';
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -703,6 +709,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
             <Printer size={18} className="text-indigo-600" />
             {language === 'pt' ? 'Imprimir' : 'Print'}
           </button>
+          {!isInstructor && (
           <button
             onClick={handleOpenNewStudent}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3.5 rounded-2xl font-black flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 transition-all active:scale-95 text-xs uppercase tracking-widest"
@@ -710,6 +717,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
             <Plus size={18} />
             {t.add}
           </button>
+          )}
         </div>
       </header>
 
@@ -782,6 +790,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
               <span className="text-xs font-black uppercase tracking-tighter">Faltas</span>
             </button>
 
+            {!isInstructor && (
             <button
               onClick={() => setNoPlanFilter(!noPlanFilter)}
               className={`flex items-center justify-center gap-2 border rounded-2xl px-4 py-3 shadow-sm transition-all flex-1 md:flex-none ${
@@ -793,7 +802,9 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
               <BookX size={14} />
               <span className="text-xs font-black uppercase tracking-tighter">Sem Plano</span>
             </button>
+            )}
 
+            {!isInstructor && (
             <button
               onClick={() => setNoDueDateFilter(!noDueDateFilter)}
               className={`flex items-center justify-center gap-2 border rounded-2xl px-4 py-3 shadow-sm transition-all flex-1 md:flex-none ${
@@ -805,6 +816,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
               <CalendarOff size={14} />
               <span className="text-xs font-black uppercase tracking-tighter">Sem Vencimento</span>
             </button>
+            )}
           </div>
         </div>
 
@@ -918,7 +930,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     </button>
 
                     <div className="flex gap-2">
-                      {student.status === 'Pending' ? (
+                      {student.status === 'Pending' && !isInstructor ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -980,7 +992,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest hidden md:table-cell">Idade</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest hidden md:table-cell">Treinos</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest hidden md:table-cell">Faltas</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest hidden md:table-cell">Vencimento</th>
+                {!isInstructor && <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest hidden md:table-cell">Vencimento</th>}
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Status</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Ações</th>
               </tr>
@@ -988,7 +1000,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
             <tbody className="divide-y divide-slate-100">
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="px-6 py-10 text-center">
+                <td colSpan={isInstructor ? 6 : 7} className="px-6 py-10 text-center">
                   <Loader2 size={24} className="animate-spin text-indigo-500 mx-auto mb-2" />
                   <p className="text-slate-400 text-sm">Carregando alunos...</p>
                 </td>
@@ -1058,11 +1070,13 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         {student.absentCount}
                       </span>
                     </td>
+                    {!isInstructor && (
                     <td className="px-6 py-4 hidden md:table-cell">
                       <span className="text-sm font-bold text-slate-500">
                         {student.nextPaymentDate ? fmtDate(student.nextPaymentDate) : ''}
                       </span>
                     </td>
+                    )}
                     <td className="px-6 py-4">
                       <span className={`text-[10px] px-2 py-1 rounded-full font-black uppercase ${
                         student.status === 'Active' ? 'bg-green-100 text-green-700' :
@@ -1074,7 +1088,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {student.status === 'Pending' ? (
+                        {student.status === 'Pending' && !isInstructor ? (
                           <button
                             onClick={() => handleApproveStudent(student)}
                             className="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black uppercase rounded-xl transition-all flex items-center gap-1 shadow-sm"
@@ -1119,7 +1133,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
               })
             ) : (
               <tr>
-                <td colSpan={7} className="px-6 py-10 text-center text-slate-400">
+                <td colSpan={isInstructor ? 6 : 7} className="px-6 py-10 text-center text-slate-400">
                   Nenhum aluno encontrado para estes filtros.
                 </td>
               </tr>
@@ -1322,6 +1336,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                         className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-indigo-600"
                       />
                     </div>
+                    {!isInstructor && (
                     <div className="md:col-span-1">
                       <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1 flex items-center justify-between">
                         <span>{isNewStudent ? 'Senha de Acesso' : 'Redefinir Senha'} {isNewStudent && <span className="text-red-500">*</span>}</span>
@@ -1339,6 +1354,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       />
                       {!isNewStudent && <p className="text-[9px] text-slate-400 mt-1 ml-1 italic">O aluno será obrigado a trocar na próxima entrada.</p>}
                     </div>
+                    )}
                     {!isNewStudent && (
                       <div className="md:col-span-2">
                         <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1 flex items-center gap-1.5">
@@ -1658,7 +1674,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                 </div>
               </div>
 
-              {editingStudent.id && (
+              {editingStudent.id && !isInstructor && (
                 <GuardianAccessSection studentId={editingStudent.id} onNotify={showNotification} />
               )}
 
@@ -1667,12 +1683,14 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   <h3 className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
                     <FileText size={14} /> Documentação e Anexos
                   </h3>
+                  {!isInstructor && (
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     className="flex items-center gap-2 text-[10px] font-black uppercase text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl hover:bg-indigo-100 transition-colors"
                   >
                     <Upload size={14} /> Anexar Documento
                   </button>
+                  )}
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -1704,12 +1722,14 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                           >
                             <Download size={18} />
                           </button>
+                          {!isInstructor && (
                           <button
                             onClick={() => deleteDocument(doc.id)}
                             className="p-2 text-slate-400 hover:text-red-500 hover:bg-white dark:hover:bg-slate-800 rounded-lg transition-all"
                           >
                             <Trash2 size={18} />
                           </button>
+                          )}
                         </div>
                       </div>
                     ))
@@ -1855,15 +1875,30 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Status de Matrícula</label>
+                    {/* 'Pendente' entrou na lista porque é um status real de students.status: sem a
+                        option, a ficha de um cadastro pendente abria com o select em branco — o que
+                        passava despercebido num campo editável e ficaria evidente agora que o
+                        instrutor o vê travado. */}
                     <select
                       value={editingStudent.status}
+                      disabled={isInstructor}
                       onChange={(e) => setEditingStudent({...editingStudent, status: e.target.value as any})}
-                      className="w-full bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-slate-700 dark:text-slate-200"
+                      className={`w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none font-bold ${
+                        isInstructor
+                          ? 'bg-slate-100 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700/50 text-slate-400 cursor-not-allowed'
+                          : 'bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200'
+                      }`}
                     >
                       <option value="Active">Ativo</option>
                       <option value="Inactive">Inativo</option>
+                      <option value="Pending">Pendente</option>
                       <option value="Dropped">Desistente</option>
                     </select>
+                    {isInstructor && (
+                      <p className="text-[9px] text-slate-400 mt-1 ml-1 font-medium italic">
+                        * Só a administração da academia altera o status de matrícula.
+                      </p>
+                    )}
                   </div>
                   {['admin', 'superuser', 'staff'].includes(user.role) ? (
                   <div>
@@ -1889,6 +1924,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                     </div>
                   </div>
                   ) : null}
+                  {!isInstructor && (
                   <div>
                     <div className="flex items-center gap-2">
                       <div className="flex-1">
@@ -1923,6 +1959,8 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       </p>
                     )}
                   </div>
+                  )}
+                  {!isInstructor && (
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-2 ml-1">Limite de Faltas Personalizado</label>
                     <input
@@ -1937,6 +1975,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                       * Deixe vazio para usar o limite padrão da academia.
                     </p>
                   </div>
+                  )}
                 </div>
                 <textarea
                   rows={3}
@@ -1949,7 +1988,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
 
               <div className="flex flex-col md:flex-row gap-3 pt-8 border-t border-slate-100 dark:border-slate-700/50 md:sticky md:bottom-0 bg-white dark:bg-slate-800 z-[200] pb-24 md:pb-6 px-4 -mx-6 md:mx-0">
                 <div className="flex gap-3 w-full px-2 md:px-0">
-                  {!isNewStudent && (
+                  {!isNewStudent && !isInstructor && (
                     <button
                       type="button"
                       onClick={(e) => {
@@ -1965,7 +2004,7 @@ const StudentsView: React.FC<StudentsViewProps> = ({ academy, user }) => {
                   )}
                   <button
                     onClick={handleSaveStudent}
-                    className={`${isNewStudent ? 'w-full' : 'flex-[2]'} bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95 uppercase tracking-widest`}
+                    className={`${isNewStudent || isInstructor ? 'w-full' : 'flex-[2]'} bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 active:scale-95 uppercase tracking-widest`}
                   >
                     <Save size={20} />
                     {isNewStudent ? 'Finalizar Cadastro' : 'Salvar Ficha Completa'}

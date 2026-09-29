@@ -90,8 +90,11 @@ const App: React.FC = () => (
             {/* <Route path="/templates"  element={<TemplatesPage />} /> */}
           </Route>
 
-          {/* Admin + Staff */}
-          <Route element={<RoleGuard roles={['superuser', 'admin', 'staff']} />}>
+          {/* Admin + Staff + Instrutor com permissão na ficha */}
+          {/* O instrutor passa por este RoleGuard e é filtrado de novo dentro da StudentsPage,
+              pela permissão individual (instructors.can_view_students) — ela vive nos perfis,
+              que chegam de forma assíncrona, e o RoleGuard só sabe olhar role. */}
+          <Route element={<RoleGuard roles={['superuser', 'admin', 'staff', 'instructor']} />}>
             <Route path="/students" element={<StudentsPage />} />
           </Route>
 

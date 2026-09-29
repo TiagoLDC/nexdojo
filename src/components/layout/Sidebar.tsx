@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Settings, ShieldCheck, Sun, Moon, ChevronLeft, ChevronRight, ChevronDown, Award } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
-import { useProfileStore, getActiveProfile, getEffectiveRoles } from '@/stores/profileStore';
+import { useProfileStore, getActiveProfile, getEffectiveRoles, hasStudentsAccess } from '@/stores/profileStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { academyService } from '@/features/settings/services/academyService';
@@ -42,7 +42,8 @@ export const Sidebar: React.FC = () => {
   const mainItems = MAIN_NAV.filter((item) => item.roles.some((r) => effectiveRoles.includes(r)));
   const mgmtItems = MANAGEMENT_NAV
     .filter((item) => item.roles.some((r) => effectiveRoles.includes(r)))
-    .filter((item) => item.to !== '/kimonos' || academy?.kimonoLoanEnabled);
+    .filter((item) => item.to !== '/kimonos' || academy?.kimonoLoanEnabled)
+    .filter((item) => item.to !== '/students' || hasStudentsAccess(user.role, switcherProfiles));
 
   const isActive = (to: string) =>
     to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);

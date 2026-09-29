@@ -15,6 +15,22 @@ import { logAudit } from '../utils/auditLog';
 
 const router = Router();
 
+// Permissao por instrutor (instructors.can_view_students) para consultar a ficha de um aluno.
+// Vale so para role 'instructor': admin, superuser e staff tem a tela por funcao.
+//
+// ATENCAO ao ponto onde isso e aplicado: a ficha individual (GET /students/:id) e barrada aqui,
+// mas a LISTAGEM (GET /students) nao pode ser, porque o lancamento de presenca e o check-in por
+// QR Code carregam a lista de alunos pela mesma rota - barrar ali derrubaria a tela de Presenca
+// de todo instrutor. O que a permissao protege de verdade e o dado sensivel da ficha (CPF, RG,
+// endereco, observacoes medicas, responsaveis, documentos), e e esse o recorte desta checagem.
+const instructorCanViewStudents = async (userId: string): Promise<boolean> => {
+  const [rows] = await pool.execute<any[]>(
+    'SELECT can_view_students FROM instructors WHERE user_id = ? LIMIT 1',
+    [userId]
+  );
+  return Number(rows[0]?.can_view_students ?? 0) === 1;
+};
+
 const buildGuardianInviteLink = (alias: string, token: string): string => {
   const base = (process.env.FRONTEND_URL || 'http://localhost:3002').replace(/\/$/, '');
   return `${base}/guardian-invite/${alias}/${token}`;
@@ -164,6 +180,11 @@ router.get('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
 
     if (req.user!.role === 'guardian' && !(await isGuardianOfStudent(req.user!.userId, String(req.params.id)))) {
       res.status(403).json({ error: 'Sem permissão para esta ação' });
+      return;
+    }
+
+    if (req.user!.role === 'instructor' && !(await instructorCanViewStudents(req.user!.userId))) {
+      res.status(403).json({ error: 'Seu perfil não tem permissão para consultar a ficha de alunos' });
       return;
     }
 

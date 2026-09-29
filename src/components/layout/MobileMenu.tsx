@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Settings, LogOut, Share2, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
-import { useProfileStore, getActiveProfile, getEffectiveRoles } from '@/stores/profileStore';
+import { useProfileStore, getActiveProfile, getEffectiveRoles, hasStudentsAccess } from '@/stores/profileStore';
 import { useUIStore } from '@/stores/uiStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { MAIN_NAV, MANAGEMENT_NAV } from './navConfig';
@@ -19,7 +19,8 @@ export const MobileMenu: React.FC = () => {
   const effectiveRoles = getEffectiveRoles(user.role, getActiveProfile(switcherProfiles, activeProfileId));
   const allItems = [...MAIN_NAV, ...MANAGEMENT_NAV]
     .filter((item) => item.roles.some((r) => effectiveRoles.includes(r)))
-    .filter((item) => item.to !== '/kimonos' || academy?.kimonoLoanEnabled);
+    .filter((item) => item.to !== '/kimonos' || academy?.kimonoLoanEnabled)
+    .filter((item) => item.to !== '/students' || hasStudentsAccess(user.role, switcherProfiles));
 
   const close = () => setMobileMenuOpen(false);
 

@@ -39,4 +39,7 @@ export interface Profile {
   belt?: string;
   totalClasses?: number;
   relation?: string;
+  // Só vem preenchido no perfil próprio de instrutor (instructors.can_view_students). É a via
+  // pela qual a sessão sabe se pode abrir a tela de Alunos — ver hasStudentsAccess no profileStore.
+  canViewStudents?: boolean;
 }
