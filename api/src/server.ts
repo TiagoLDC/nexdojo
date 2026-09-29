@@ -55,7 +55,9 @@ async function applySchemaPatches() {
     `ALTER TABLE instructors ADD UNIQUE KEY uniq_academy_email (academy_id, email)`,
     `ALTER TABLE staff ADD UNIQUE KEY uniq_academy_email (academy_id, email)`,
     `ALTER TABLE attendance_records ADD COLUMN justified TINYINT(1) DEFAULT 0 COMMENT 'Presenca concedida por justificativa de falta aceita'`,
-    `ALTER TABLE students ADD COLUMN access_blocked TINYINT(1) NOT NULL DEFAULT 0 AFTER status COMMENT 'Bloqueio deliberado do acesso pela academia — separado de status, que indica evasao e alimenta o relatorio de retorno'`,
+    // COMMENT vem ANTES de AFTER — a ordem inversa e erro de sintaxe (ER_PARSE_ERROR), e como
+    // o throw sai do applySchemaPatches, as patches seguintes e os CREATE TABLE abaixo nem rodam.
+    `ALTER TABLE students ADD COLUMN access_blocked TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Bloqueio deliberado do acesso pela academia, separado de status' AFTER status`,
   ];
   for (const sql of patches) {
     try {
