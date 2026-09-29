@@ -64,7 +64,7 @@ import { authService } from '@/features/auth/services/authService';
 import { StorageService } from '../services/storage';
 import { advancePaymentDate } from '@/utils/paymentUtils';
 import { getInactiveStudents, getReturnWhatsappUrl } from '@/utils/inactiveStudents';
-import { getTodayBrasilia } from '@/utils/date';
+import { getTodayBrasilia, formatDateBR, formatTimeHHMM } from '@/utils/date';
 import { 
   PieChart, 
   Pie, 
@@ -736,8 +736,13 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
   }, [students, templates, academy?.id]);
 
   const recentActivity = useMemo(() => {
-    return attendance
-      .sort((a, b) => b.date.localeCompare(a.date))
+    // Cópia antes do sort: `attendance` vem do estado e `sort` ordena no lugar.
+    // Desempate por checkInTime para que, dentro do mesmo dia, o feed mostre de fato
+    // o check-in mais recente primeiro (presença retroativa não tem hora e fica por último).
+    return [...attendance]
+      .sort((a, b) =>
+        `${b.date} ${b.checkInTime || ''}`.localeCompare(`${a.date} ${a.checkInTime || ''}`)
+      )
       .slice(0, 5)
       .map(att => {
         const student = students.find(s => s.id === att.studentId);
@@ -2747,8 +2752,13 @@ const DashboardView: React.FC<{ academy: Academy | null; user: User; onSwitchAca
                         <h4 className="font-black text-slate-800 dark:text-white text-sm leading-tight uppercase italic truncate">{att.studentName}</h4>
                         <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <BeltBadge belt={att.studentBelt} stripes={att.studentStripes} colorKey={getBeltConfig(att.studentBelt)?.colorKey} />
+                          {/* A hora vem de checkInTime (coluna TIME, hora real do check-in em
+                              Brasília). `att.date` é só a data e NÃO carrega hora nenhuma — formatá-la
+                              com new Date() fazia a lista inteira exibir o dia anterior às 21:00,
+                              que é apenas o offset UTC-3 vazando. Presença retroativa fica sem hora. */}
                           <span className="text-[10px] font-bold text-slate-400 capitalize">
-                            {new Date(att.date).toLocaleDateString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            {formatDateBR(att.date)}
+                            {formatTimeHHMM(att.checkInTime) ? ` às ${formatTimeHHMM(att.checkInTime)}` : ''}
                           </span>
                         </div>
                       </div>
