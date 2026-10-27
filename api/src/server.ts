@@ -61,6 +61,11 @@ async function applySchemaPatches() {
     // Permissao por instrutor para abrir a tela de Alunos. Default 0: quem ja esta cadastrado
     // continua sem a tela ate o admin marcar na ficha, que e o comportamento de hoje.
     `ALTER TABLE instructors ADD COLUMN can_view_students TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Se 1, o instrutor enxerga a tela/lista de alunos' AFTER status`,
+    // Catraca (routes/turnstile.ts). Tolerância 0 = bloqueia no dia seguinte ao vencimento, que é
+    // a mesma régua do card "Vencidas" do dashboard; o admin aumenta se quiser dar folga.
+    `ALTER TABLE academies ADD COLUMN turnstile_grace_days INT NOT NULL DEFAULT 0 COMMENT 'Dias de tolerancia apos o vencimento antes de bloquear na catraca'`,
+    `ALTER TABLE academies ADD COLUMN turnstile_alert_minutes INT NOT NULL DEFAULT 15 COMMENT 'Minutos sem contato do middleware da catraca ate avisar o admin'`,
+    `ALTER TABLE attendance_records ADD COLUMN source VARCHAR(20) NULL COMMENT 'Origem da presenca avulsa: qr_code, turnstile; NULL = lancamento manual ou legado'`,
   ];
   for (const sql of patches) {
     try {
@@ -162,6 +167,81 @@ async function applySchemaPatches() {
       INDEX idx_audit_academy (academy_id),
       INDEX idx_audit_entity (entity_type, entity_id),
       INDEX idx_audit_created (created_at)
+    )
+  `);
+
+  // ── Catraca (routes/turnstile.ts) ──────────────────────────────────────────────────────────
+  // Credencial do middleware NexDojo-Catraca. Não é um usuário (tabela users) de propósito: o
+  // token dela só abre /api/turnstile e não carrega papel nenhum dentro do sistema.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS turnstile_credentials (
+      id VARCHAR(36) PRIMARY KEY,
+      academy_id VARCHAR(36) NOT NULL,
+      username VARCHAR(100) NOT NULL,
+      password_hash VARCHAR(255) NOT NULL,
+      label VARCHAR(100) NULL,
+      active TINYINT(1) NOT NULL DEFAULT 1,
+      created_by VARCHAR(36) NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      last_seen_at DATETIME NULL COMMENT 'UTC - ultimo contato do middleware (login ou heartbeat)',
+      last_ip VARCHAR(45) NULL,
+      last_status LONGTEXT NULL COMMENT 'JSON do ultimo heartbeat: versao, maquina e estado de cada catraca',
+      UNIQUE KEY uniq_turnstile_username (username),
+      FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE
+    )
+  `);
+  // Liberação temporária (botão "liberar por 1 dia"). Fica aqui, e não no middleware, para valer
+  // em todas as catracas, sobreviver a reinstalação do PC e deixar rastro de quem liberou.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS turnstile_releases (
+      id VARCHAR(36) PRIMARY KEY,
+      academy_id VARCHAR(36) NOT NULL,
+      person_type VARCHAR(20) NOT NULL,
+      person_id VARCHAR(36) NOT NULL,
+      released_until DATETIME NOT NULL COMMENT 'UTC',
+      created_via VARCHAR(20) NOT NULL COMMENT 'nexdojo ou middleware',
+      created_by_user_id VARCHAR(36) NULL,
+      operator_name VARCHAR(100) NULL COMMENT 'Nome digitado no middleware por quem liberou',
+      revoked_at DATETIME NULL,
+      revoked_by_user_id VARCHAR(36) NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_turnstile_release_person (academy_id, person_id),
+      FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE
+    )
+  `);
+  // Situação de cada pessoa em cada catraca, informada pelo middleware (foto recusada etc.).
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS turnstile_sync_status (
+      academy_id VARCHAR(36) NOT NULL,
+      person_id VARCHAR(36) NOT NULL,
+      device_key VARCHAR(64) NOT NULL,
+      credential_id VARCHAR(36) NOT NULL,
+      device_name VARCHAR(100) NULL,
+      state VARCHAR(20) NOT NULL COMMENT 'synced, no_photo, photo_rejected, error',
+      message VARCHAR(500) NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (academy_id, person_id, device_key),
+      FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE
+    )
+  `);
+  // Passagens lidas das catracas. Sem FK para a pessoa: o registro sobrevive à exclusão dela.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS turnstile_access_events (
+      id VARCHAR(36) PRIMARY KEY,
+      academy_id VARCHAR(36) NOT NULL,
+      device_key VARCHAR(64) NOT NULL,
+      device_name VARCHAR(100) NULL,
+      device_log_id BIGINT NOT NULL COMMENT 'id do access_logs na propria catraca',
+      person_type VARCHAR(20) NULL,
+      person_id VARCHAR(36) NULL,
+      event INT NOT NULL COMMENT 'Codigo Control iD: 7 concedido, 6 negado, 3 nao identificado...',
+      granted TINYINT(1) NOT NULL DEFAULT 0,
+      occurred_at DATETIME NOT NULL COMMENT 'UTC, pelo relogio da catraca',
+      attendance_record_id VARCHAR(36) NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uniq_turnstile_event (academy_id, device_key, device_log_id),
+      INDEX idx_turnstile_event_time (academy_id, occurred_at),
+      FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE
     )
   `);
 }

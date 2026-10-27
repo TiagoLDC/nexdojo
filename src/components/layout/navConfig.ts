@@ -37,6 +37,7 @@ export const MANAGEMENT_NAV: NavItem[] = [
   { to: '/reports', labelKey: 'reports', icon: 'BarChart3', roles: ['superuser', 'admin'] },
   { to: '/recycle-bin', labelKey: 'recycleBin', icon: 'Trash2', roles: ['superuser', 'admin'] },
   { to: '/logs', labelKey: 'auditLog', icon: 'ScrollText', roles: ['superuser', 'admin'] },
+  { to: '/catraca', labelKey: 'turnstile', icon: 'DoorOpen', roles: ['superuser', 'admin'] },
   { to: '/system-config', labelKey: 'systemConfig', icon: 'SlidersHorizontal', roles: ['superuser'] },
   { to: '/sports', labelKey: 'sports', icon: 'Trophy', roles: ['superuser'] },
   { to: '/logout', labelKey: 'logout', icon: 'LogOut', roles: ['superuser', 'admin', 'instructor', 'staff', 'student', 'guardian'] },

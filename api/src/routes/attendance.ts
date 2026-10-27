@@ -6,6 +6,7 @@ import { getAcademyId } from '../utils/academyScope';
 import { validate } from '../utils/validate';
 import { withTransaction } from '../utils/withTransaction';
 import { isGuardianOfStudent } from '../utils/guardianAccess';
+import { registerDailyCheckIn } from '../utils/dailyCheckIn';
 
 const router = Router();
 
@@ -154,66 +155,12 @@ router.post('/qr-checkin', requireAuth, async (req: Request, res: Response, next
       return;
     }
 
-    // Idempotência: já marcou hoje?
-    const [existingRows] = await pool.execute<any[]>(
-      'SELECT id FROM attendance_records WHERE student_id = ? AND academy_id = ? AND date = ? AND class_id IS NULL',
-      [student.id, academyId, today]
-    );
-    if (existingRows.length > 0) {
+    // Mesma regra de presença diária usada pela catraca (utils/dailyCheckIn.ts).
+    const { created, record } = await registerDailyCheckIn(academyId, student, today, nowTimeStr, 'qr_code');
+    if (!created) {
       res.status(400).json({ error: 'Presença já registrada hoje.' });
       return;
     }
-
-    // Valida plano (se tiver, usa duração do plano; caso contrário usa 60 min de fallback)
-    let durationMinutes = 60;
-    let matchedPlanId: string | null = null;
-    let matchedScheduleId: string | null = null;
-
-    if (student.plan_id) {
-      const [planRows] = await pool.execute<any[]>(
-        'SELECT id, active FROM academy_plans WHERE id = ? AND academy_id = ?',
-        [student.plan_id, academyId]
-      );
-      const plan = planRows[0];
-      if (plan && plan.active) {
-        matchedPlanId = plan.id;
-        const dow = new Date(`${today}T12:00:00Z`).getUTCDay();
-        const [scheduleRows] = await pool.execute<any[]>(
-          'SELECT id, start_time, end_time FROM academy_plan_schedules WHERE plan_id = ? AND day_of_week = ?',
-          [student.plan_id, dow]
-        );
-        if (scheduleRows.length > 0) {
-          const s = scheduleRows[0] as any;
-          matchedScheduleId = s.id;
-          const [sh, sm] = s.start_time.split(':').map(Number);
-          const [eh, em] = s.end_time.split(':').map(Number);
-          durationMinutes = (eh * 60 + em) - (sh * 60 + sm);
-        }
-      }
-    }
-
-    const record = await withTransaction(async (conn) => {
-      const id = crypto.randomUUID();
-      await conn.execute(
-        `INSERT INTO attendance_records
-           (id, academy_id, student_id, class_id, date, duration_minutes, check_in_time, matched_plan_id, matched_schedule_id)
-         VALUES (?,?,?,NULL,?,?,?,?,?)`,
-        [id, academyId, student.id, today, durationMinutes, nowTimeStr, matchedPlanId, matchedScheduleId]
-      );
-      const hoursToAdd = Math.round(durationMinutes / 60);
-      await conn.execute(
-        `UPDATE students
-         SET total_classes              = total_classes + 1,
-             total_hours                = total_hours + ?,
-             classes_since_graduation   = classes_since_graduation + 1,
-             hours_since_graduation     = hours_since_graduation + ?,
-             last_attendance            = GREATEST(COALESCE(last_attendance, ?), ?)
-         WHERE id = ?`,
-        [hoursToAdd, hoursToAdd, today, today, student.id]
-      );
-      const [rows] = await conn.execute<any[]>('SELECT * FROM attendance_records WHERE id = ?', [id]);
-      return rows[0];
-    });
 
     res.status(201).json(record);
   } catch (err) {

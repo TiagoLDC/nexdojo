@@ -40,3 +40,10 @@ dist-ssr
 /backups/
 api/src/scripts/migrate_guerreiros_qas_to_prd.ts
 _photo_backup_prd/
+
+# Simulador da catraca: banco SQLite e logs locais de cada catraca simulada
+/simulador/dados/
+__pycache__/
+
+# Middleware da catraca: repositorio proprio (github.com/TiagoLDC/NexDojo-Catraca)
+/middleware/

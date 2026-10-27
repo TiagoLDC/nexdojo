@@ -10,6 +10,7 @@ import { Sidebar } from './Sidebar';
 import { MobileHeader } from './MobileHeader';
 import { MobileDock } from './MobileDock';
 import { MobileMenu } from './MobileMenu';
+import { TurnstileAlertBanner } from './TurnstileAlertBanner';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -92,7 +93,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           ].join(' ')}
         >
           <div className="bg-amber-400 text-amber-950 text-[8px] font-black uppercase tracking-widest px-3 py-px rounded-b-lg select-none shadow-sm">
-            VERSÃO QAS 29/09/2026 17:46:12
+            VERSÃO QAS 27/10/2026 11:23:38
           </div>
         </div>
       )}
@@ -133,6 +134,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             </div>
           </div>
         )}
+
+        <TurnstileAlertBanner />
 
         {children}
       </main>

@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador iDFace</title>
+<style>
+  :root {
+    --bg: #f3f4f6; --card: #ffffff; --ink: #111827; --muted: #6b7280; --line: #e5e7eb;
+    --ok: #15803d; --ok-bg: #dcfce7; --bad: #b91c1c; --bad-bg: #fee2e2; --warn: #a16207; --warn-bg: #fef9c3;
+    --accent: #e30613; --chip: #f3f4f6; --screen: #0f172a; --screen-ink: #e2e8f0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b0f17; --card: #141a24; --ink: #e5e7eb; --muted: #94a3b8; --line: #243042;
+      --ok: #4ade80; --ok-bg: #052e16; --bad: #f87171; --bad-bg: #450a0a; --warn: #facc15; --warn-bg: #422006;
+      --chip: #1e293b; --screen: #020617;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between;
+           padding: 12px 16px; background: var(--card); border-bottom: 1px solid var(--line); }
+  header h1 { margin: 0; font-size: 17px; font-weight: 650; }
+  header h1 b { color: var(--accent); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { padding: 3px 10px; border-radius: 999px; background: var(--chip); font-size: 12px; white-space: nowrap; }
+  .chip.ok { background: var(--ok-bg); color: var(--ok); } .chip.bad { background: var(--bad-bg); color: var(--bad); }
+  main { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; padding: 16px; max-width: 1400px; margin: 0 auto; }
+  @media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr); } }
+  .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px; min-width: 0; }
+  section h2 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+  .tela { background: var(--screen); color: var(--screen-ink); border-radius: 10px; min-height: 150px; display: flex;
+          flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 18px; transition: background .2s; }
+  .tela.ok { background: #14532d; color: #fff; } .tela.bad { background: #7f1d1d; color: #fff; }
+  .tela .big { font-size: 22px; font-weight: 700; } .tela .sub { opacity: .85; margin-top: 4px; }
+  .linha-botoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  button { font: inherit; border: 1px solid var(--line); background: var(--chip); color: var(--ink); border-radius: 7px; padding: 6px 12px; cursor: pointer; }
+  button:hover { filter: brightness(.96); } button.prim { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.perigo { color: var(--bad); }
+  input[type=search], input[type=number] { font: inherit; padding: 6px 10px; border-radius: 7px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+  input[type=search] { width: 100%; margin-bottom: 10px; }
+  .users { display: flex; flex-direction: column; gap: 6px; max-height: 520px; overflow-y: auto; }
+  .user { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px; border-radius: 8px; border: 1px solid var(--line); }
+  .thumb { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: var(--chip); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--muted); }
+  .nome { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .meta { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; margin-right: 4px; }
+  .tag.ok { background: var(--ok-bg); color: var(--ok); } .tag.bad { background: var(--bad-bg); color: var(--bad); } .tag.warn { background: var(--warn-bg); color: var(--warn); }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  td { padding: 5px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+  td.num { white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .rolagem { max-height: 320px; overflow: auto; }
+  .ajuste { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); }
+  .ajuste:first-of-type { border-top: 0; }
+  .ajuste small { display: block; color: var(--muted); }
+  dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; margin: 0; font-size: 13px; }
+  dt { color: var(--muted); } dd { margin: 0; overflow-wrap: anywhere; }
+  .vazio { color: var(--muted); font-size: 13px; padding: 8px 0; }
+  code { font-size: 12px; overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Simulador Control <b>iD</b> · <span id="nome">iDFace</span></h1>
+  <div class="chips" id="chips"></div>
+</header>
+<main>
+  <div class="col">
+    <section>
+      <h2>Tela do equipamento</h2>
+      <div class="tela" id="tela"><div class="big">Aguardando rosto</div><div class="sub">Escolha um usuário abaixo para simular o reconhecimento facial</div></div>
+      <div class="linha-botoes"><button onclick="rosto(null)">Apresentar rosto desconhecido</button></div>
+    </section>
+    <section>
+      <h2>Usuários cadastrados na catraca <span id="qtd"></span></h2>
+      <input type="search" id="busca" placeholder="Buscar por nome ou matrícula" oninput="renderUsuarios()">
+      <div class="users" id="users"></div>
+    </section>
+  </div>
+  <div class="col">
+    <section>
+      <h2>Ajustes de teste</h2>
+      <div class="ajuste"><label for="aj-offline">Equipamento fora do ar<small>A API fecha a conexão sem responder</small></label><input type="checkbox" id="aj-offline" onchange="ajustar({offline: this.checked})"></div>
+      <div class="ajuste"><label for="aj-fotos">Recusar fotos<small>user_set_image responde "Face not detected"</small></label><input type="checkbox" id="aj-fotos" onchange="ajustar({rejeitar_fotos: this.checked})"></div>
+      <div class="ajuste"><label for="aj-lat">Latência da API (ms)<small>Atraso antes de cada resposta</small></label><input type="number" id="aj-lat" min="0" max="30000" step="100" style="width:100px" onchange="ajustar({latencia_ms: Number(this.value)})"></div>
+      <div class="linha-botoes">
+        <button onclick="post('sessoes/limpar')">Invalidar sessões</button>
+        <button class="perigo" onclick="if (confirm('Apagar todos os usuários, fotos, regras e logs desta catraca?')) post('fabrica')">Reset de fábrica</button>
+      </div>
+    </section>
+    <section>
+      <h2>Últimos acessos (access_logs)</h2>
+      <div class="rolagem"><table><tbody id="logs"></tbody></table></div>
+    </section>
+    <section>
+      <h2>Requisições</h2>
+      <div class="rolagem"><table><tbody id="reqs"></tbody></table></div>
+    </section>
+    <section>
+      <h2>Monitor (notificações enviadas)</h2>
+      <div id="monitor"></div>
+    </section>
+    <section>
+      <h2>Identificação</h2>
+      <dl id="ident"></dl>
+    </section>
+  </div>
+</main>
+<script>
+let estado = null;
+let telaTimer = null;
+
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const hora = (ts) => ts ? new Date(ts * 1000).toLocaleString('pt-BR') : '—';
+const horaCurta = (ts) => new Date(ts * 1000).toLocaleTimeString('pt-BR');
+
+async function carregar() {
+  try {
+    const r = await fetch('/sim/api/estado');
+    estado = await r.json();
+    render();
+  } catch (e) {
+    document.getElementById('chips').innerHTML = '<span class="chip bad">Simulador não responde</span>';
+  }
+}
+
+async function post(acao, corpo) {
+  const r = await fetch('/sim/api/' + acao, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo || {}) });
+  const dados = await r.json();
+  await carregar();
+  return dados;
+}
+
+const ajustar = (d) => post('ajustes', d);
+
+async function rosto(userId) {
+  const r = await post('rosto', { user_id: userId });
+  const tela = document.getElementById('tela');
+  const cls = r.event === 7 ? 'ok' : r.event === 3 ? '' : 'bad';
+  tela.className = 'tela ' + cls;
+  tela.innerHTML = `<div class="big">${esc(r.evento)}</div><div class="sub">${esc(r.nome || '')}</div><div class="sub">${esc(r.motivo)}</div>`;
+  clearTimeout(telaTimer);
+  telaTimer = setTimeout(() => {
+    tela.className = 'tela';
+    tela.innerHTML = '<div class="big">Aguardando rosto</div><div class="sub">Escolha um usuário abaixo para simular o reconhecimento facial</div>';
+  }, 4000);
+}
+
+function tagPrevia(u) {
+  if (u.previa_event === 7) return '<span class="tag ok">Liberado</span>';
+  if (u.previa_event === 3) return `<span class="tag warn" title="${esc(u.previa_motivo)}">Sem foto</span>`;
+  return `<span class="tag bad" title="${esc(u.previa_motivo)}">Negado</span>`;
+}
+
+function renderUsuarios() {
+  if (!estado) return;
+  const termo = document.getElementById('busca').value.trim().toLowerCase();
+  const lista = estado.usuarios.filter((u) => !termo || u.name.toLowerCase().includes(termo) || String(u.registration).toLowerCase().includes(termo));
+  document.getElementById('qtd').textContent = `(${estado.usuarios.length})`;
+  const el = document.getElementById('users');
+  if (!lista.length) { el.innerHTML = `<div class="vazio">${estado.usuarios.length ? 'Nenhum usuário com esse filtro.' : 'Nenhum usuário. O middleware ainda não sincronizou.'}</div>`; return; }
+  el.innerHTML = lista.map((u) => {
+    const thumb = u.tem_foto
+      ? `<img class="thumb" loading="lazy" src="/sim/api/foto/${u.id}?t=${u.image_timestamp}" alt="">`
+      : `<div class="thumb">${esc((u.name || '?').trim().charAt(0).toUpperCase())}</div>`;
+    const validade = u.end_time ? ` · válido até ${hora(u.end_time)}` : '';
+    return `<div class="user">${thumb}
+      <div><div class="nome">${esc(u.name)}</div>
+        <div class="meta">${tagPrevia(u)}id ${u.id} · matrícula ${esc(u.registration) || '—'}${u.grupos ? ' · ' + esc(u.grupos) : ''}${validade}</div>
+        <div class="meta">${esc(u.previa_motivo)} · último acesso ${hora(u.last_access)}</div></div>
+      <button class="prim" onclick="rosto(${u.id})">Apresentar rosto</button></div>`;
+  }).join('');
+}
+
+function render() {
+  const e = estado, d = e.dispositivo;
+  document.getElementById('nome').textContent = d.nome;
+  document.title = 'Simulador · ' + d.nome;
+  document.getElementById('chips').innerHTML = [
+    e.ajustes.offline ? '<span class="chip bad">API fora do ar</span>' : '<span class="chip ok">API no ar</span>',
+    `<span class="chip">${d.ip}:${d.porta}</span>`,
+    `<span class="chip">${e.sessoes} sessão(ões)</span>`,
+    e.secbox_aberta ? '<span class="chip ok">Catraca liberada</span>' : '<span class="chip">Catraca travada</span>',
+    `<span class="chip">${e.contagens.users} usuários · ${e.contagens.fotos} fotos</span>`,
+  ].join('');
+
+  document.getElementById('aj-offline').checked = e.ajustes.offline;
+  document.getElementById('aj-fotos').checked = e.ajustes.rejeitar_fotos;
+  const lat = document.getElementById('aj-lat');
+  if (document.activeElement !== lat) lat.value = e.ajustes.latencia_ms;
+
+  renderUsuarios();
+
+  document.getElementById('logs').innerHTML = e.logs.length ? e.logs.map((l) => {
+    const cls = l.event === 7 ? 'ok' : l.event === 3 ? 'warn' : 'bad';
+    return `<tr><td class="num">${horaCurta(l.time)}</td><td><span class="tag ${cls}">${esc(l.evento)}</span> ${esc(l.name || '')}<div class="meta">${esc(l.motivo || '')}</div></td></tr>`;
+  }).join('') : '<tr><td class="vazio">Nenhum acesso ainda.</td></tr>';
+
+  document.getElementById('reqs').innerHTML = e.requisicoes.length ? e.requisicoes.map((r) => {
+    const cls = r.status && r.status < 400 ? 'ok' : 'bad';
+    const seta = r.direcao === 'saida' ? '→ ' : '';
+    return `<tr><td class="num">${horaCurta(r.quando)}</td><td><span class="tag ${cls}">${r.status ?? 'falha'}</span> ${seta}<code>${esc(r.metodo)} ${esc(r.rota)}</code> <span class="meta">${r.ms}ms</span><div class="meta" style="white-space:normal">${esc(r.resumo)}</div></td></tr>`;
+  }).join('') : '<tr><td class="vazio">Nenhuma requisição recebida ainda.</td></tr>';
+
+  const m = e.monitor;
+  document.getElementById('monitor').innerHTML = m.hostname
+    ? `<dl><dt>Destino</dt><dd><code>http://${esc(m.hostname)}:${esc(m.port || '80')}/${esc(m.path)}</code></dd>
+       <dt>Último envio</dt><dd>${m.ultimo ? `${hora(m.ultimo.quando)} · ${m.ultimo.erro ? '<span class="tag bad">falhou</span> ' + esc(m.ultimo.erro) : '<span class="tag ok">' + m.ultimo.status + '</span>'}` : 'nenhum ainda'}</dd></dl>`
+    : '<div class="vazio">Não configurado. O middleware pode configurar via set_configuration (seção "monitor").</div>';
+
+  document.getElementById('ident').innerHTML = [
+    ['Dispositivo', d.modelo], ['Serial', d.serial], ['Firmware', d.firmware], ['Firmware da SecBox', d.secbox],
+    ['MAC', d.mac], ['Device ID', d.device_id], ['Relógio', hora(d.relogio) + (d.desvio_relogio ? ` (desvio de ${d.desvio_relogio}s)` : '')],
+    ['Ligado há', Math.floor(d.uptime_s / 60) + ' min'],
+  ].map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join('');
+}
+
+carregar();
+setInterval(carregar, 1500);
+</script>
+</body>
+</html>

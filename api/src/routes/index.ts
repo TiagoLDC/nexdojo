@@ -21,6 +21,7 @@ import announcementsRouter from './announcements';
 import absenceJustificationsRouter from './absenceJustifications';
 import auditLogRouter from './auditLog';
 import clientErrorsRouter from './clientErrors';
+import turnstileRouter from './turnstile';
 
 const router = Router();
 
@@ -50,5 +51,6 @@ router.use('/announcements', announcementsRouter);
 router.use('/absence-justifications', absenceJustificationsRouter);
 router.use('/audit-log', auditLogRouter);
 router.use('/client-errors', clientErrorsRouter);
+router.use('/turnstile', turnstileRouter);
 
 export default router;

@@ -33,6 +33,7 @@ const SystemConfigPage     = React.lazy(() => import('@/pages/SystemConfigPage')
 const SportsPage           = React.lazy(() => import('@/pages/SportsPage'));
 const AnnouncementsPage    = React.lazy(() => import('@/pages/AnnouncementsPage'));
 const AuditLogPage         = React.lazy(() => import('@/pages/AuditLogPage'));
+const TurnstilePage        = React.lazy(() => import('@/pages/TurnstilePage'));
 const AbsenceJustificationsPage = React.lazy(() => import('@/pages/AbsenceJustificationsPage'));
 const ResetPasswordPage    = React.lazy(() => import('@/pages/ResetPasswordPage'));
 const StaffInvitePage      = React.lazy(() => import('@/pages/StaffInvitePage'));
@@ -110,6 +111,7 @@ const App: React.FC = () => (
             <Route path="/relatorios/alunos-inativos" element={<InactiveStudentsReportPage />} />
             <Route path="/recycle-bin" element={<RecycleBinPage />} />
             <Route path="/logs"        element={<AuditLogPage />} />
+            <Route path="/catraca"     element={<TurnstilePage />} />
           </Route>
 
           {/* Superuser only */}
