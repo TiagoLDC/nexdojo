@@ -65,6 +65,9 @@ const TurnstileView: React.FC<{ academy: Academy; user: User }> = ({ academy }) 
   // Modais de credencial
   const [credModal, setCredModal] = useState<{ mode: 'create' | 'password'; credential?: TurnstileCredential } | null>(null);
   const [credForm, setCredForm] = useState({ username: '', password: '', label: '' });
+  // Depois de salvar, a janela mostra o que FOI GRAVADO e só fecha com a confirmação de que foi
+  // anotado. A senha só existe aqui: no banco fica o hash, e não há como recuperá-la depois.
+  const [credSaved, setCredSaved] = useState<{ username: string; password: string } | null>(null);
   const [savingCred, setSavingCred] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TurnstileCredential | null>(null);
 
@@ -138,7 +141,10 @@ const TurnstileView: React.FC<{ academy: Academy; user: User }> = ({ academy }) 
   };
 
   const openCreate = () => {
-    setCredForm({ username: `catraca.${(academy?.alias || 'academia').toLowerCase().replace(/[^a-z0-9]/g, '')}`, password: generatePassword(), label: 'PC da recepção' });
+    // Senha vazia de propósito: uma senha sorteada que o usuário não pediu se confunde com a
+    // que ele anotou (foi assim que uma credencial do QAS ficou com senha diferente da anotada).
+    setCredForm({ username: `catraca.${(academy?.alias || 'academia').toLowerCase().replace(/[^a-z0-9]/g, '')}`, password: '', label: 'PC da recepção' });
+    setCredSaved(null);
     setCredModal({ mode: 'create' });
   };
 
@@ -146,14 +152,14 @@ const TurnstileView: React.FC<{ academy: Academy; user: User }> = ({ academy }) 
     if (!credModal) return;
     setSavingCred(true);
     try {
+      // Os valores exibidos no resumo são exatamente os enviados nesta chamada.
+      const enviado = { username: credForm.username.trim(), password: credForm.password };
       if (credModal.mode === 'create') {
-        await turnstileService.createCredential({ username: credForm.username.trim(), password: credForm.password, label: credForm.label.trim() || undefined });
-        showNotification('Credencial criada. Cadastre o mesmo usuário e senha no NexDojo-Catraca.');
+        await turnstileService.createCredential({ ...enviado, label: credForm.label.trim() || undefined });
       } else if (credModal.credential) {
-        await turnstileService.updateCredential(credModal.credential.id, { password: credForm.password });
-        showNotification('Senha alterada. Atualize-a também no NexDojo-Catraca.');
+        await turnstileService.updateCredential(credModal.credential.id, { password: enviado.password });
       }
-      setCredModal(null);
+      setCredSaved(enviado);
       load(true);
     } catch (e) {
       showNotification(errorMessage(e, 'Erro ao salvar a credencial.'), 'error');
@@ -360,7 +366,7 @@ const TurnstileView: React.FC<{ academy: Academy; user: User }> = ({ academy }) 
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button type="button" title="Trocar senha" className={btnGhost}
-                      onClick={() => { setCredForm({ username: c.username, password: generatePassword(), label: c.label ?? '' }); setCredModal({ mode: 'password', credential: c }); }}>
+                      onClick={() => { setCredForm({ username: c.username, password: '', label: c.label ?? '' }); setCredSaved(null); setCredModal({ mode: 'password', credential: c }); }}>
                       <KeyRound size={13} />
                     </button>
                     <button type="button" title={c.active ? 'Desativar' : 'Reativar'} disabled={busyId === c.id} className={btnGhost} onClick={() => toggleCredential(c)}>
@@ -492,9 +498,18 @@ const TurnstileView: React.FC<{ academy: Academy; user: User }> = ({ academy }) 
         )}
       </section>
 
-      <Modal open={!!credModal} onClose={() => setCredModal(null)} size="md"
-        title={credModal?.mode === 'create' ? 'Nova credencial de integração' : `Nova senha para ${credModal?.credential?.username}`}
-        footer={(
+      <Modal open={!!credModal} onClose={() => { if (!credSaved) setCredModal(null); }} size="md"
+        closeOnBackdrop={!credSaved} closeOnEsc={!credSaved}
+        title={credSaved
+          ? (credModal?.mode === 'create' ? 'Credencial criada' : 'Senha alterada')
+          : credModal?.mode === 'create' ? 'Nova credencial de integração' : `Nova senha para ${credModal?.credential?.username}`}
+        footer={credSaved ? (
+          <div className="flex justify-end">
+            <button type="button" className={btnPrimary} onClick={() => { setCredSaved(null); setCredModal(null); }}>
+              <CheckCircle2 size={14} /> Já anotei, fechar
+            </button>
+          </div>
+        ) : (
           <div className="flex gap-2 justify-end">
             <button type="button" className={btnGhost} onClick={() => setCredModal(null)}>Cancelar</button>
             <button type="button" className={btnPrimary} onClick={submitCredential} disabled={savingCred || credForm.password.length < 8 || (credModal?.mode === 'create' && credForm.username.trim().length < 3)}>
@@ -502,36 +517,55 @@ const TurnstileView: React.FC<{ academy: Academy; user: User }> = ({ academy }) 
             </button>
           </div>
         )}>
-        <div className="space-y-4">
-          <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
-            Esta credencial só serve para o NexDojo-Catraca: ela lê nome, foto e status de acesso, e não abre nenhuma outra tela do sistema.
-            Anote a senha agora — depois de salva ela não é exibida de novo.
-          </p>
-          {credModal?.mode === 'create' && (
-            <>
-              <label className="block">
-                <span className="text-xs font-black text-slate-600 dark:text-slate-300">Usuário</span>
-                <input className={`${inputCls} mt-1`} value={credForm.username}
-                  onChange={(e) => setCredForm((f) => ({ ...f, username: e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, '') }))} />
-              </label>
-              <label className="block">
-                <span className="text-xs font-black text-slate-600 dark:text-slate-300">Descrição</span>
-                <input className={`${inputCls} mt-1`} value={credForm.label} placeholder="Ex.: PC da recepção"
-                  onChange={(e) => setCredForm((f) => ({ ...f, label: e.target.value }))} />
-              </label>
-            </>
-          )}
-          <label className="block">
-            <span className="text-xs font-black text-slate-600 dark:text-slate-300">Senha</span>
-            <div className="flex gap-2 mt-1">
-              <input className={`${inputCls} font-mono`} value={credForm.password}
-                onChange={(e) => setCredForm((f) => ({ ...f, password: e.target.value }))} />
-              <button type="button" className={btnGhost} title="Gerar outra" onClick={() => setCredForm((f) => ({ ...f, password: generatePassword() }))}><RefreshCw size={14} /></button>
-              <button type="button" className={btnGhost} title="Copiar" onClick={() => copy(credForm.password)}><Copy size={14} /></button>
-            </div>
-            <span className="block text-[11px] font-bold text-slate-400 mt-1">Mínimo de 8 caracteres.</span>
-          </label>
-        </div>
+        {credSaved ? (
+          <div className="space-y-4">
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+              Estes são os dados que foram gravados. Copie e cole no NexDojo-Catraca, em <b>Configurações</b>.
+              A senha não poderá ser vista de novo depois que esta janela for fechada.
+            </p>
+            {([['Usuário', credSaved.username], ['Senha', credSaved.password]] as const).map(([rotulo, valor]) => (
+              <div key={rotulo}>
+                <span className="text-xs font-black text-slate-600 dark:text-slate-300">{rotulo}</span>
+                <div className="flex gap-2 mt-1">
+                  <div className={`${inputCls} font-mono select-all break-all`}>{valor}</div>
+                  <button type="button" className={`${btnGhost} shrink-0`} title={`Copiar ${rotulo.toLowerCase()}`} onClick={() => copy(valor)}><Copy size={14} /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+              Esta credencial só serve para o NexDojo-Catraca: ela lê nome, foto e status de acesso, e não abre nenhuma outra tela do sistema.
+            </p>
+            {credModal?.mode === 'create' && (
+              <>
+                <label className="block">
+                  <span className="text-xs font-black text-slate-600 dark:text-slate-300">Usuário</span>
+                  <input className={`${inputCls} mt-1`} value={credForm.username}
+                    onChange={(e) => setCredForm((f) => ({ ...f, username: e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, '') }))} />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-black text-slate-600 dark:text-slate-300">Descrição</span>
+                  <input className={`${inputCls} mt-1`} value={credForm.label} placeholder="Ex.: PC da recepção"
+                    onChange={(e) => setCredForm((f) => ({ ...f, label: e.target.value }))} />
+                </label>
+              </>
+            )}
+            <label className="block">
+              <span className="text-xs font-black text-slate-600 dark:text-slate-300">Senha</span>
+              <div className="flex gap-2 mt-1">
+                <input className={`${inputCls} font-mono`} value={credForm.password} placeholder="Digite ou clique em Gerar senha"
+                  autoComplete="off" spellCheck={false}
+                  onChange={(e) => setCredForm((f) => ({ ...f, password: e.target.value }))} />
+                <button type="button" className={`${btnGhost} shrink-0`} onClick={() => setCredForm((f) => ({ ...f, password: generatePassword() }))}>
+                  <RefreshCw size={14} /> Gerar senha
+                </button>
+              </div>
+              <span className="block text-[11px] font-bold text-slate-400 mt-1">Mínimo de 8 caracteres. Depois de salvar, a senha aparece para você copiar.</span>
+            </label>
+          </div>
+        )}
       </Modal>
 
       <ConfirmDialog
