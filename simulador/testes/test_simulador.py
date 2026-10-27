@@ -21,8 +21,17 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from catraca.app import Catraca  # noqa: E402
 from catraca.servidor import criar_servidor  # noqa: E402
 
-JPEG = b'\xff\xd8\xff\xe0' + b'\x00' * 64 + b'\xff\xd9'
-JPEG_2 = b'\xff\xd8\xff\xe0' + b'\x01' * 64 + b'\xff\xd9'
+def jpeg_falso(largura=320, altura=320, recheio=b'\x00'):
+    """JPEG que não decodifica, mas tem cabeçalho válido: SOI, APP0 (para variar o hash) e SOF0 com as
+    dimensões. É o que o simulador lê para aplicar o mínimo de 160x160 da catraca."""
+    app0 = b'\xff\xe0' + (2 + 64).to_bytes(2, 'big') + recheio * 64
+    sof0 = (b'\xff\xc0' + (17).to_bytes(2, 'big') + b'\x08' + altura.to_bytes(2, 'big') + largura.to_bytes(2, 'big')
+            + b'\x03' + b'\x01\x22\x00\x02\x11\x01\x03\x11\x01')
+    return b'\xff\xd8' + app0 + sof0 + b'\xff\xd9'
+
+
+JPEG = jpeg_falso()
+JPEG_2 = jpeg_falso(recheio=b'\x01')
 
 
 class _Receptor(BaseHTTPRequestHandler):
@@ -290,6 +299,53 @@ class TestSimulador(unittest.TestCase):
         self.assertEqual(self.post('nao_existe.fcgi')[0], 404)
         _, r = self.post('user_hash_password.fcgi', {'password': 'abc123'})
         self.assertEqual(len(r['password']), 64)
+
+    def test_tamanho_da_imagem(self):
+        self.criar_aluno(1)
+        r = self.set_image(1, 2, jpeg_falso(120, 300), 0)
+        self.assertFalse(r['success'])
+        self.assertIn('minimum is 160x160', r['errors'][0]['message'])
+        r = self.set_image(1, 2, jpeg_falso(4000, 3000), 0)
+        self.assertIn('maximum is 2073600 pixels', r['errors'][0]['message'])
+        self.assertTrue(self.set_image(1, 2, jpeg_falso(160, 160), 0)['success'])
+
+    def _cadastro_remoto(self, corpo, acao):
+        resultado = {}
+
+        def chamar():
+            resultado['r'] = self.post('remote_enroll.fcgi', corpo)
+
+        t = threading.Thread(target=chamar)
+        t.start()
+        for _ in range(100):  # espera o pedido chegar ao "equipamento"
+            if self.catraca.cadastro_remoto:
+                break
+            time.sleep(0.02)
+        self.assertIsNotNone(self.catraca.cadastro_remoto)
+        if acao == 'cancelar_api':
+            self.req('cancel_remote_enroll.fcgi')
+        else:
+            self.catraca.responder_cadastro_remoto(acao)
+        t.join(5)
+        return resultado['r']
+
+    def test_cadastro_remoto_de_rosto(self):
+        self.post('create_objects.fcgi', {'object': 'users', 'values': [{'id': 7, 'registration': '7', 'name': 'Sem Foto'}]})
+        self.post('create_objects.fcgi', {'object': 'user_groups', 'values': [{'user_id': 7, 'group_id': 1}]})
+        self.assertEqual(self.catraca.simular_rosto(7)['event'], 3, 'sem foto, não reconhece')
+
+        st, r = self._cadastro_remoto({'type': 'face', 'user_id': 7, 'save': True, 'sync': True, 'auto': True}, 'capturar')
+        self.assertEqual(st, 200)
+        self.assertTrue(r['success'])
+        self.assertEqual(base64.b64decode(r['user_image'])[:4], b'\x89PNG')
+        self.assertEqual(self.catraca.simular_rosto(7)['event'], 7, 'rosto cadastrado pela câmera')
+
+        _, r = self._cadastro_remoto({'type': 'face', 'user_id': 7, 'save': True, 'sync': True}, 'falhar')
+        self.assertEqual((r['success'], r['error']), (False, 'Face not detected'))
+        _, r = self._cadastro_remoto({'type': 'face', 'user_id': 7, 'save': True, 'sync': True}, 'cancelar_api')
+        self.assertEqual(r['error'], 'Remote enroll canceled')
+        self.assertIsNone(self.catraca.cadastro_remoto)
+        self.assertEqual(self.post('remote_enroll.fcgi', {'type': 'face', 'user_id': 999, 'save': True, 'sync': True})[0], 400)
 
     def test_relogio(self):
         from datetime import datetime, timedelta

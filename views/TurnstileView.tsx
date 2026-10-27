@@ -108,7 +108,7 @@ const TurnstileView: React.FC<{ academy: Academy; user: User }> = ({ academy }) 
     all: people.length,
     blocked: people.filter((p) => p.status === 'blocked').length,
     released: people.filter((p) => p.releasedUntil).length,
-    problem: people.filter((p) => p.devices.some((d) => d.state !== 'synced')).length,
+    problem: people.filter((p) => !!p.photoProblem || p.devices.some((d) => d.state !== 'synced')).length,
     staff: people.filter((p) => p.type !== 'student').length,
   }), [people]);
 
@@ -118,7 +118,7 @@ const TurnstileView: React.FC<{ academy: Academy; user: User }> = ({ academy }) 
       .filter((p) => {
         if (filter === 'blocked') return p.status === 'blocked';
         if (filter === 'released') return !!p.releasedUntil;
-        if (filter === 'problem') return p.devices.some((d) => d.state !== 'synced');
+        if (filter === 'problem') return !!p.photoProblem || p.devices.some((d) => d.state !== 'synced');
         if (filter === 'staff') return p.type !== 'student';
         return true;
       })
@@ -442,6 +442,11 @@ const TurnstileView: React.FC<{ academy: Academy; user: User }> = ({ academy }) 
                       )}
                     </div>
                     {p.reason && <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-1">{p.reason}</p>}
+                    {p.photoProblem && (
+                      <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400 mt-0.5 flex items-center gap-1">
+                        <Camera size={11} /> {p.photoProblem}
+                      </p>
+                    )}
                     {p.devices.filter((d) => d.state !== 'synced' && d.message).map((d) => (
                       <p key={d.deviceKey} className="text-[11px] font-bold text-amber-600 dark:text-amber-400 mt-0.5 flex items-center gap-1">
                         <AlertTriangle size={11} /> {d.message}

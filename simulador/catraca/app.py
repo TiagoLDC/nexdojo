@@ -38,6 +38,10 @@ SCORES_OK = {'bounds_width': 320, 'horizontal_center_offset': 12, 'vertical_cent
              'center_pose_quality': 180, 'sharpness_quality': 900}
 
 SEM_SESSAO = {'login.fcgi', 'session_is_valid.fcgi'}
+# Comandos que ficam esperando alguém agir no equipamento: rodam FORA da trava global, senão o
+# resto da API (e o painel, que é quem "responde" pela câmera) ficaria parado junto.
+SEM_TRAVA = {'remote_enroll.fcgi', 'cancel_remote_enroll.fcgi'}
+ESPERA_CADASTRO_REMOTO_S = 60
 
 
 def _json(status, obj):
@@ -72,6 +76,77 @@ def _tipo_imagem(img):
     return None
 
 
+# "Recomendações - fotos e instalação": mínimo de 160x160 e no máximo 1920 x 1080 = 2.073.600 pixels.
+LADO_MINIMO = 160
+PIXELS_MAXIMOS = 1920 * 1080
+_SOF = {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}
+
+
+def dimensoes_imagem(img):
+    """(largura, altura) lidas do cabeçalho do PNG ou do JPEG, sem decodificar a imagem."""
+    if img[:8] == b'\x89PNG\r\n\x1a\n' and img[12:16] == b'IHDR':
+        return int.from_bytes(img[16:20], 'big'), int.from_bytes(img[20:24], 'big')
+    if img[:2] != b'\xff\xd8':
+        return None
+    i = 2
+    while i + 4 <= len(img):
+        if img[i] != 0xFF:
+            return None
+        marcador = img[i + 1]
+        if marcador == 0xFF:  # preenchimento
+            i += 1
+            continue
+        if marcador in (0xD8, 0x01) or 0xD0 <= marcador <= 0xD7:
+            i += 2
+            continue
+        tamanho = int.from_bytes(img[i + 2:i + 4], 'big')
+        if marcador in _SOF and i + 9 <= len(img):
+            altura = int.from_bytes(img[i + 5:i + 7], 'big')
+            largura = int.from_bytes(img[i + 7:i + 9], 'big')
+            return largura, altura
+        if marcador == 0xD9 or tamanho < 2:
+            return None
+        i += 2 + tamanho
+    return None
+
+
+def erro_dimensoes(img):
+    """Mensagem de erro (code 1) quando a imagem não serve para cadastro facial, ou None."""
+    if not _tipo_imagem(img):
+        return 'Image file not recognized. Image should be either JPG or PNG.'
+    dim = dimensoes_imagem(img)
+    if not dim:
+        return 'Image file not recognized. Image should be either JPG or PNG.'
+    largura, altura = dim
+    if largura < LADO_MINIMO or altura < LADO_MINIMO:
+        return f'Image too small ({largura}x{altura}): minimum is {LADO_MINIMO}x{LADO_MINIMO}'
+    if largura * altura > PIXELS_MAXIMOS:
+        return f'Image too large ({largura}x{altura}): maximum is {PIXELS_MAXIMOS} pixels'
+    return None
+
+
+def png_rosto_simulado(nome, lado=320):
+    """PNG de verdade (biblioteca padrão), usado como "foto da câmera" no cadastro remoto simulado."""
+    import zlib
+    semente = int(hashlib.sha256(nome.encode('utf-8')).hexdigest()[:6], 16)
+    cor = bytes(((semente >> 16) & 0xFF, (semente >> 8) & 0xFF, semente & 0xFF))
+    claro = bytes(min(255, c + 90) for c in cor)
+    linhas = bytearray()
+    centro, raio2 = lado // 2, (lado // 3) ** 2
+    for y in range(lado):
+        linhas.append(0)
+        for x in range(lado):
+            linhas += claro if (x - centro) ** 2 + (y - centro) ** 2 <= raio2 else cor
+
+    def bloco(tipo, dados):
+        return (len(dados).to_bytes(4, 'big') + tipo + dados
+                + (zlib.crc32(tipo + dados) & 0xFFFFFFFF).to_bytes(4, 'big'))
+
+    ihdr = lado.to_bytes(4, 'big') * 2 + bytes((8, 2, 0, 0, 0))
+    return (b'\x89PNG\r\n\x1a\n' + bloco(b'IHDR', ihdr) + bloco(b'IDAT', zlib.compress(bytes(linhas), 6))
+            + bloco(b'IEND', b''))
+
+
 def _ip_local():
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
@@ -99,7 +174,8 @@ class Catraca:
         self.inicio = time.time()
         self.secbox_aberta = False
         self._timer_secbox = None
-        self.desvio_relogio = 0  # segundos entre o relógio "da catraca" e o do PC (set_system_time)
+        self.desvio_relogio = 0
+        self.cadastro_remoto = None  # cadastro de rosto pela câmera esperando ação no painel  # segundos entre o relógio "da catraca" e o do PC (set_system_time)
 
         self.log = logging.getLogger(f'catraca.{nome}.{porta}')
         self.log.setLevel(logging.INFO)
@@ -140,6 +216,8 @@ class Catraca:
             'doors_state.fcgi': self._doors_state,
             'door_state.fcgi': self._doors_state,  # a documentação usa os dois nomes
             'set_system_time.fcgi': self._set_system_time,
+            'remote_enroll.fcgi': self._remote_enroll,
+            'cancel_remote_enroll.fcgi': self._cancel_remote_enroll,
             'template_sync_init.fcgi': lambda q, c: VAZIO,
             'template_sync_end.fcgi': lambda q, c: VAZIO,
             'reboot.fcgi': self._reboot,
@@ -183,6 +261,8 @@ class Catraca:
         if rota not in SEM_SESSAO and query.get('session') not in self.sessoes:
             return _json(401, {'error': 'Session is not valid', 'code': 1})
         try:
+            if rota in SEM_TRAVA:
+                return handler(query, corpo)
             with self.trava:
                 return handler(query, corpo)
         except ErroApi as e:
@@ -239,8 +319,9 @@ class Catraca:
             return falha(1, 'User does not exist')
         if len(img) > LIMITE_FOTO:
             return falha(1, 'Image file too large (max 2MB)')
-        if not _tipo_imagem(img):
-            return falha(1, 'Image file not recognized. Image should be either JPG or PNG.')
+        erro = erro_dimensoes(img)
+        if erro:
+            return falha(1, erro)
         if self.ajustes['rejeitar_fotos']:
             return falha(2, 'Face not detected')
         sha = hashlib.sha256(img).hexdigest()
@@ -360,10 +441,68 @@ class Catraca:
                 self.conn.execute('UPDATE users SET image_timestamp = 0 WHERE id = ?', (uid,))
         return VAZIO
 
+    def _remote_enroll(self, q, c):
+        """Cadastro de rosto pela câmera do equipamento, modo síncrono: a resposta só sai quando a
+        captura termina. Sem câmera, quem "fotografa" é o painel do simulador (botões na faixa de
+        cadastro remoto). Formato do erro: a documentação só diz que vem "error"; aqui é uma string."""
+        dados = _corpo_json(c)
+        if dados.get('type') != 'face':
+            raise ErroApi(f"Failed: o simulador só implementa type 'face' (recebido {dados.get('type')!r})")
+        if dados.get('sync') is not True:
+            raise ErroApi('Failed: o simulador só implementa o modo síncrono (sync: true)')
+        uid = dados.get('user_id')
+        salvar = dados.get('save') is True
+        with self.trava:
+            if salvar:
+                if not isinstance(uid, int) or isinstance(uid, bool):
+                    raise ErroApi("Failed: Invalid member 'user_id' (int expected)")
+                linha = self.conn.execute('SELECT name FROM users WHERE id = ?', (uid,)).fetchone()
+                if not linha:
+                    raise ErroApi('User does not exist')
+                nome = linha['name']
+            else:
+                nome = dados.get('registration') or 'Visitante'
+            if self.cadastro_remoto:
+                raise ErroApi('Failed: another remote enroll is in progress')
+            pedido = {'user_id': uid, 'nome': nome, 'mensagem': dados.get('msg') or dados.get('message') or '',
+                      'desde': time.time(), 'evento': threading.Event(), 'acao': None}
+            self.cadastro_remoto = pedido
+        self.log.info('Cadastro remoto de rosto iniciado: %s (user_id=%s) — aguardando ação no painel', nome, uid)
+
+        respondeu = pedido['evento'].wait(ESPERA_CADASTRO_REMOTO_S)
+        with self.trava:
+            self.cadastro_remoto = None
+            acao = pedido['acao'] if respondeu else 'tempo'
+            base = {'user_id': uid, 'device_id': self.device_id}
+            if acao == 'capturar':
+                img = png_rosto_simulado(nome)
+                if salvar:
+                    r = self._cadastrar_foto(uid, self.agora(), img, False)
+                    if not r['success']:
+                        return ok({**base, 'success': False, 'error': r['errors'][0]['message']})
+                self.log.info('Cadastro remoto concluído: %s', nome)
+                return ok({**base, 'success': True, 'user_image': base64.b64encode(img).decode()})
+            mensagens = {'falhar': 'Face not detected', 'cancelar': 'Remote enroll canceled',
+                         'tempo': 'Remote enroll timeout'}
+            self.log.info('Cadastro remoto sem sucesso: %s (%s)', nome, mensagens[acao])
+            return ok({**base, 'success': False, 'error': mensagens[acao]})
+
+    def _cancel_remote_enroll(self, q, c):
+        self.responder_cadastro_remoto('cancelar')
+        return VAZIO
+
+    def responder_cadastro_remoto(self, acao):
+        pedido = self.cadastro_remoto
+        if not pedido:
+            return False
+        pedido['acao'] = acao
+        pedido['evento'].set()
+        return True
+
     def _user_test_image(self, q, c):
-        if not _tipo_imagem(c):
-            return ok({'success': False, 'errors': [
-                {'code': 1, 'message': 'Image file not recognized. Image should be either JPG or PNG.'}]})
+        erro = erro_dimensoes(c)
+        if erro:
+            return ok({'success': False, 'errors': [{'code': 1, 'message': erro}]})
         if self.ajustes['rejeitar_fotos']:
             return ok({'success': False, 'errors': [{'code': 2, 'message': 'Face not detected'}]})
         return ok({'scores': SCORES_OK, 'success': True})
@@ -544,6 +683,11 @@ class Catraca:
             'usuarios': usuarios,
             'logs': logs,
             'requisicoes': list(self.requisicoes)[-80:][::-1],
+            'cadastro_remoto': ({'user_id': self.cadastro_remoto['user_id'], 'nome': self.cadastro_remoto['nome'],
+                                 'mensagem': self.cadastro_remoto['mensagem'],
+                                 'segundos': int(time.time() - self.cadastro_remoto['desde']),
+                                 'limite': ESPERA_CADASTRO_REMOTO_S}
+                                if self.cadastro_remoto else None),
         }
 
     def foto(self, user_id):

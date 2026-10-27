@@ -45,6 +45,10 @@ py simulador.py --porta 8091 --nome "Catraca 2" --device-id 4408801109306066
   equipamento decidiria, grava o `access_logs` e, se o monitor estiver configurado, notifica o
   servidor.
 - **Rosto desconhecido:** gera um evento "Não identificado".
+- **Cadastro de rosto pela câmera** (`remote_enroll`): quando o middleware pede, aparece uma
+  faixa amarela na "Tela do equipamento" com os botões *Capturar rosto*, *Rosto não detectado* e
+  *Cancelar*. A chamada da API fica esperando até alguém clicar (ou 60 s). *Capturar* grava uma
+  imagem PNG gerada pelo simulador como foto do usuário.
 - **Ajustes de teste**, para exercitar o tratamento de erro do middleware:
   - *Equipamento fora do ar:* a API fecha a conexão sem responder.
   - *Recusar fotos:* todo cadastro de foto volta com `Face not detected`.
@@ -68,7 +72,7 @@ Log em arquivo: `dados/<nome>/logs/simulador.log`, rotacionado a cada 2 MB, com 
 | Objetos | `load_objects`, `create_objects`, `modify_objects`, `destroy_objects`, `create_or_modify_objects` |
 | Fotos | `user_set_image`, `user_set_image_list`, `user_get_image`, `user_get_image_list`, `user_list_images`, `user_destroy_image`, `user_test_image` |
 | Sistema | `system_information`, `get_configuration`, `set_configuration`, `set_system_time`, `user_hash_password`, `reboot`, `template_sync_init`, `template_sync_end` |
-| Ações | `execute_actions` (`door`, `sec_box`, `catra`, `open_collector`), `doors_state` / `door_state` |
+| Ações | `execute_actions` (`door`, `sec_box`, `catra`, `open_collector`), `doors_state` / `door_state`, `remote_enroll` (só `type: "face"` síncrono), `cancel_remote_enroll` |
 | Monitor (enviado pela catraca) | `dao` (novo `access_logs`), `device_is_alive`, `secbox` |
 
 Objetos suportados: `users`, `groups`, `user_groups`, `access_rules`, `user_access_rules`,
@@ -85,6 +89,8 @@ Estes pontos estão na documentação, e o simulador os cobra:
 - **`registration` e `name` são obrigatórios** em `users`.
 - **"Sem retorno" significa corpo vazio.** `logout`, `set_configuration`, `execute_actions` e
   `user_destroy_image` respondem 200 sem corpo, então não se pode fazer `JSON.parse` cego.
+- **Tamanho da foto:** no mínimo 160×160 e no máximo 1920×1080 = 2.073.600 pixels
+  ("Recomendações – fotos e instalação"). O simulador lê as dimensões no cabeçalho do JPG/PNG.
 - **Foto:** `user_set_image` recebe os bytes crus (`application/octet-stream`), com `user_id` e
   `timestamp` na query, e o arquivo precisa ser menor que 2 MB. Em `user_set_image_list`, o
   **request inteiro** precisa ter menos de 2 MB, então o envio em massa tem de ser feito em lotes.
@@ -108,7 +114,9 @@ Quando a catraca real estiver disponível, conferir cada item e ajustar o simula
 | Regra sem horário (`access_rule_time_zones`) | Vale o tempo todo |
 | Regra sem portal (`portal_access_rules`) | Não libera nada |
 | Feriados (`hol1..hol3`) | Ignorados |
-| Detecção de rosto | Aceita qualquer JPG ou PNG. "Mesmo rosto" (`match=1`) significa o mesmo arquivo. |
+| Detecção de rosto | Aceita qualquer JPG ou PNG com as dimensões válidas. "Mesmo rosto" (`match=1`) significa o mesmo arquivo. |
+| Foto fora do tamanho | `code 1`, mensagem `Image too small (WxH): minimum is 160x160` ou `Image too large ...`. O código real não está documentado. |
+| Erro do `remote_enroll` | `{"success": false, "error": "<texto>"}`: `Face not detected`, `Remote enroll canceled` ou `Remote enroll timeout` (60 s). A doc só diz que vem "error". |
 | `user_hash_password` | `sha256(senha + salt)`. O algoritmo real não está documentado. |
 | Abertura remota | Não grava `access_logs`. Só muda o estado da SecBox e notifica `secbox`. |
 

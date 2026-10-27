@@ -128,6 +128,10 @@ class _Handler(BaseHTTPRequestHandler):
         if metodo == 'POST' and acao == 'ajustes':
             catraca.ajustar(dados)
             return self._json(catraca.ajustes)
+        if metodo == 'POST' and acao == 'cadastro-remoto':
+            if dados.get('acao') not in ('capturar', 'falhar', 'cancelar'):
+                return self._json({'erro': 'acao deve ser capturar, falhar ou cancelar'}, 400)
+            return self._json({'ok': catraca.responder_cadastro_remoto(dados['acao'])})
         if metodo == 'POST' and acao == 'sessoes/limpar':
             catraca.limpar_sessoes()
             return self._json({'ok': True})

@@ -114,6 +114,8 @@ interface TurnstilePerson {
   released_until: string | null;
   release_id: string | null;
   photo_hash: string | null;
+  /** Por que a foto do cadastro não serve para a catraca (null = serve, ou não há foto). */
+  photo_problem: string | null;
 }
 
 interface TurnstileSettings { grace_days: number; alert_minutes: number }
@@ -158,20 +160,27 @@ const formatBRDateTime = (d: Date): string => {
 async function computePeople(academyId: string): Promise<{ people: TurnstilePerson[]; settings: TurnstileSettings }> {
   const settings = await loadSettings(academyId);
   const today = getTodayBrasilia();
-  const photoHash = (alias: string) => `IF(${alias}.photo IS NULL OR ${alias}.photo = '', NULL, MD5(${alias}.photo))`;
+  // A catraca só aceita JPEG e PNG. Foto em outro formato (havia uma WebP no QAS) ou link de
+  // fora (48 alunos importados da Guerreiros apontam para upload.guerreirosicp.com.br, que hoje
+  // responde 401) não tem hash: o middleware trata como "sem foto" e mostra o motivo.
+  const FOTO_OK = (a: string) => `(${a}.photo LIKE 'data:image/jpeg;base64,%' OR ${a}.photo LIKE 'data:image/jpg;base64,%' OR ${a}.photo LIKE 'data:image/png;base64,%')`;
+  const photoCols = (a: string) => `IF(${FOTO_OK(a)}, MD5(${a}.photo), NULL) AS photo_hash,
+    CASE WHEN ${a}.photo IS NULL OR ${a}.photo = '' OR ${FOTO_OK(a)} THEN NULL
+         WHEN ${a}.photo LIKE 'http%' THEN 'link'
+         ELSE UPPER(SUBSTRING_INDEX(SUBSTRING_INDEX(${a}.photo, ';', 1), '/', -1)) END AS photo_kind`;
 
   const [students] = await pool.execute<any[]>(
-    `SELECT s.id, s.name, s.access_blocked, s.next_payment_date, p.price AS plan_price, ${photoHash('s')} AS photo_hash
+    `SELECT s.id, s.name, s.access_blocked, s.next_payment_date, p.price AS plan_price, ${photoCols('s')}
        FROM students s LEFT JOIN academy_plans p ON p.id = s.plan_id
       WHERE s.academy_id = ? AND s.status = 'Active'`,
     [academyId]
   );
   const [instructors] = await pool.execute<any[]>(
-    `SELECT i.id, i.name, ${photoHash('i')} AS photo_hash FROM instructors i WHERE i.academy_id = ? AND i.status = 'Active'`,
+    `SELECT i.id, i.name, ${photoCols('i')} FROM instructors i WHERE i.academy_id = ? AND i.status = 'Active'`,
     [academyId]
   );
   const [staff] = await pool.execute<any[]>(
-    `SELECT f.id, f.name, ${photoHash('f')} AS photo_hash FROM staff f WHERE f.academy_id = ? AND f.status = 'Active'`,
+    `SELECT f.id, f.name, ${photoCols('f')} FROM staff f WHERE f.academy_id = ? AND f.status = 'Active'`,
     [academyId]
   );
   const [releases] = await pool.execute<any[]>(
@@ -205,18 +214,25 @@ async function computePeople(academyId: string): Promise<{ people: TurnstilePers
       released_until: release && overdue && !s.access_blocked ? release.until.toISOString() : null,
       release_id: release && overdue && !s.access_blocked ? release.id : null,
       photo_hash: s.photo_hash,
+      photo_problem: photoProblem(s.photo_kind),
     });
   }
   for (const [type, rows] of [['instructor', instructors], ['staff', staff]] as const) {
     for (const r of rows) {
       people.push({
         id: r.id, type, name: r.name, status: 'allowed', reason: null, overdue: false, access_blocked: false,
-        released_until: null, release_id: null, photo_hash: r.photo_hash,
+        released_until: null, release_id: null, photo_hash: r.photo_hash, photo_problem: photoProblem(r.photo_kind),
       });
     }
   }
   people.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   return { people, settings };
+}
+
+function photoProblem(kind: string | null): string | null {
+  if (!kind) return null;
+  if (kind === 'link') return 'A foto é um link antigo (importação) que não está mais disponível. Cadastre uma foto nova.';
+  return `A foto está em formato ${kind.slice(0, 10)}, e a catraca só aceita JPG ou PNG. Cadastre a foto de novo.`;
 }
 
 async function findPerson(academyId: string, type: PersonType, id: string): Promise<any | null> {
@@ -363,6 +379,64 @@ router.get('/people/:type/:id/photo', requireTurnstile, async (req: Request, res
     res.setHeader('Content-Type', match[1] === 'image/jpg' ? 'image/jpeg' : match[1]);
     res.setHeader('X-Photo-Hash', crypto.createHash('md5').update(photo!).digest('hex'));
     res.send(bytes);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/turnstile/people/:type/:id/photo — rosto capturado pela câmera da catraca vira a foto
+// do cadastro. A captura já passou pelo crivo da catraca (ela só devolve rosto que reconhece), então
+// é a melhor foto possível para as outras catracas e para o próprio NexDojo.
+router.post('/people/:type/:id/photo', requireTurnstile, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const type = req.params.type as PersonType;
+  if (!PERSON_TYPES.includes(type)) {
+    res.status(400).json({ error: 'Tipo de pessoa inválido' });
+    return;
+  }
+  const { image, operator_name, device_name } = req.body ?? {};
+  if (typeof image !== 'string' || !image) {
+    res.status(400).json({ error: 'image (base64) é obrigatório' });
+    return;
+  }
+  const bytes = Buffer.from(image, 'base64');
+  const mime = bytes.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff])) ? 'image/jpeg'
+    : bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) ? 'image/png' : null;
+  if (!mime) {
+    res.status(400).json({ error: 'A imagem precisa ser JPEG ou PNG' });
+    return;
+  }
+  if (bytes.length > 1.5 * 1024 * 1024) {
+    res.status(400).json({ error: 'Imagem maior que 1,5 MB' });
+    return;
+  }
+  const operator = typeof operator_name === 'string' ? operator_name.trim().slice(0, 100) : '';
+  if (!operator) {
+    res.status(400).json({ error: 'Informe quem cadastrou o rosto (operator_name)' });
+    return;
+  }
+  const { academyId } = req.turnstile!;
+  try {
+    const person = await findPerson(academyId, type, String(req.params.id));
+    if (!person || person.status !== 'Active') {
+      res.status(404).json({ error: 'Pessoa ativa não encontrada nesta academia' });
+      return;
+    }
+    const dataUrl = `data:${mime};base64,${bytes.toString('base64')}`;
+    await pool.execute(`UPDATE ${PERSON_TABLE[type]} SET photo = ? WHERE id = ? AND academy_id = ?`, [dataUrl, person.id, academyId]);
+    // A foto anterior não cabe no audit_log (é a imagem inteira); fica registrado que ela existia.
+    await logAudit(req, {
+      action: 'turnstile.photo_captured',
+      entityType: type,
+      entityId: person.id,
+      academyId,
+      userId: null,
+      userEmail: `integração:${req.turnstile!.username}`,
+      details: {
+        name: person.name, operator_name: operator, device_name: typeof device_name === 'string' ? device_name.slice(0, 100) : null,
+        had_photo: !!person.photo, bytes: bytes.length,
+      },
+    });
+    res.json({ photo_hash: crypto.createHash('md5').update(dataUrl).digest('hex') });
   } catch (err) {
     next(err);
   }

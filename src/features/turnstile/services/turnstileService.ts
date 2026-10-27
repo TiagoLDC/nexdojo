@@ -48,6 +48,8 @@ export interface TurnstilePerson {
   releasedUntil: string | null;
   releaseId: string | null;
   photoHash: string | null;
+  /** Por que a foto do cadastro não serve para a catraca (formato ou link antigo). */
+  photoProblem: string | null;
   devices: TurnstilePersonDevice[];
 }
 

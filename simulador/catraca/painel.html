@@ -59,6 +59,8 @@
   dt { color: var(--muted); } dd { margin: 0; overflow-wrap: anywhere; }
   .vazio { color: var(--muted); font-size: 13px; padding: 8px 0; }
   code { font-size: 12px; overflow-wrap: anywhere; }
+  .cadastro-remoto { margin-top: 12px; padding: 12px; border-radius: 10px; background: var(--warn-bg); color: var(--warn); }
+  .cadastro-remoto b { display: block; margin-bottom: 4px; }
 </style>
 </head>
 <body>
@@ -72,6 +74,7 @@
       <h2>Tela do equipamento</h2>
       <div class="tela" id="tela"><div class="big">Aguardando rosto</div><div class="sub">Escolha um usuário abaixo para simular o reconhecimento facial</div></div>
       <div class="linha-botoes"><button onclick="rosto(null)">Apresentar rosto desconhecido</button></div>
+      <div class="cadastro-remoto" id="cadastro-remoto" hidden></div>
     </section>
     <section>
       <h2>Usuários cadastrados na catraca <span id="qtd"></span></h2>
@@ -192,6 +195,20 @@ function render() {
   if (document.activeElement !== lat) lat.value = e.ajustes.latencia_ms;
 
   renderUsuarios();
+
+  // Cadastro de rosto pela câmera pedido pela API (remote_enroll): o painel faz o papel da câmera.
+  const cr = e.cadastro_remoto, box = document.getElementById('cadastro-remoto');
+  box.hidden = !cr;
+  if (cr) {
+    box.innerHTML = `<b>Cadastro de rosto pela câmera: ${esc(cr.nome)}</b>
+      ${cr.mensagem ? `<div>Mensagem na tela: "${esc(cr.mensagem)}"</div>` : ''}
+      <div>O middleware está esperando. Responda em até ${cr.limite - cr.segundos}s.</div>
+      <div class="linha-botoes">
+        <button class="prim" onclick="post('cadastro-remoto', {acao: 'capturar'})">Capturar rosto</button>
+        <button onclick="post('cadastro-remoto', {acao: 'falhar'})">Rosto não detectado</button>
+        <button onclick="post('cadastro-remoto', {acao: 'cancelar'})">Cancelar</button>
+      </div>`;
+  }
 
   document.getElementById('logs').innerHTML = e.logs.length ? e.logs.map((l) => {
     const cls = l.event === 7 ? 'ok' : l.event === 3 ? 'warn' : 'bad';

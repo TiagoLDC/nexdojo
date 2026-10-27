@@ -29,6 +29,7 @@ import { getBeltClassName } from '../constants';
 import { useAcademyBeltRanks } from '@/features/settings/hooks/useAcademyBeltRanks';
 import { useTranslation } from '../services/LanguageContext';
 import { DateSelectInput } from '@/components/ui';
+import { compressImage } from '@/utils/imageCompression';
 
 const Loader2 = ({ size, className }: { size: number, className: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -156,8 +157,11 @@ const InstructorProfileView: React.FC<InstructorProfileViewProps> = ({ user, aca
     if (!file || !editData) return;
 
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setEditData({ ...editData, photo: reader.result as string });
+    reader.onloadend = async () => {
+      // Mesma conversão das outras telas: JPEG de até 400px. Sem ela a foto ia do jeito que veio
+      // do celular (WebP, HEIC convertido, vários MB), e a catraca só aceita JPG ou PNG.
+      const compressed = await compressImage(reader.result as string);
+      setEditData({ ...editData, photo: compressed });
     };
     reader.readAsDataURL(file);
   };
