@@ -66,6 +66,9 @@ async function applySchemaPatches() {
     `ALTER TABLE academies ADD COLUMN turnstile_grace_days INT NOT NULL DEFAULT 0 COMMENT 'Dias de tolerancia apos o vencimento antes de bloquear na catraca'`,
     `ALTER TABLE academies ADD COLUMN turnstile_alert_minutes INT NOT NULL DEFAULT 15 COMMENT 'Minutos sem contato do middleware da catraca ate avisar o admin'`,
     `ALTER TABLE attendance_records ADD COLUMN source VARCHAR(20) NULL COMMENT 'Origem da presenca avulsa: qr_code, turnstile; NULL = lancamento manual ou legado'`,
+    // Liga/desliga o módulo de catraca por academia. Default 0: academia nenhuma ganha o módulo
+    // sozinha; desligado, a API recusa o middleware e a página/menu/aviso somem (routes/turnstile.ts).
+    `ALTER TABLE academies ADD COLUMN turnstile_enabled TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Modulo de catraca ativo nesta academia'`,
   ];
   for (const sql of patches) {
     try {
@@ -241,6 +244,64 @@ async function applySchemaPatches() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       UNIQUE KEY uniq_turnstile_event (academy_id, device_key, device_log_id),
       INDEX idx_turnstile_event_time (academy_id, occurred_at),
+      FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE
+    )
+  `);
+  // Vínculo entre quem JÁ estava cadastrado na catraca (antes do NexDojo) e a pessoa no NexDojo.
+  // Fica aqui, e não só no PC da recepção, para sobreviver a uma reinstalação e ficar auditável.
+  // photo_hash_at_link: foto do NexDojo no momento do vínculo — enquanto ela não mudar, vale o
+  // rosto que já estava na catraca.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS turnstile_links (
+      academy_id VARCHAR(36) NOT NULL,
+      device_key VARCHAR(64) NOT NULL,
+      device_user_id BIGINT NOT NULL COMMENT 'id do usuario na catraca',
+      person_type VARCHAR(20) NOT NULL,
+      person_id VARCHAR(36) NOT NULL,
+      original_registration VARCHAR(100) NULL COMMENT 'Matricula que o usuario tinha na catraca',
+      original_name VARCHAR(255) NULL,
+      photo_hash_at_link VARCHAR(32) NULL,
+      linked_by VARCHAR(100) NULL COMMENT 'Nome digitado no middleware por quem confirmou',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (academy_id, device_key, device_user_id),
+      UNIQUE KEY uniq_turnstile_link_person (academy_id, device_key, person_id),
+      FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE
+    )
+  `);
+  // Bloqueio de catraca que não é mensalidade. source 'nexdojo' = bloqueio manual pela página
+  // Catraca; source 'catraca' = a pessoa foi travada no próprio app/tela da catraca, e o middleware
+  // espelha aqui (some sozinho quando destravarem lá). removed_at preenchido = histórico.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS turnstile_blocks (
+      id VARCHAR(36) PRIMARY KEY,
+      academy_id VARCHAR(36) NOT NULL,
+      person_type VARCHAR(20) NOT NULL,
+      person_id VARCHAR(36) NOT NULL,
+      source VARCHAR(20) NOT NULL COMMENT 'nexdojo ou catraca',
+      reason VARCHAR(255) NULL,
+      device_key VARCHAR(64) NULL,
+      device_name VARCHAR(100) NULL,
+      created_by_user_id VARCHAR(36) NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      removed_at DATETIME NULL,
+      removed_by_user_id VARCHAR(36) NULL,
+      INDEX idx_turnstile_block_person (academy_id, person_id),
+      FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE
+    )
+  `);
+  // Quem está na catraca sem vínculo com o NexDojo ("órfãos"), informado pelo middleware a cada ciclo.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS turnstile_orphans (
+      academy_id VARCHAR(36) NOT NULL,
+      device_key VARCHAR(64) NOT NULL,
+      device_user_id BIGINT NOT NULL,
+      device_name VARCHAR(100) NULL,
+      name VARCHAR(255) NULL,
+      registration VARCHAR(100) NULL,
+      has_face TINYINT(1) NOT NULL DEFAULT 0,
+      blocked_on_device VARCHAR(255) NULL COMMENT 'Motivo, se o cadastro esta travado na propria catraca',
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (academy_id, device_key, device_user_id),
       FOREIGN KEY (academy_id) REFERENCES academies(id) ON DELETE CASCADE
     )
   `);

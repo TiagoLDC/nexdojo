@@ -14,7 +14,7 @@ import { turnstileService } from '@/features/turnstile/services/turnstileService
  */
 export const TurnstileAlertBanner: React.FC = () => {
   const { user, academy } = useAuthStore();
-  const enabled = !!academy?.id && (user?.role === 'admin' || user?.role === 'superuser');
+  const enabled = !!academy?.id && !!academy?.turnstileEnabled && (user?.role === 'admin' || user?.role === 'superuser');
 
   const { data } = useQuery({
     queryKey: ['turnstile-alert', academy?.id],

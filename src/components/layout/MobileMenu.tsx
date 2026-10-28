@@ -20,6 +20,7 @@ export const MobileMenu: React.FC = () => {
   const allItems = [...MAIN_NAV, ...MANAGEMENT_NAV]
     .filter((item) => item.roles.some((r) => effectiveRoles.includes(r)))
     .filter((item) => item.to !== '/kimonos' || academy?.kimonoLoanEnabled)
+    .filter((item) => item.to !== '/catraca' || academy?.turnstileEnabled)
     .filter((item) => item.to !== '/students' || hasStudentsAccess(user.role, switcherProfiles));
 
   const close = () => setMobileMenuOpen(false);

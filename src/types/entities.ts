@@ -386,6 +386,8 @@ export interface Academy {
   qrCodePresenca?: string;
   plans?: AcademyPlan[];
   kimonoLoanEnabled?: boolean;
+  /** Módulo de catraca (integração NexDojo-Catraca). Desligado, nada de catraca funciona. */
+  turnstileEnabled?: boolean;
 }
 
 // ── Kimono Loans ──────────────────────────────────────────────────────────

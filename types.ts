@@ -281,6 +281,7 @@ export interface Academy {
   paymentWarningDays?: number;
   plans?: AcademyPlan[];
   kimonoLoanEnabled?: boolean;
+  turnstileEnabled?: boolean;
 }
 
 export interface KimonoLoan {

@@ -2,12 +2,12 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import {
   DoorOpen, Search, RefreshCw, KeyRound, Plus, Trash2, Power, Wifi, WifiOff, Clock, ShieldOff,
-  Unlock, Lock, Loader2, AlertTriangle, Camera, CheckCircle2, Save, Monitor, Copy,
+  Unlock, Lock, Loader2, AlertTriangle, Camera, CheckCircle2, Save, Monitor, Copy, UserX, Ban,
 } from 'lucide-react';
 import type { Academy, User } from '../src/types';
 import {
   turnstileService, TURNSTILE_EVENT_LABELS,
-  type TurnstileCredential, type TurnstileEvent, type TurnstilePerson, type TurnstileSettings,
+  type TurnstileCredential, type TurnstileEvent, type TurnstilePerson, type TurnstileSettings, type TurnstileOrphan,
 } from '@/features/turnstile/services/turnstileService';
 import { useTranslation } from '../services/LanguageContext';
 import { Spinner, Modal, ConfirmDialog } from '@/components/ui';
@@ -58,6 +58,9 @@ const TurnstileView: React.FC<{ academy: Academy; user: User }> = ({ academy }) 
   const [credentials, setCredentials] = useState<TurnstileCredential[]>([]);
   const [people, setPeople] = useState<TurnstilePerson[]>([]);
   const [events, setEvents] = useState<TurnstileEvent[]>([]);
+  const [orphans, setOrphans] = useState<TurnstileOrphan[]>([]);
+  const [blockTarget, setBlockTarget] = useState<TurnstilePerson | null>(null);
+  const [blockReason, setBlockReason] = useState('');
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<PeopleFilter>('all');
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -79,6 +82,8 @@ const TurnstileView: React.FC<{ academy: Academy; user: User }> = ({ academy }) 
         turnstileService.getPeople(),
         turnstileService.getEvents(100),
       ]);
+      // Pendências não podem derrubar a página se a rota falhar.
+      setOrphans(await turnstileService.getOrphans().catch(() => []));
       setSettings(overview.settings);
       setCredentials(overview.credentials);
       setPeople(peopleList);
@@ -204,6 +209,36 @@ const TurnstileView: React.FC<{ academy: Academy; user: User }> = ({ academy }) 
       load(true);
     } catch (e) {
       showNotification(errorMessage(e, 'Erro ao liberar o acesso.'), 'error');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const confirmBlock = async () => {
+    if (!blockTarget || !blockReason.trim()) return;
+    setBusyId(blockTarget.id);
+    try {
+      await turnstileService.block(blockTarget.type, blockTarget.id, blockReason.trim());
+      showNotification(`${blockTarget.name} bloqueado(a) na catraca. Vale na próxima sincronização.`);
+      setBlockTarget(null);
+      setBlockReason('');
+      load(true);
+    } catch (e) {
+      showNotification(errorMessage(e, 'Erro ao bloquear.'), 'error');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const unblock = async (p: TurnstilePerson) => {
+    if (!p.manualBlock) return;
+    setBusyId(p.id);
+    try {
+      await turnstileService.unblock(p.manualBlock.id);
+      showNotification(`Bloqueio manual de ${p.name} retirado.`);
+      load(true);
+    } catch (e) {
+      showNotification(errorMessage(e, 'Erro ao desbloquear.'), 'error');
     } finally {
       setBusyId(null);
     }
@@ -442,6 +477,11 @@ const TurnstileView: React.FC<{ academy: Academy; user: User }> = ({ academy }) 
                       )}
                     </div>
                     {p.reason && <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-1">{p.reason}</p>}
+                    {p.externalBlocks.length > 0 && (
+                      <p className="text-[11px] font-bold text-red-600 dark:text-red-400 mt-0.5 flex items-center gap-1">
+                        <ShieldOff size={11} /> Travado no próprio sistema da catraca: só sai por lá. O NexDojo atualiza sozinho em seguida.
+                      </p>
+                    )}
                     {p.photoProblem && (
                       <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400 mt-0.5 flex items-center gap-1">
                         <Camera size={11} /> {p.photoProblem}
@@ -468,11 +508,59 @@ const TurnstileView: React.FC<{ academy: Academy; user: User }> = ({ academy }) 
                         Encerrar liberação
                       </button>
                     )}
+                    {p.manualBlock ? (
+                      <button type="button" onClick={() => unblock(p)} disabled={busyId === p.id} className={btnGhost}
+                        title="Retira o bloqueio manual. Outros bloqueios (mensalidade, catraca) continuam valendo.">
+                        {busyId === p.id ? <Loader2 size={14} className="animate-spin" /> : <Unlock size={14} />}
+                        Desbloquear
+                      </button>
+                    ) : (
+                      <button type="button" onClick={() => { setBlockTarget(p); setBlockReason(''); }} disabled={busyId === p.id} className={btnGhost}
+                        title="Impede a passagem nas catracas, independente de mensalidade">
+                        <Ban size={14} className="text-red-500" /> Bloquear
+                      </button>
+                    )}
                   </div>
                 </div>
               );
             })}
           </div>
+        )}
+      </section>
+
+      {/* Pendências: quem está na catraca sem vínculo com o NexDojo */}
+      <section className={`${card} mx-2`}>
+        <h2 className={sectionTitle}><UserX size={14} /> Pendências na catraca ({orphans.length})</h2>
+        {orphans.length === 0 ? (
+          <p className="text-sm text-slate-400 italic">Nenhum cadastro sem vínculo nas catracas.</p>
+        ) : (
+          <>
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-3">
+              Estes cadastros estão na catraca, mas não estão ligados a ninguém do NexDojo, então não seguem bloqueio por mensalidade nem inativação.
+              Vincule cada um no NexDojo-Catraca, em <b>Vincular cadastros</b>, ou remova da catraca quem não deve mais entrar.
+            </p>
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              {orphans.map((o) => (
+                <div key={`${o.deviceKey}-${o.deviceUserId}`} className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 py-2.5">
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-slate-700 dark:text-slate-200 truncate">{o.name || '(sem nome)'}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      {o.deviceName || o.deviceKey} · id {o.deviceUserId} · matrícula {o.registration || '—'} · {o.hasFace ? 'com rosto' : 'sem rosto'}
+                    </p>
+                  </div>
+                  {o.blockedOnDevice ? (
+                    <span className="shrink-0 px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400" title={o.blockedOnDevice}>
+                      Travado na catraca
+                    </span>
+                  ) : (
+                    <span className="shrink-0 px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                      Sem vínculo
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </section>
 
@@ -571,6 +659,29 @@ const TurnstileView: React.FC<{ academy: Academy; user: User }> = ({ academy }) 
             </label>
           </div>
         )}
+      </Modal>
+
+      <Modal open={!!blockTarget} onClose={() => setBlockTarget(null)} size="md"
+        title={`Bloquear ${blockTarget?.name ?? ''} na catraca`}
+        footer={(
+          <div className="flex gap-2 justify-end">
+            <button type="button" className={btnGhost} onClick={() => setBlockTarget(null)}>Cancelar</button>
+            <button type="button" className={btnPrimary} onClick={confirmBlock} disabled={!blockReason.trim() || busyId === blockTarget?.id}>
+              {busyId === blockTarget?.id ? <Loader2 size={14} className="animate-spin" /> : <Ban size={14} />} Bloquear
+            </button>
+          </div>
+        )}>
+        <div className="space-y-4">
+          <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+            Impede a passagem em todas as catracas, independente de mensalidade, até alguém clicar em Desbloquear. A liberação de 24h não derruba este bloqueio.
+            Fica registrado em Logs do Sistema com o seu usuário e o motivo.
+          </p>
+          <label className="block">
+            <span className="text-xs font-black text-slate-600 dark:text-slate-300">Motivo</span>
+            <input className={`${inputCls} mt-1`} value={blockReason} maxLength={255} placeholder="Ex.: comportamento, pendência de documento"
+              onChange={(e) => setBlockReason(e.target.value)} />
+          </label>
+        </div>
       </Modal>
 
       <ConfirmDialog

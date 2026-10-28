@@ -10,6 +10,7 @@ import { getAcademyId } from '../utils/academyScope';
 import { logAudit } from '../utils/auditLog';
 import { getTodayBrasilia } from '../utils/date';
 import { registerDailyCheckIn, brasiliaDateTime } from '../utils/dailyCheckIn';
+import { withTransaction } from '../utils/withTransaction';
 
 /**
  * Integração com a catraca (middleware NexDojo-Catraca, instalado no PC da academia).
@@ -55,6 +56,32 @@ const loginMiddleware = process.env.NODE_ENV === 'production'
 
 const adminOnly = [requireAuth, requireRole('admin', 'superuser')];
 
+// ── módulo ligado/desligado por academia (academies.turnstile_enabled) ──────────────────────────
+// Desligado, "nada de catraca funciona": o middleware é recusado em todas as rotas (inclusive o
+// login) com code 'turnstile_disabled', para ele parar de mexer nas catracas e explicar o motivo.
+const MODULO_DESLIGADO = { error: 'O módulo de catraca está desativado nesta academia', code: 'turnstile_disabled' };
+
+async function moduloAtivo(academyId: string): Promise<boolean> {
+  const [rows] = await pool.execute<any[]>('SELECT turnstile_enabled FROM academies WHERE id = ?', [academyId]);
+  return !!rows[0]?.turnstile_enabled;
+}
+
+async function requireModuloAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const academyId = getAcademyId(req, res);
+  if (!academyId) return;
+  try {
+    if (!(await moduloAtivo(academyId))) {
+      res.status(403).json(MODULO_DESLIGADO);
+      return;
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
+const adminModulo = [...adminOnly, requireModuloAdmin];
+
 // ── autenticação do middleware ─────────────────────────────────────────────────────────────────
 
 async function requireTurnstile(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -84,6 +111,10 @@ async function requireTurnstile(req: Request, res: Response, next: NextFunction)
     const cred = rows[0];
     if (!cred || !cred.active) {
       res.status(401).json({ error: 'Credencial de integração desativada ou removida' });
+      return;
+    }
+    if (!(await moduloAtivo(cred.academy_id))) {
+      res.status(403).json(MODULO_DESLIGADO);
       return;
     }
     req.turnstile = { credentialId: cred.id, academyId: cred.academy_id, username: cred.username };
@@ -116,6 +147,10 @@ interface TurnstilePerson {
   photo_hash: string | null;
   /** Por que a foto do cadastro não serve para a catraca (null = serve, ou não há foto). */
   photo_problem: string | null;
+  /** Bloqueio manual feito na página Catraca do NexDojo (independe de mensalidade). */
+  manual_block: { id: string; reason: string | null; created_at: string } | null;
+  /** Travas feitas no app/tela da própria catraca, espelhadas pelo middleware. */
+  external_blocks: { id: string; reason: string | null; device_name: string | null; created_at: string }[];
 }
 
 interface TurnstileSettings { grace_days: number; alert_minutes: number }
@@ -215,6 +250,7 @@ async function computePeople(academyId: string): Promise<{ people: TurnstilePers
       release_id: release && overdue && !s.access_blocked ? release.id : null,
       photo_hash: s.photo_hash,
       photo_problem: photoProblem(s.photo_kind),
+      manual_block: null, external_blocks: [],
     });
   }
   for (const [type, rows] of [['instructor', instructors], ['staff', staff]] as const) {
@@ -222,8 +258,32 @@ async function computePeople(academyId: string): Promise<{ people: TurnstilePers
       people.push({
         id: r.id, type, name: r.name, status: 'allowed', reason: null, overdue: false, access_blocked: false,
         released_until: null, release_id: null, photo_hash: r.photo_hash, photo_problem: photoProblem(r.photo_kind),
+        manual_block: null, external_blocks: [],
       });
     }
+  }
+  // Bloqueios que não são mensalidade valem para qualquer pessoa e vencem a liberação de 24h.
+  const [blocks] = await pool.execute<any[]>(
+    `SELECT id, person_id, source, reason, device_name, created_at FROM turnstile_blocks
+      WHERE academy_id = ? AND removed_at IS NULL ORDER BY created_at`,
+    [academyId]
+  );
+  const blocksByPerson = new Map<string, any[]>();
+  for (const b of blocks) blocksByPerson.set(b.person_id, [...(blocksByPerson.get(b.person_id) ?? []), b]);
+  for (const p of people) {
+    const bl = blocksByPerson.get(p.id);
+    if (!bl) continue;
+    const manual = bl.find(b => b.source === 'nexdojo') ?? null;
+    const externos = bl.filter(b => b.source === 'catraca');
+    p.manual_block = manual ? { id: manual.id, reason: manual.reason, created_at: new Date(manual.created_at).toISOString() } : null;
+    p.external_blocks = externos.map(b => ({ id: b.id, reason: b.reason, device_name: b.device_name, created_at: new Date(b.created_at).toISOString() }));
+    const motivos = [
+      ...(manual ? [`Bloqueado manualmente no NexDojo${manual.reason ? `: ${manual.reason}` : ''}`] : []),
+      ...externos.map(b => `Bloqueado no sistema da catraca${b.device_name ? ` "${b.device_name}"` : ''}${b.reason ? `: ${b.reason}` : ''}`),
+    ];
+    if (p.status === 'blocked' && p.reason) motivos.push(p.reason);
+    p.status = 'blocked';
+    p.reason = motivos.join(' · ');
   }
   people.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   return { people, settings };
@@ -324,6 +384,10 @@ router.post('/auth', loginMiddleware, async (req: Request, res: Response, next: 
         details: { reason: !cred ? 'usuario_inexistente' : !cred.active ? 'credencial_desativada' : 'senha_incorreta' },
       });
       res.status(401).json({ error: 'Usuário ou senha da integração inválidos' });
+      return;
+    }
+    if (!(await moduloAtivo(cred.academy_id))) {
+      res.status(403).json(MODULO_DESLIGADO);
       return;
     }
     const token = jwt.sign(
@@ -437,6 +501,202 @@ router.post('/people/:type/:id/photo', requireTurnstile, async (req: Request, re
       },
     });
     res.json({ photo_hash: crypto.createHash('md5').update(dataUrl).digest('hex') });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/turnstile/device-report — o que o middleware viu numa catraca neste ciclo:
+//  - orphans: cadastros na catraca sem vínculo com o NexDojo (substitui a lista anterior);
+//  - external_blocks: pessoas do NexDojo travadas no app/tela da catraca (fora do NexDojo).
+// Trava nova vira turnstile_blocks (source 'catraca') + audit_log; trava que sumiu é encerrada.
+router.post('/device-report', requireTurnstile, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { device_key, device_name, orphans, external_blocks } = req.body ?? {};
+  if (typeof device_key !== 'string' || !device_key || !Array.isArray(orphans) || !Array.isArray(external_blocks)
+    || orphans.length > 20000 || external_blocks.length > 5000) {
+    res.status(400).json({ error: 'device_key, orphans e external_blocks são obrigatórios' });
+    return;
+  }
+  const { academyId } = req.turnstile!;
+  const chave = device_key.slice(0, 64);
+  const nomeCatraca = typeof device_name === 'string' ? device_name.slice(0, 100) : null;
+  const quem = `integração:${req.turnstile!.username}`;
+  try {
+    // Órfãos: troca a lista inteira da catraca.
+    await withTransaction(async (conn) => {
+      await conn.execute('DELETE FROM turnstile_orphans WHERE academy_id = ? AND device_key = ?', [academyId, chave]);
+      for (let i = 0; i < orphans.length; i += 500) {
+        const lote = orphans.slice(i, i + 500).filter((o: any) => Number.isSafeInteger(Number(o?.device_user_id)));
+        if (!lote.length) continue;
+        await conn.query(
+          `INSERT INTO turnstile_orphans (academy_id, device_key, device_user_id, device_name, name, registration, has_face, blocked_on_device) VALUES ?`,
+          [lote.map((o: any) => [academyId, chave, Number(o.device_user_id), nomeCatraca, String(o.name ?? '').slice(0, 255),
+            o.registration ? String(o.registration).slice(0, 100) : null, o.has_face ? 1 : 0,
+            o.blocked_on_device ? String(o.blocked_on_device).slice(0, 255) : null])]
+        );
+      }
+    });
+
+    // Travas externas: compara com as abertas desta catraca.
+    const [abertas] = await pool.execute<any[]>(
+      `SELECT id, person_id, reason FROM turnstile_blocks
+        WHERE academy_id = ? AND device_key = ? AND source = 'catraca' AND removed_at IS NULL`,
+      [academyId, chave]
+    );
+    const abertaPorPessoa = new Map<string, any>(abertas.map(a => [a.person_id, a]));
+    const vistas = new Set<string>();
+    let detectadas = 0;
+    for (const b of external_blocks) {
+      const type = b?.person_type as PersonType;
+      if (!PERSON_TYPES.includes(type) || typeof b?.person_id !== 'string') continue;
+      const motivo = b.detail ? String(b.detail).slice(0, 255) : null;
+      vistas.add(b.person_id);
+      const aberta = abertaPorPessoa.get(b.person_id);
+      if (aberta) {
+        if (aberta.reason !== motivo) await pool.execute('UPDATE turnstile_blocks SET reason = ? WHERE id = ?', [motivo, aberta.id]);
+        continue;
+      }
+      const person = await findPerson(academyId, type, b.person_id);
+      if (!person) continue;
+      await pool.execute(
+        `INSERT INTO turnstile_blocks (id, academy_id, person_type, person_id, source, reason, device_key, device_name)
+         VALUES (?,?,?,?, 'catraca', ?,?,?)`,
+        [crypto.randomUUID(), academyId, type, person.id, motivo, chave, nomeCatraca]
+      );
+      await logAudit(req, {
+        action: 'turnstile.external_block_detected', entityType: type, entityId: person.id, academyId, userId: null, userEmail: quem,
+        details: { name: person.name, device_name: nomeCatraca, detail: motivo },
+      });
+      detectadas++;
+    }
+    let encerradas = 0;
+    for (const a of abertas) {
+      if (vistas.has(a.person_id)) continue;
+      await pool.execute('UPDATE turnstile_blocks SET removed_at = UTC_TIMESTAMP() WHERE id = ?', [a.id]);
+      await logAudit(req, {
+        action: 'turnstile.external_block_cleared', entityType: 'turnstile_block', entityId: a.person_id, academyId, userId: null, userEmail: quem,
+        details: { device_name: nomeCatraca, detail: a.reason },
+      });
+      encerradas++;
+    }
+    res.json({ orphans: orphans.length, external_blocks_detected: detectadas, external_blocks_cleared: encerradas });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── vínculo com quem já estava na catraca ─────────────────────────────────────────────────────
+
+// GET /api/turnstile/links?device_key=... — vínculos de uma catraca
+router.get('/links', requireTurnstile, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const deviceKey = String(req.query.device_key ?? '');
+  if (!deviceKey) {
+    res.status(400).json({ error: 'device_key é obrigatório' });
+    return;
+  }
+  try {
+    const [rows] = await pool.execute<any[]>(
+      `SELECT device_user_id, person_type, person_id, original_registration, original_name, photo_hash_at_link, linked_by, created_at
+         FROM turnstile_links WHERE academy_id = ? AND device_key = ?`,
+      [req.turnstile!.academyId, deviceKey.slice(0, 64)]
+    );
+    res.json({ links: rows.map(r => ({ ...r, device_user_id: Number(r.device_user_id) })) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/turnstile/links — confirma vínculos (lote) feitos na tela "Vincular cadastros"
+router.post('/links', requireTurnstile, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { device_key, device_name, links, operator_name } = req.body ?? {};
+  const operator = typeof operator_name === 'string' ? operator_name.trim().slice(0, 100) : '';
+  if (typeof device_key !== 'string' || !device_key || !Array.isArray(links) || !links.length || links.length > 2000) {
+    res.status(400).json({ error: 'device_key e links (1 a 2000) são obrigatórios' });
+    return;
+  }
+  if (!operator) {
+    res.status(400).json({ error: 'Informe quem está confirmando os vínculos (operator_name)' });
+    return;
+  }
+  const { academyId } = req.turnstile!;
+  try {
+    const salvos: any[] = [];
+    const recusados: any[] = [];
+    for (const l of links) {
+      const type = l?.person_type as PersonType;
+      const userId = Number(l?.device_user_id);
+      if (!PERSON_TYPES.includes(type) || typeof l?.person_id !== 'string' || !Number.isSafeInteger(userId)) {
+        recusados.push({ device_user_id: l?.device_user_id, motivo: 'dados inválidos' });
+        continue;
+      }
+      const [rows] = await pool.execute<any[]>(
+        `SELECT id, name, IF(photo LIKE 'data:image/jpeg;base64,%' OR photo LIKE 'data:image/jpg;base64,%' OR photo LIKE 'data:image/png;base64,%', MD5(photo), NULL) AS photo_hash
+           FROM ${PERSON_TABLE[type]} WHERE id = ? AND academy_id = ?`,
+        [l.person_id, academyId]
+      );
+      const person = rows[0];
+      if (!person) {
+        recusados.push({ device_user_id: userId, motivo: 'pessoa não encontrada nesta academia' });
+        continue;
+      }
+      // Um usuário da catraca e uma pessoa só podem estar em um vínculo por catraca: o novo
+      // substitui o anterior dos dois lados (correção de um vínculo errado, por exemplo).
+      await pool.execute(
+        'DELETE FROM turnstile_links WHERE academy_id = ? AND device_key = ? AND (device_user_id = ? OR person_id = ?)',
+        [academyId, device_key.slice(0, 64), userId, person.id]
+      );
+      await pool.execute(
+        `INSERT INTO turnstile_links
+           (academy_id, device_key, device_user_id, person_type, person_id, original_registration, original_name, photo_hash_at_link, linked_by)
+         VALUES (?,?,?,?,?,?,?,?,?)`,
+        [academyId, device_key.slice(0, 64), userId, type, person.id,
+          l.original_registration ? String(l.original_registration).slice(0, 100) : null,
+          l.original_name ? String(l.original_name).slice(0, 255) : null, person.photo_hash, operator]
+      );
+      salvos.push({ device_user_id: userId, person_id: person.id, name: person.name, original_name: l.original_name ?? null });
+    }
+    if (salvos.length) {
+      await logAudit(req, {
+        action: 'turnstile.link_created',
+        entityType: 'turnstile_device',
+        entityId: device_key.slice(0, 36),
+        academyId,
+        userId: null,
+        userEmail: `integração:${req.turnstile!.username}`,
+        details: { device_name: typeof device_name === 'string' ? device_name.slice(0, 100) : null, operator_name: operator, total: salvos.length, links: salvos.slice(0, 500) },
+      });
+    }
+    res.json({ saved: salvos.length, rejected: recusados });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/turnstile/links — desfaz um vínculo
+router.delete('/links', requireTurnstile, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const { device_key, device_user_id, operator_name } = req.body ?? {};
+  const userId = Number(device_user_id);
+  if (typeof device_key !== 'string' || !Number.isSafeInteger(userId)) {
+    res.status(400).json({ error: 'device_key e device_user_id são obrigatórios' });
+    return;
+  }
+  const { academyId } = req.turnstile!;
+  try {
+    const [rows] = await pool.execute<any[]>(
+      'SELECT person_id, original_name FROM turnstile_links WHERE academy_id = ? AND device_key = ? AND device_user_id = ?',
+      [academyId, device_key, userId]
+    );
+    if (!rows[0]) {
+      res.status(404).json({ error: 'Vínculo não encontrado' });
+      return;
+    }
+    await pool.execute('DELETE FROM turnstile_links WHERE academy_id = ? AND device_key = ? AND device_user_id = ?', [academyId, device_key, userId]);
+    await logAudit(req, {
+      action: 'turnstile.link_removed', entityType: 'turnstile_device', entityId: device_key.slice(0, 36), academyId,
+      userId: null, userEmail: `integração:${req.turnstile!.username}`,
+      details: { device_user_id: userId, person_id: rows[0].person_id, original_name: rows[0].original_name, operator_name: operator_name ?? null },
+    });
+    res.json({ ok: true });
   } catch (err) {
     next(err);
   }
@@ -596,6 +856,11 @@ router.get('/admin/alert', ...adminOnly, async (req: Request, res: Response, nex
   if (!academyId) return;
   try {
     const settings = await loadSettings(academyId);
+    // Módulo desligado: sem aviso nenhum (o layout consulta esta rota em toda tela).
+    if (!(await moduloAtivo(academyId))) {
+      res.json({ configured: false, stale: false, last_seen_at: null, alert_minutes: settings.alert_minutes, offline_devices: [] });
+      return;
+    }
     const [rows] = await pool.execute<any[]>(
       `SELECT last_seen_at, last_status FROM turnstile_credentials
         WHERE academy_id = ? AND active = 1 ORDER BY last_seen_at IS NULL, last_seen_at DESC`,
@@ -621,7 +886,7 @@ router.get('/admin/alert', ...adminOnly, async (req: Request, res: Response, nex
 });
 
 // GET /api/turnstile/admin/overview — configurações, credenciais e estado do middleware
-router.get('/admin/overview', ...adminOnly, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.get('/admin/overview', ...adminModulo, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
   try {
@@ -639,8 +904,95 @@ router.get('/admin/overview', ...adminOnly, async (req: Request, res: Response, 
   }
 });
 
+// GET /api/turnstile/admin/orphans — cadastros nas catracas que ainda não têm vínculo
+router.get('/admin/orphans', ...adminModulo, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const academyId = getAcademyId(req, res);
+  if (!academyId) return;
+  try {
+    const [rows] = await pool.execute<any[]>(
+      `SELECT device_key, device_name, device_user_id, name, registration, has_face, blocked_on_device, updated_at
+         FROM turnstile_orphans WHERE academy_id = ? ORDER BY device_name, name`,
+      [academyId]
+    );
+    res.json({ orphans: rows.map(r => ({ ...r, device_user_id: Number(r.device_user_id) })) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/turnstile/admin/blocks — bloqueio manual na catraca (sem relação com mensalidade)
+router.post('/admin/blocks', ...adminModulo, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const academyId = getAcademyId(req, res);
+  if (!academyId) return;
+  const type = req.body?.person_type as PersonType;
+  const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 255) : '';
+  if (!PERSON_TYPES.includes(type) || typeof req.body?.person_id !== 'string') {
+    res.status(400).json({ error: 'person_type e person_id são obrigatórios' });
+    return;
+  }
+  if (!reason) {
+    res.status(400).json({ error: 'Informe o motivo do bloqueio' });
+    return;
+  }
+  try {
+    const person = await findPerson(academyId, type, req.body.person_id);
+    if (!person) {
+      res.status(404).json({ error: 'Pessoa não encontrada nesta academia' });
+      return;
+    }
+    const [abertos] = await pool.execute<any[]>(
+      `SELECT id FROM turnstile_blocks WHERE academy_id = ? AND person_id = ? AND source = 'nexdojo' AND removed_at IS NULL`,
+      [academyId, person.id]
+    );
+    if (abertos.length) {
+      res.status(409).json({ error: 'Esta pessoa já está bloqueada manualmente na catraca' });
+      return;
+    }
+    const id = crypto.randomUUID();
+    await pool.execute(
+      `INSERT INTO turnstile_blocks (id, academy_id, person_type, person_id, source, reason, created_by_user_id)
+       VALUES (?,?,?,?, 'nexdojo', ?, ?)`,
+      [id, academyId, type, person.id, reason, req.user!.userId]
+    );
+    await logAudit(req, { action: 'turnstile.manual_block', entityType: type, entityId: person.id, academyId,
+      details: { name: person.name, reason } });
+    res.status(201).json({ id });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/turnstile/admin/blocks/:id — retira o bloqueio manual (o externo só sai na catraca)
+router.delete('/admin/blocks/:id', ...adminModulo, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const academyId = getAcademyId(req, res);
+  if (!academyId) return;
+  try {
+    const [rows] = await pool.execute<any[]>(
+      `SELECT b.id, b.person_type, b.person_id, b.source, b.reason FROM turnstile_blocks b
+        WHERE b.id = ? AND b.academy_id = ? AND b.removed_at IS NULL`,
+      [req.params.id, academyId]
+    );
+    const b = rows[0];
+    if (!b) {
+      res.status(404).json({ error: 'Bloqueio não encontrado ou já retirado' });
+      return;
+    }
+    if (b.source !== 'nexdojo') {
+      res.status(409).json({ error: 'Este bloqueio foi feito no sistema da catraca e só pode ser retirado lá. O NexDojo atualiza sozinho em seguida.' });
+      return;
+    }
+    await pool.execute('UPDATE turnstile_blocks SET removed_at = UTC_TIMESTAMP(), removed_by_user_id = ? WHERE id = ?', [req.user!.userId, b.id]);
+    const person = await findPerson(academyId, b.person_type, b.person_id);
+    await logAudit(req, { action: 'turnstile.manual_unblock', entityType: b.person_type, entityId: b.person_id, academyId,
+      details: { name: person?.name ?? null, reason_was: b.reason } });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/turnstile/admin/people — status de cada pessoa + situação em cada catraca
-router.get('/admin/people', ...adminOnly, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.get('/admin/people', ...adminModulo, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
   try {
@@ -661,7 +1013,7 @@ router.get('/admin/people', ...adminOnly, async (req: Request, res: Response, ne
 });
 
 // GET /api/turnstile/admin/events?limit=100 — últimas passagens
-router.get('/admin/events', ...adminOnly, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.get('/admin/events', ...adminModulo, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
   const limit = Math.min(500, Math.max(1, parseInt(String(req.query.limit ?? '100'), 10) || 100));
@@ -688,7 +1040,7 @@ router.get('/admin/events', ...adminOnly, async (req: Request, res: Response, ne
 const USERNAME_RE = /^[a-z0-9._-]{3,100}$/;
 
 // POST /api/turnstile/admin/credentials — cria o usuário/senha que o middleware vai usar
-router.post('/admin/credentials', ...adminOnly, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.post('/admin/credentials', ...adminModulo, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
   const username = String(req.body?.username ?? '').trim().toLowerCase();
@@ -722,7 +1074,7 @@ router.post('/admin/credentials', ...adminOnly, async (req: Request, res: Respon
 });
 
 // PUT /api/turnstile/admin/credentials/:id — troca senha, ativa/desativa, renomeia
-router.put('/admin/credentials/:id', ...adminOnly, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.put('/admin/credentials/:id', ...adminModulo, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
   const sets: string[] = [];
@@ -769,7 +1121,7 @@ router.put('/admin/credentials/:id', ...adminOnly, async (req: Request, res: Res
 });
 
 // DELETE /api/turnstile/admin/credentials/:id
-router.delete('/admin/credentials/:id', ...adminOnly, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.delete('/admin/credentials/:id', ...adminModulo, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
   try {
@@ -790,7 +1142,7 @@ router.delete('/admin/credentials/:id', ...adminOnly, async (req: Request, res: 
 });
 
 // PUT /api/turnstile/admin/settings — tolerância de vencimento e prazo do aviso de "sem contato"
-router.put('/admin/settings', ...adminOnly, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.put('/admin/settings', ...adminModulo, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
   const graceDays = Number(req.body?.grace_days);
@@ -816,7 +1168,7 @@ router.put('/admin/settings', ...adminOnly, async (req: Request, res: Response, 
 });
 
 // POST /api/turnstile/admin/releases — liberação temporária pelo NexDojo
-router.post('/admin/releases', ...adminOnly, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.post('/admin/releases', ...adminModulo, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
   try {
@@ -830,7 +1182,7 @@ router.post('/admin/releases', ...adminOnly, async (req: Request, res: Response,
 });
 
 // DELETE /api/turnstile/admin/releases/:id — encerra a liberação antes do prazo
-router.delete('/admin/releases/:id', ...adminOnly, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+router.delete('/admin/releases/:id', ...adminModulo, async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const academyId = getAcademyId(req, res);
   if (!academyId) return;
   try {

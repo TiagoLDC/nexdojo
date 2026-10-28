@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   ScrollText, LogIn, Trash2, DollarSign, KeyRound, Layers,
-  Search, Globe, ShieldAlert, ChevronLeft, ChevronRight, X, FileText,
+  Search, Globe, ShieldAlert, ChevronLeft, ChevronRight, X, FileText, DoorOpen,
 } from 'lucide-react';
 import type { Academy, User, AuditLogEntry } from '../src/types';
 import { auditLogService } from '@/features/auditLog/services/auditLogService';
@@ -56,6 +56,18 @@ const CATEGORIES: Category[] = [
     actions: ['user.role_change', 'user.status_change', 'user.password_reset_by_admin',
       'student.access_change', 'student.status_change', 'instructor.permission_change'],
   },
+  {
+    id: 'turnstile',
+    label: 'Catraca',
+    icon: DoorOpen,
+    actions: [
+      'turnstile.module_enabled', 'turnstile.module_disabled',
+      'turnstile.manual_block', 'turnstile.manual_unblock', 'turnstile.external_block_detected', 'turnstile.external_block_cleared',
+      'turnstile.release_granted', 'turnstile.release_revoked', 'turnstile.photo_captured',
+      'turnstile.link_created', 'turnstile.link_removed', 'turnstile.login_failed',
+      'turnstile.credential_created', 'turnstile.credential_updated', 'turnstile.credential_deleted', 'turnstile.settings_changed',
+    ],
+  },
 ];
 
 const ACTION_LABELS: Record<string, string> = {
@@ -89,6 +101,22 @@ const ACTION_LABELS: Record<string, string> = {
   'student.access_change': 'Acesso do aluno bloqueado/liberado',
   'student.status_change': 'Status de matrícula alterado',
   'instructor.permission_change': 'Permissão do instrutor alterada',
+  'turnstile.module_enabled': 'Módulo de catraca ativado',
+  'turnstile.module_disabled': 'Módulo de catraca desativado',
+  'turnstile.manual_block': 'Bloqueado manualmente na catraca (NexDojo)',
+  'turnstile.manual_unblock': 'Bloqueio manual da catraca retirado',
+  'turnstile.external_block_detected': 'Bloqueado externamente pelo sistema da catraca',
+  'turnstile.external_block_cleared': 'Bloqueio do sistema da catraca retirado',
+  'turnstile.release_granted': 'Liberado na catraca por 24h',
+  'turnstile.release_revoked': 'Liberação de 24h encerrada',
+  'turnstile.photo_captured': 'Foto cadastrada pela câmera da catraca',
+  'turnstile.link_created': 'Cadastros da catraca vinculados',
+  'turnstile.link_removed': 'Vínculo com cadastro da catraca desfeito',
+  'turnstile.login_failed': 'Falha de login da integração da catraca',
+  'turnstile.credential_created': 'Credencial da catraca criada',
+  'turnstile.credential_updated': 'Credencial da catraca alterada',
+  'turnstile.credential_deleted': 'Credencial da catraca excluída',
+  'turnstile.settings_changed': 'Regras da catraca alteradas',
 };
 
 const FAILURE_REASONS: Record<string, string> = {
@@ -170,6 +198,21 @@ const describeDetails = (entry: AuditLogEntry): string => {
   }
   if (entry.action === 'student.status_change') {
     return `${d.name ?? ''} — de "${d.from}" para "${d.to}"${d.hasAccount ? '' : ' · sem conta de acesso'}`.trim();
+  }
+  if (entry.action.startsWith('turnstile.')) {
+    // As chaves chegam em camelCase (interceptor do api.ts).
+    const nome = d.name ?? d.studentName ?? '';
+    switch (entry.action) {
+      case 'turnstile.manual_block': return `${nome} — motivo: ${d.reason ?? '—'}`;
+      case 'turnstile.manual_unblock': return `${nome}${d.reasonWas ? ` — bloqueio era: ${d.reasonWas}` : ''}`;
+      case 'turnstile.external_block_detected': return `${nome} — catraca "${d.deviceName ?? '?'}": ${d.detail ?? 'travado no sistema da catraca'}`;
+      case 'turnstile.external_block_cleared': return `Catraca "${d.deviceName ?? '?'}": ${d.detail ?? ''} — destravado no sistema da catraca`;
+      case 'turnstile.release_granted': return `${nome} — ${d.hours ?? 24}h${d.operatorName ? ` · por ${d.operatorName}` : ''}${d.via === 'middleware' ? ' (no PC da recepção)' : ''}`;
+      case 'turnstile.photo_captured': return `${nome} — catraca "${d.deviceName ?? '?'}" · por ${d.operatorName ?? '?'}${d.hadPhoto ? ' · substituiu a foto anterior' : ''}`;
+      case 'turnstile.link_created': return `${d.total ?? 0} cadastro(s) · catraca "${d.deviceName ?? '?'}" · por ${d.operatorName ?? '?'}`;
+      case 'turnstile.login_failed': return String(d.reason ?? '—').replace(/_/g, ' ');
+      default: return nome || (d.username ?? '—');
+    }
   }
   // Exclusões/restaurações e demais: nome e e-mail do registro afetado
   const parts = [d.name, d.email].filter(Boolean);

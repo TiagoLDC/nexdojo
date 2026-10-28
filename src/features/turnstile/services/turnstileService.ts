@@ -51,6 +51,22 @@ export interface TurnstilePerson {
   /** Por que a foto do cadastro não serve para a catraca (formato ou link antigo). */
   photoProblem: string | null;
   devices: TurnstilePersonDevice[];
+  /** Bloqueio manual feito nesta página (independe de mensalidade). */
+  manualBlock: { id: string; reason: string | null; createdAt: string } | null;
+  /** Travas feitas no app/tela da própria catraca, espelhadas pelo middleware. */
+  externalBlocks: { id: string; reason: string | null; deviceName: string | null; createdAt: string }[];
+}
+
+/** Cadastro que está numa catraca sem vínculo com o NexDojo. */
+export interface TurnstileOrphan {
+  deviceKey: string;
+  deviceName: string | null;
+  deviceUserId: number;
+  name: string;
+  registration: string | null;
+  hasFace: boolean;
+  blockedOnDevice: string | null;
+  updatedAt: string;
 }
 
 export interface TurnstileEvent {
@@ -92,6 +108,10 @@ export const turnstileService = {
   release: (personType: TurnstilePersonType, personId: string, hours = 24) =>
     api.post('/turnstile/admin/releases', { personType, personId, hours }).then((r) => r.data),
   revokeRelease: (id: string) => api.delete(`/turnstile/admin/releases/${id}`).then((r) => r.data),
+  getOrphans: () => api.get<{ orphans: TurnstileOrphan[] }>('/turnstile/admin/orphans').then((r) => r.data.orphans),
+  block: (personType: TurnstilePersonType, personId: string, reason: string) =>
+    api.post('/turnstile/admin/blocks', { personType, personId, reason }).then((r) => r.data),
+  unblock: (blockId: string) => api.delete(`/turnstile/admin/blocks/${blockId}`).then((r) => r.data),
 };
 
 /** Texto dos códigos de evento da Control iD que aparecem na prática numa catraca facial. */

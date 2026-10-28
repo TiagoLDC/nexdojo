@@ -6,6 +6,7 @@ import { requireRole } from '../middleware/requireRole';
 import { getAcademyId } from '../utils/academyScope';
 import { validate } from '../utils/validate';
 import { withTransaction } from '../utils/withTransaction';
+import { logAudit } from '../utils/auditLog';
 
 const router = Router();
 
@@ -128,11 +129,14 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
     'cep', 'address', 'address_number', 'absence_limit',
     'pix_key', 'pix_type', 'bank_name', 'bank_agency', 'bank_account',
     'current_plan', 'plan_status', 'plan_expiration_date', 'payment_warning_days',
-    'qr_code_presenca', 'kimono_loan_enabled',
+    'qr_code_presenca', 'kimono_loan_enabled', 'turnstile_enabled',
   ];
 
   if (req.body.kimono_loan_enabled !== undefined) {
     req.body.kimono_loan_enabled = req.body.kimono_loan_enabled ? 1 : 0;
+  }
+  if (req.body.turnstile_enabled !== undefined) {
+    req.body.turnstile_enabled = req.body.turnstile_enabled ? 1 : 0;
   }
 
   const fields = Object.keys(req.body).filter(k => ALLOWED.includes(k));
@@ -152,6 +156,13 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
       );
       if ((aliasConflict as any[]).length) { res.status(409).json({ error: 'Alias já está em uso' }); return; }
       req.body.alias = newAlias;
+    }
+
+    // Ligar/desligar a catraca muda o que acontece na porta da academia: fica no audit_log.
+    let catracaAntes: boolean | null = null;
+    if (fields.includes('turnstile_enabled')) {
+      const [r] = await pool.execute<any[]>('SELECT turnstile_enabled FROM academies WHERE id = ?', [req.params.id]);
+      catracaAntes = !!r[0]?.turnstile_enabled;
     }
 
     if (fields.length) {
@@ -185,6 +196,13 @@ router.put('/:id', requireAuth, requireRole('admin', 'superuser'), async (req: R
           ]
         );
       }
+    }
+
+    if (catracaAntes !== null && catracaAntes !== !!req.body.turnstile_enabled) {
+      await logAudit(req, {
+        action: req.body.turnstile_enabled ? 'turnstile.module_enabled' : 'turnstile.module_disabled',
+        entityType: 'academy', entityId: String(req.params.id), academyId: String(req.params.id),
+      });
     }
 
     const [rows] = await pool.execute<any[]>('SELECT * FROM academies WHERE id = ?', [req.params.id]);

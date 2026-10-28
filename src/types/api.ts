@@ -268,6 +268,7 @@ export interface UpdateAcademyDTO {
   qrCodePresenca?: string;
   plans?: AcademyPlan[];
   kimonoLoanEnabled?: boolean;
+  turnstileEnabled?: boolean;
 }
 
 // ── Kimono Loan DTOs ──────────────────────────────────────────────────────

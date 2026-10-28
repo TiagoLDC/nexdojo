@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Academy, User, Student, Instructor, Staff, AcademyPlan, Language } from '../types';
-import { Settings, Bell, Shield, LogOut, ChevronRight, User as UserIcon, Palette, MapPin, Moon, Sun, X, CreditCard, Wallet, Loader2, Save, CheckCircle2, Crown, Zap, Star as StarIcon, Award, Trophy, Book, Users, Plus, Trash2, Globe, AlertTriangle, Smartphone, Check, Briefcase, Clock, ToggleLeft, ToggleRight, Copy, QrCode, Printer } from 'lucide-react';
+import { Settings, Bell, Shield, LogOut, ChevronRight, User as UserIcon, Palette, MapPin, Moon, Sun, X, CreditCard, Wallet, Loader2, Save, CheckCircle2, Crown, Zap, Star as StarIcon, Award, Trophy, Book, Users, Plus, Trash2, Globe, AlertTriangle, Smartphone, Check, Briefcase, Clock, ToggleLeft, ToggleRight, Copy, QrCode, Printer, DoorOpen } from 'lucide-react';
 import { fetchAddressByCep, maskCEP, maskPhone } from '../services/cep';
 import { PrivacyValue } from '../components/PrivacyValue';
 import { studentService } from '@/features/students/services/studentService';
@@ -96,6 +96,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   const [isEditingAcademy, setIsEditingAcademy] = React.useState(false);
   const [isEditingNotifications, setIsEditingNotifications] = React.useState(false);
   const [isSavingKimonoLoan, setIsSavingKimonoLoan] = React.useState(false);
+  const [isSavingTurnstile, setIsSavingTurnstile] = React.useState(false);
   const [isEditingBeltSettings, setIsEditingBeltSettings] = React.useState(false);
   const [isEditingPayment, setIsEditingPayment] = React.useState(false);
   const [isEditingQrCode, setIsEditingQrCode] = useState(false);
@@ -333,6 +334,27 @@ const SettingsView: React.FC<SettingsViewProps> = ({
       showNotification('Erro ao alterar configuração. Tente novamente.', 'error');
     } finally {
       setIsSavingKimonoLoan(false);
+    }
+  };
+
+  // Desligar a catraca corta o middleware no NexDojo (ele para de atualizar as catracas, que
+  // ficam com o último estado recebido) e some com página, menu e aviso. Por isso pede confirmação.
+  const handleToggleTurnstile = async () => {
+    const ligar = !academy.turnstileEnabled;
+    if (!ligar && !window.confirm('Desativar o módulo de catraca?\n\nO NexDojo-Catraca deixa de receber dados: bloqueios, liberações e cadastros novos param de chegar às catracas, e as passagens deixam de virar presença. As catracas continuam com o último estado que receberam.')) return;
+    setIsSavingTurnstile(true);
+    try {
+      const saved = await academyService.update(academy.id, { turnstileEnabled: ligar });
+      // academyService devolve o Academy de src/types; esta view usa o de types.ts (incompatibilidade antiga).
+      const merged = { ...academy, ...(saved as Partial<typeof academy>) };
+      onUpdateAcademy(merged);
+      setEditAcademy(merged);
+      showNotification(saved.turnstileEnabled ? 'Módulo de catraca ativado!' : 'Módulo de catraca desativado.');
+    } catch (e) {
+      console.error(e);
+      showNotification('Erro ao alterar configuração. Tente novamente.', 'error');
+    } finally {
+      setIsSavingTurnstile(false);
     }
   };
 
@@ -1027,6 +1049,32 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                 {isSavingKimonoLoan ? (
                   <Loader2 size={36} className="text-slate-400 animate-spin" />
                 ) : academy.kimonoLoanEnabled ? (
+                  <ToggleRight size={36} className="text-indigo-600" />
+                ) : (
+                  <ToggleLeft size={36} className="text-slate-400" />
+                )}
+              </button>
+            </div>
+            <div className="w-full flex items-center justify-between p-5 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-4">
+                <div className="bg-slate-100 dark:bg-slate-800 w-10 h-10 rounded-xl flex items-center justify-center">
+                  <DoorOpen className="text-indigo-500" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Catraca (controle de acesso)</h4>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
+                    {academy.turnstileEnabled ? 'Ativado — integração com o NexDojo-Catraca liberada' : 'Desativado — nada referente à catraca funciona'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleToggleTurnstile}
+                disabled={isSavingTurnstile}
+                className="disabled:opacity-50 transition-transform active:scale-90"
+              >
+                {isSavingTurnstile ? (
+                  <Loader2 size={36} className="text-slate-400 animate-spin" />
+                ) : academy.turnstileEnabled ? (
                   <ToggleRight size={36} className="text-indigo-600" />
                 ) : (
                   <ToggleLeft size={36} className="text-slate-400" />
