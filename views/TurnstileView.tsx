@@ -14,7 +14,7 @@ import { Spinner, Modal, ConfirmDialog } from '@/components/ui';
 
 type PeopleFilter = 'all' | 'blocked' | 'released' | 'problem' | 'staff';
 
-const TYPE_LABEL: Record<TurnstilePerson['type'], string> = { student: 'Aluno', instructor: 'Instrutor', staff: 'Colaborador' };
+const TYPE_LABEL: Record<TurnstilePerson['type'], string> = { student: 'Aluno', instructor: 'Instrutor', staff: 'Colaborador', admin: 'Administrador' };
 const SYNC_LABEL: Record<string, string> = {
   synced: 'Na catraca', no_photo: 'Sem foto', photo_rejected: 'Foto recusada', error: 'Erro',
 };

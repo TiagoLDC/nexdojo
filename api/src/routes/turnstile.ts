@@ -28,9 +28,11 @@ import { withTransaction } from '../utils/withTransaction';
 
 const router = Router();
 
-type PersonType = 'student' | 'instructor' | 'staff';
-const PERSON_TYPES: PersonType[] = ['student', 'instructor', 'staff'];
-const PERSON_TABLE: Record<PersonType, string> = { student: 'students', instructor: 'instructors', staff: 'staff' };
+// 'admin' = usuário de login com role admin que NÃO tem ficha de aluno/instrutor/colaborador
+// (o dono da academia, normalmente). Vive na tabela users, que também tem photo e status.
+type PersonType = 'student' | 'instructor' | 'staff' | 'admin';
+const PERSON_TYPES: PersonType[] = ['student', 'instructor', 'staff', 'admin'];
+const PERSON_TABLE: Record<PersonType, string> = { student: 'students', instructor: 'instructors', staff: 'staff', admin: 'users' };
 const SYNC_STATES = ['synced', 'no_photo', 'photo_rejected', 'error', 'removed'];
 const TOKEN_TTL = '12h';
 const MAX_RELEASE_HOURS = 24;
@@ -218,6 +220,16 @@ async function computePeople(academyId: string): Promise<{ people: TurnstilePers
     `SELECT f.id, f.name, ${photoCols('f')} FROM staff f WHERE f.academy_id = ? AND f.status = 'Active'`,
     [academyId]
   );
+  // Admins da academia também passam. Quem tem ficha ativa com o mesmo e-mail (ex.: admin que
+  // também é instrutor) já entrou por ela — sem isso a mesma pessoa teria dois cadastros na catraca.
+  const [admins] = await pool.execute<any[]>(
+    `SELECT u.id, u.name, ${photoCols('u')} FROM users u
+      WHERE u.academy_id = ? AND u.role = 'admin' AND u.status = 'Active'
+        AND NOT EXISTS (SELECT 1 FROM students s WHERE s.academy_id = u.academy_id AND s.status = 'Active' AND LOWER(s.email) = LOWER(u.email))
+        AND NOT EXISTS (SELECT 1 FROM instructors i WHERE i.academy_id = u.academy_id AND i.status = 'Active' AND LOWER(i.email) = LOWER(u.email))
+        AND NOT EXISTS (SELECT 1 FROM staff f WHERE f.academy_id = u.academy_id AND f.status = 'Active' AND LOWER(f.email) = LOWER(u.email))`,
+    [academyId]
+  );
   const [releases] = await pool.execute<any[]>(
     `SELECT id, person_id, released_until FROM turnstile_releases
       WHERE academy_id = ? AND revoked_at IS NULL AND released_until > UTC_TIMESTAMP()
@@ -253,7 +265,7 @@ async function computePeople(academyId: string): Promise<{ people: TurnstilePers
       manual_block: null, external_blocks: [],
     });
   }
-  for (const [type, rows] of [['instructor', instructors], ['staff', staff]] as const) {
+  for (const [type, rows] of [['instructor', instructors], ['staff', staff], ['admin', admins]] as const) {
     for (const r of rows) {
       people.push({
         id: r.id, type, name: r.name, status: 'allowed', reason: null, overdue: false, access_blocked: false,
@@ -1021,11 +1033,12 @@ router.get('/admin/events', ...adminModulo, async (req: Request, res: Response, 
     const [rows] = await pool.execute<any[]>(
       `SELECT e.id, e.device_key, e.device_name, e.person_type, e.person_id, e.event, e.granted, e.occurred_at,
               e.attendance_record_id,
-              COALESCE(s.name, i.name, f.name) AS person_name
+              COALESCE(s.name, i.name, f.name, u.name) AS person_name
          FROM turnstile_access_events e
          LEFT JOIN students s ON e.person_type = 'student' AND s.id = e.person_id
          LEFT JOIN instructors i ON e.person_type = 'instructor' AND i.id = e.person_id
          LEFT JOIN staff f ON e.person_type = 'staff' AND f.id = e.person_id
+         LEFT JOIN users u ON e.person_type = 'admin' AND u.id = e.person_id
         WHERE e.academy_id = ?
         ORDER BY e.occurred_at DESC
         LIMIT ${limit}`,

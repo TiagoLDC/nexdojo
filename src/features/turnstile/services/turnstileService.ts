@@ -2,7 +2,8 @@ import { api } from '@/lib/api';
 
 // As chaves chegam em camelCase porque o interceptor de src/lib/api.ts converte a resposta.
 
-export type TurnstilePersonType = 'student' | 'instructor' | 'staff';
+/** 'admin' = usuário admin da academia sem ficha de aluno/instrutor/colaborador. */
+export type TurnstilePersonType = 'student' | 'instructor' | 'staff' | 'admin';
 
 export interface TurnstileSettings {
   graceDays: number;
